@@ -41,9 +41,14 @@ class Config:
     MAIL_DEFAULT_SENDER = os.getenv('MAIL_DEFAULT_SENDER', os.getenv('MAIL_USERNAME', ''))
     MAIL_SUPPRESS_SEND = is_debug
 
-    OPENAI_API_KEY = _require_env('OPENAI_API_KEY')
-    AI_MODEL = os.getenv('AI_MODEL', 'gpt-4o-mini')
+    AI_API_KEY = _require_env('AI_API_KEY')
+    AI_API_URL = os.getenv('AI_API_URL', 'https://openrouter.ai/api/v1')
+    AI_MODEL   = os.getenv('AI_MODEL', 'meta-llama/llama-3.3-70b-instruct')
 
     STRIPE_SECRET_KEY      = _require_env('STRIPE_SECRET_KEY')
     STRIPE_PUBLISHABLE_KEY = _require_env('STRIPE_PUBLISHABLE_KEY')
     STRIPE_WEBHOOK_SECRET  = _require_env('STRIPE_WEBHOOK_SECRET')
+
+    STRIPE_LINK_READING = os.getenv('STRIPE_LINK_READING', '')
+    STRIPE_LINK_BASIC   = os.getenv('STRIPE_LINK_BASIC', '')
+    STRIPE_LINK_VIP     = os.getenv('STRIPE_LINK_VIP', '')

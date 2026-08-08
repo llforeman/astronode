@@ -2,14 +2,12 @@ import stripe
 from flask import Blueprint, render_template, redirect, url_for, request, flash, abort, current_app
 from flask_login import login_required, current_user
 from extensions import db, csrf
-from models import Payment, Subscription, ReadingType, Reading
+from models import Payment, Subscription, Reading, ReadingType
 
 billing_bp = Blueprint('billing', __name__, url_prefix='/billing')
 
-TIER_PRICES = {
-    'basic': {'price_id': None, 'name': 'Basic'},
-    'vip':   {'price_id': None, 'name': 'VIP'},
-}
+# Prices in cents — used to determine tier from subscription amount
+VIP_MIN_CENTS = 900  # anything >= €9.00/mo is VIP
 
 
 def _stripe():
@@ -17,74 +15,52 @@ def _stripe():
     return stripe
 
 
+# ── Public pages ─────────────────────────────────────────────────────────────
+
 @billing_bp.route('/pricing')
 def pricing():
     return render_template('billing/pricing.html')
 
 
+# ── Checkout redirects ────────────────────────────────────────────────────────
+
 @billing_bp.route('/checkout/reading/<int:reading_type_id>', methods=['POST'])
 @login_required
 def checkout_reading(reading_type_id):
-    rtype = ReadingType.query.filter_by(id=reading_type_id, active=True).first_or_404()
-    if not rtype.price_cents:
-        abort(400)
-
-    s = _stripe()
-    session = s.checkout.Session.create(
-        payment_method_types=['card'],
-        mode='payment',
-        customer_email=current_user.email,
-        line_items=[{
-            'price_data': {
-                'currency': 'eur',
-                'unit_amount': rtype.price_cents,
-                'product_data': {'name': rtype.name},
-            },
-            'quantity': 1,
-        }],
-        metadata={
-            'user_id': current_user.id,
-            'reading_type_id': reading_type_id,
-            'payment_type': 'one_time',
-        },
-        success_url=url_for('billing.success', _external=True) + '?session_id={CHECKOUT_SESSION_ID}',
-        cancel_url=url_for('billing.cancelled', _external=True),
+    ReadingType.query.filter_by(id=reading_type_id, active=True).first_or_404()
+    link = current_app.config.get('STRIPE_LINK_READING', '')
+    if not link:
+        flash('Payments are not yet configured.')
+        return redirect(url_for('billing.pricing'))
+    return redirect(
+        f"{link}?client_reference_id={current_user.id}"
+        f"&prefilled_email={current_user.email}",
+        code=303,
     )
-    return redirect(session.url, code=303)
 
 
 @billing_bp.route('/checkout/subscribe/<tier>', methods=['POST'])
 @login_required
 def checkout_subscribe(tier):
-    if tier not in TIER_PRICES:
-        abort(400)
-    price_id = TIER_PRICES[tier]['price_id']
-    if not price_id:
-        flash('Subscription plans are not yet configured. Check back soon.')
+    link_map = {
+        'basic': current_app.config.get('STRIPE_LINK_BASIC', ''),
+        'vip':   current_app.config.get('STRIPE_LINK_VIP', ''),
+    }
+    link = link_map.get(tier, '')
+    if not link:
+        flash('This plan is not yet available.')
         return redirect(url_for('billing.pricing'))
-
-    s = _stripe()
-    session = s.checkout.Session.create(
-        payment_method_types=['card'],
-        mode='subscription',
-        customer_email=current_user.email,
-        line_items=[{'price': price_id, 'quantity': 1}],
-        metadata={
-            'user_id': current_user.id,
-            'tier': tier,
-            'payment_type': 'subscription',
-        },
-        success_url=url_for('billing.success', _external=True) + '?session_id={CHECKOUT_SESSION_ID}',
-        cancel_url=url_for('billing.cancelled', _external=True),
+    return redirect(
+        f"{link}?client_reference_id={current_user.id}"
+        f"&prefilled_email={current_user.email}",
+        code=303,
     )
-    return redirect(session.url, code=303)
 
 
 @billing_bp.route('/success')
-@login_required
 def success():
-    flash('Payment successful! Your reading will be generated shortly.')
-    return redirect(url_for('main.dashboard'))
+    flash('Payment confirmed! Check your email shortly.')
+    return redirect(url_for('main.dashboard') if current_user.is_authenticated else url_for('public.landing'))
 
 
 @billing_bp.route('/cancelled')
@@ -93,82 +69,119 @@ def cancelled():
     return redirect(url_for('billing.pricing'))
 
 
+# ── Webhook ───────────────────────────────────────────────────────────────────
+
 @billing_bp.route('/webhook', methods=['POST'])
 @csrf.exempt
 def webhook():
     s = _stripe()
     payload    = request.get_data()
     sig_header = request.headers.get('Stripe-Signature', '')
+    secret     = current_app.config['STRIPE_WEBHOOK_SECRET']
+
     try:
-        event = s.Webhook.construct_event(
-            payload, sig_header, current_app.config['STRIPE_WEBHOOK_SECRET'])
+        event = s.Webhook.construct_event(payload, sig_header, secret)
     except (ValueError, stripe.error.SignatureVerificationError):
         abort(400)
 
-    if event['type'] == 'checkout.session.completed':
-        _handle_checkout_completed(event['data']['object'])
-    elif event['type'] == 'customer.subscription.updated':
-        _handle_subscription_updated(event['data']['object'])
-    elif event['type'] == 'customer.subscription.deleted':
-        _handle_subscription_deleted(event['data']['object'])
+    obj = event['data']['object']
+    try:
+        if event['type'] == 'checkout.session.completed':
+            _handle_checkout_completed(obj)
+        elif event['type'] == 'customer.subscription.updated':
+            _handle_subscription_updated(obj)
+        elif event['type'] == 'customer.subscription.deleted':
+            _handle_subscription_deleted(obj)
+    except Exception as e:
+        current_app.logger.error('Webhook handler error [%s]: %s', event['type'], e)
 
     return '', 200
 
 
-def _handle_checkout_completed(session):
-    from models import User, Notification
-    from datetime import datetime
+# ── Webhook handlers ──────────────────────────────────────────────────────────
 
-    meta     = session.get('metadata', {})
-    user_id  = meta.get('user_id')
-    pay_type = meta.get('payment_type')
-    if not user_id:
+def _get_or_create_user(email):
+    """Find user by email or create a new account for them."""
+    from models import User
+    from security import blind_index
+    import secrets
+
+    user = User.query.filter_by(email_hash=blind_index(email)).first()
+    if not user:
+        user = User()
+        user.set_email(email)
+        user.set_password(secrets.token_hex(16))  # random password — they reset it to log in
+        db.session.add(user)
+        db.session.flush()
+    return user
+
+
+def _handle_checkout_completed(session):
+    from datetime import datetime
+    from models import Notification
+
+    email   = (session.get('customer_details') or {}).get('email', '')
+    mode    = session.get('mode')   # 'payment' or 'subscription'
+    user_id = session.get('client_reference_id')
+
+    # Resolve user — prefer client_reference_id (logged-in buyer), fall back to email
+    from models import User
+    if user_id:
+        user = User.query.get(int(user_id))
+    elif email:
+        user = _get_or_create_user(email)
+    else:
+        current_app.logger.error('Webhook: no user_id or email in session %s', session['id'])
         return
 
-    from models import User
-    user = User.query.get(int(user_id))
     if not user:
         return
 
+    # Record payment
     payment = Payment(
-        user_id=int(user_id),
+        user_id=user.id,
         stripe_session_id=session['id'],
         stripe_payment_id=session.get('payment_intent'),
         amount_cents=session.get('amount_total', 0),
         currency=session.get('currency', 'eur'),
-        payment_type=pay_type,
+        payment_type='one_time' if mode == 'payment' else 'subscription',
         status='completed',
     )
     db.session.add(payment)
 
-    if pay_type == 'one_time':
-        reading_type_id = meta.get('reading_type_id')
-        if reading_type_id:
-            reading = Reading(
-                user_id=int(user_id),
-                reading_type_id=int(reading_type_id),
-            )
+    if mode == 'payment':
+        # One-time reading — use first active reading type
+        rtype = ReadingType.query.filter_by(active=True).first()
+        if rtype and user.birth_date and user.birth_place:
+            reading = Reading(user_id=user.id, reading_type_id=rtype.id)
             db.session.add(reading)
             db.session.flush()
             payment.reading_id = reading.id
+            db.session.commit()
             from worker import enqueue_reading
             enqueue_reading(reading.id)
+        else:
+            # No birth data yet — notify them to complete profile
+            db.session.commit()
+            _send_complete_profile_email(user)
 
-    elif pay_type == 'subscription':
-        tier = meta.get('tier')
-        if tier:
-            user.tier = tier
-            sub = Subscription(
-                user_id=int(user_id),
-                stripe_subscription_id=session.get('subscription'),
-                tier=tier,
-            )
-            db.session.add(sub)
+    elif mode == 'subscription':
+        amount = session.get('amount_total', 0)
+        tier   = 'vip' if amount >= VIP_MIN_CENTS else 'basic'
+        user.tier = tier
+        sub = Subscription(
+            user_id=user.id,
+            stripe_subscription_id=session.get('subscription'),
+            tier=tier,
+        )
+        db.session.add(sub)
+        db.session.commit()
+        _send_welcome_subscription_email(user, tier)
 
     notif = Notification(
-        user_id=int(user_id),
-        message='Payment confirmed! Your reading is being prepared.',
-        link=url_for('readings.index'),
+        user_id=user.id,
+        message='Payment confirmed! Your reading is on its way.' if mode == 'payment' else f'Welcome to {user.tier.upper()}!',
+        link='/readings/',
     )
     db.session.add(notif)
     db.session.commit()
@@ -176,12 +189,12 @@ def _handle_checkout_completed(session):
 
 def _handle_subscription_updated(sub_obj):
     from models import User
-    stripe_sub_id = sub_obj['id']
-    sub = Subscription.query.filter_by(stripe_subscription_id=stripe_sub_id).first()
+    from datetime import datetime
+
+    sub = Subscription.query.filter_by(stripe_subscription_id=sub_obj['id']).first()
     if not sub:
         return
     sub.status = sub_obj['status']
-    from datetime import datetime
     sub.current_period_end = datetime.utcfromtimestamp(sub_obj['current_period_end'])
     if sub_obj['status'] != 'active':
         user = User.query.get(sub.user_id)
@@ -193,11 +206,11 @@ def _handle_subscription_updated(sub_obj):
 def _handle_subscription_deleted(sub_obj):
     from models import User
     from datetime import datetime
-    stripe_sub_id = sub_obj['id']
-    sub = Subscription.query.filter_by(stripe_subscription_id=stripe_sub_id).first()
+
+    sub = Subscription.query.filter_by(stripe_subscription_id=sub_obj['id']).first()
     if not sub:
         return
-    sub.status = 'cancelled'
+    sub.status     = 'cancelled'
     sub.cancelled_at = datetime.utcnow()
     user = User.query.get(sub.user_id)
     if user:
@@ -205,6 +218,32 @@ def _handle_subscription_deleted(sub_obj):
     db.session.commit()
 
 
-def url_for(endpoint, **kwargs):
-    from flask import url_for as _url_for
-    return _url_for(endpoint, **kwargs)
+# ── Email helpers ─────────────────────────────────────────────────────────────
+
+def _send_complete_profile_email(user):
+    try:
+        from emails import _send
+        _send(
+            user.email,
+            'Complete your Astronode profile to get your reading',
+            'complete_profile',
+            user=user,
+            link=url_for('main.profile', _external=True),
+        )
+    except Exception as e:
+        current_app.logger.error('Failed to send complete_profile email: %s', e)
+
+
+def _send_welcome_subscription_email(user, tier):
+    try:
+        from emails import _send
+        _send(
+            user.email,
+            f'Welcome to Astronode {tier.upper()}!',
+            'welcome_subscription',
+            user=user,
+            tier=tier,
+            link=url_for('main.dashboard', _external=True),
+        )
+    except Exception as e:
+        current_app.logger.error('Failed to send welcome_subscription email: %s', e)
