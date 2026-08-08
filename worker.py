@@ -16,7 +16,7 @@ def enqueue_reading(reading_id):
     job = q.enqueue(
         generate_reading_task,
         reading_id,
-        job_timeout='5m',
+        job_timeout='15m',
         on_failure=job_failure_callback,
     )
     from app import create_app
