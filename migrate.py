@@ -1,12 +1,7 @@
-import subprocess
-import sys
+from app import create_app
+from flask_migrate import upgrade
 
-if __name__ == '__main__':
-    result = subprocess.run(
-        ['flask', 'db', 'upgrade'],
-        capture_output=True, text=True
-    )
-    print(result.stdout)
-    if result.returncode != 0:
-        print(result.stderr, file=sys.stderr)
-        sys.exit(result.returncode)
+app = create_app()
+with app.app_context():
+    upgrade()
+    print("Database migration complete.")
