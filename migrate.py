@@ -1,7 +1,7 @@
 from app import create_app
-from flask_migrate import upgrade
+from extensions import db
 
 app = create_app()
 with app.app_context():
-    upgrade()
-    print("Database migration complete.")
+    db.create_all()
+    print("Database tables created.")
