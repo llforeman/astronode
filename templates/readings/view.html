@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}{{ reading.reading_type.name }} — Astronode{% endblock %}
+{% block content %}
+<div style="max-width: 720px;">
+  <a href="{{ url_for('readings.index') }}" style="color:var(--text-muted); font-size:0.9rem;">← Back to readings</a>
+  <h2 style="margin: 1rem 0 0.25rem; color: var(--accent-light)">{{ reading.reading_type.name }}</h2>
+  <p style="color:var(--text-muted); font-size:0.85rem; margin-bottom: 2rem;">
+    {{ reading.created_at.strftime('%B %d, %Y') }}
+    {% if reading.sent_by_email %} · ✉ sent to your email{% endif %}
+  </p>
+  {% if reading.status == 'completed' and reading.content %}
+    <div class="card" style="line-height: 1.8; white-space: pre-wrap;">{{ reading.content }}</div>
+  {% elif reading.status == 'generating' %}
+    <div class="card" style="text-align:center; padding: 3rem;">
+      <div style="font-size: 2rem; margin-bottom: 1rem;">✦</div>
+      <p style="color:var(--text-muted)">Your reading is being generated. This page will update automatically.</p>
+    </div>
+    <script>
+      setTimeout(function(){ location.reload(); }, 8000);
+    </script>
+  {% elif reading.status == 'failed' %}
+    <div class="card" style="border-color:#e74c3c;">
+      <p>Something went wrong generating your reading. Please contact support.</p>
+    </div>
+  {% else %}
+    <div class="card"><p style="color:var(--text-muted)">Reading is queued…</p></div>
+  {% endif %}
+</div>
+{% endblock %}

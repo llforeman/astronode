@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Admin — Astronode{% endblock %}
+{% block content %}
+<h2 style="margin-bottom: 1.5rem; color: var(--accent-light)">Admin Panel</h2>
+<div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 2rem;">
+  <div class="card" style="min-width: 160px; text-align:center;">
+    <div style="font-size: 2rem; font-weight: 700; color: var(--accent-light)">{{ users_count }}</div>
+    <div style="color: var(--text-muted)">Users</div>
+  </div>
+  <div class="card" style="min-width: 160px; text-align:center;">
+    <div style="font-size: 2rem; font-weight: 700; color: var(--accent-light)">{{ readings_count }}</div>
+    <div style="color: var(--text-muted)">Readings</div>
+  </div>
+  <div class="card" style="min-width: 160px; text-align:center;">
+    <div style="font-size: 2rem; font-weight: 700; color: var(--accent-light)">{{ payments_count }}</div>
+    <div style="color: var(--text-muted)">Payments</div>
+  </div>
+</div>
+<div style="display: flex; gap: 1rem;">
+  <a href="{{ url_for('admin.users') }}" class="btn btn-outline">Manage users</a>
+  <a href="{{ url_for('admin.readings') }}" class="btn btn-outline">View readings</a>
+</div>
+{% endblock %}

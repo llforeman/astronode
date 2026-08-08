@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Readings — Admin — Astronode{% endblock %}
+{% block content %}
+<h2 style="margin-bottom: 1.5rem; color: var(--accent-light)">Readings</h2>
+<div class="card" style="overflow-x: auto;">
+  <table style="width:100%; border-collapse:collapse; font-size:0.9rem;">
+    <thead>
+      <tr style="color:var(--text-muted); border-bottom:1px solid var(--border);">
+        <th style="text-align:left; padding:0.5rem 0.75rem;">ID</th>
+        <th style="text-align:left; padding:0.5rem 0.75rem;">User ID</th>
+        <th style="text-align:left; padding:0.5rem 0.75rem;">Type</th>
+        <th style="text-align:left; padding:0.5rem 0.75rem;">Status</th>
+        <th style="text-align:left; padding:0.5rem 0.75rem;">Emailed</th>
+        <th style="text-align:left; padding:0.5rem 0.75rem;">Created</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in readings %}
+      <tr style="border-bottom:1px solid var(--border);">
+        <td style="padding:0.5rem 0.75rem;">{{ r.id }}</td>
+        <td style="padding:0.5rem 0.75rem;">{{ r.user_id }}</td>
+        <td style="padding:0.5rem 0.75rem;">{{ r.reading_type.name }}</td>
+        <td style="padding:0.5rem 0.75rem; color:{% if r.status=='completed' %}var(--accent-light){% elif r.status=='failed' %}#e74c3c{% else %}var(--text-muted){% endif %}">{{ r.status }}</td>
+        <td style="padding:0.5rem 0.75rem;">{{ '✓' if r.sent_by_email else '—' }}</td>
+        <td style="padding:0.5rem 0.75rem; color:var(--text-muted);">{{ r.created_at.strftime('%b %d, %Y %H:%M') }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

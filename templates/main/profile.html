@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Profile — Astronode{% endblock %}
+{% block content %}
+<h2 style="margin-bottom: 1.5rem; color: var(--accent-light)">Birth Data</h2>
+<div class="card" style="max-width: 480px;">
+  <p style="color: var(--text-muted); margin-bottom: 1.5rem;">Your birth data is used to generate your personalized horoscope readings.</p>
+  <form method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div style="margin-bottom: 1rem;">
+      <label style="display:block; font-size:0.85rem; color:var(--text-muted); margin-bottom:0.3rem;">Birth date</label>
+      <input type="date" name="birth_date" value="{{ current_user.birth_date.isoformat() if current_user.birth_date else '' }}"
+             style="width:100%; padding:0.6rem 0.8rem; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text);">
+    </div>
+    <div style="margin-bottom: 1rem;">
+      <label style="display:block; font-size:0.85rem; color:var(--text-muted); margin-bottom:0.3rem;">Birth time <span style="color:var(--text-muted)">(optional but recommended)</span></label>
+      <input type="time" name="birth_time" value="{{ current_user.birth_time.strftime('%H:%M') if current_user.birth_time else '' }}"
+             style="width:100%; padding:0.6rem 0.8rem; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text);">
+    </div>
+    <div style="margin-bottom: 1.5rem;">
+      <label style="display:block; font-size:0.85rem; color:var(--text-muted); margin-bottom:0.3rem;">Birth place <span style="color:var(--text-muted)">(city, country)</span></label>
+      <input type="text" name="birth_place" value="{{ current_user.birth_place or '' }}" placeholder="e.g. Barcelona, Spain"
+             style="width:100%; padding:0.6rem 0.8rem; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text);">
+    </div>
+    <button type="submit" class="btn btn-primary">Save</button>
+  </form>
+</div>
+{% endblock %}

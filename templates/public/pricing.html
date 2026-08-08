@@ -1,0 +1,32 @@
+{% extends "public_base.html" %}
+{% block title %}Pricing — Astronode{% endblock %}
+{% block content %}
+<div class="container" style="padding-top: 3rem;">
+  <h1 style="text-align:center; color: var(--accent-light); margin-bottom: 0.5rem;">Plans & Pricing</h1>
+  <p style="text-align:center; color: var(--text-muted); margin-bottom: 3rem;">Choose the plan that fits your journey</p>
+
+  <div style="display: flex; gap: 2rem; justify-content: center; flex-wrap: wrap;">
+    <!-- One-time -->
+    <div style="background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 2rem; width: 260px;">
+      <h3 style="margin-bottom: 0.5rem;">Single Reading</h3>
+      <div style="font-size: 2rem; font-weight: 700; color: var(--accent-light); margin: 1rem 0;">€9.99</div>
+      <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem;">One complete natal chart reading, delivered to your email.</p>
+      <a href="{{ url_for('auth.register') }}" class="btn btn-outline" style="width:100%; text-align:center;">Get started</a>
+    </div>
+    <!-- Basic -->
+    <div style="background: var(--card); border: 2px solid var(--accent); border-radius: 12px; padding: 2rem; width: 260px;">
+      <h3 style="margin-bottom: 0.5rem;">Basic <span style="background:var(--accent);color:#fff;font-size:0.7rem;padding:2px 8px;border-radius:20px;vertical-align:middle;">POPULAR</span></h3>
+      <div style="font-size: 2rem; font-weight: 700; color: var(--accent-light); margin: 1rem 0;">€4.99<span style="font-size:1rem; color:var(--text-muted)">/mo</span></div>
+      <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem;">Monthly readings + access to your personal horoscope dashboard.</p>
+      <a href="{{ url_for('auth.register') }}" class="btn btn-primary" style="width:100%; text-align:center;">Subscribe</a>
+    </div>
+    <!-- VIP -->
+    <div style="background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 2rem; width: 260px;">
+      <h3 style="margin-bottom: 0.5rem;">VIP ✦</h3>
+      <div style="font-size: 2rem; font-weight: 700; color: var(--accent-light); margin: 1rem 0;">€9.99<span style="font-size:1rem; color:var(--text-muted)">/mo</span></div>
+      <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem;">Weekly readings, compatibility reports, priority generation, and all future features.</p>
+      <a href="{{ url_for('auth.register') }}" class="btn btn-outline" style="width:100%; text-align:center;">Go VIP</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

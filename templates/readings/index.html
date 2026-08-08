@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}My Readings — Astronode{% endblock %}
+{% block content %}
+<h2 style="margin-bottom: 1.5rem; color: var(--accent-light)">My Readings</h2>
+{% if readings %}
+  {% for r in readings %}
+  <div class="card" style="display:flex; justify-content:space-between; align-items:center;">
+    <div>
+      <strong>{{ r.reading_type.name }}</strong>
+      <div style="color:var(--text-muted); font-size:0.85rem;">
+        {{ r.created_at.strftime('%B %d, %Y') }} ·
+        <span style="color: {% if r.status == 'completed' %}var(--accent-light){% elif r.status == 'failed' %}#e74c3c{% else %}var(--text-muted){% endif %}">
+          {{ r.status }}
+        </span>
+        {% if r.sent_by_email %} · ✉ sent{% endif %}
+      </div>
+    </div>
+    {% if r.status == 'completed' %}
+    <a href="{{ url_for('readings.view', reading_id=r.id) }}" class="btn btn-outline">View</a>
+    {% elif r.status == 'generating' %}
+    <span style="color:var(--text-muted); font-size:0.9rem;">Generating…</span>
+    {% endif %}
+  </div>
+  {% endfor %}
+{% else %}
+  <div class="card">
+    <p style="color:var(--text-muted)">No readings yet. <a href="{{ url_for('billing.pricing') }}">Get your first reading →</a></p>
+  </div>
+{% endif %}
+{% endblock %}

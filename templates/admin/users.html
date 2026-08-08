@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Users — Admin — Astronode{% endblock %}
+{% block content %}
+<h2 style="margin-bottom: 1.5rem; color: var(--accent-light)">Users</h2>
+<div class="card" style="overflow-x: auto;">
+  <table style="width:100%; border-collapse:collapse; font-size:0.9rem;">
+    <thead>
+      <tr style="color:var(--text-muted); border-bottom:1px solid var(--border);">
+        <th style="text-align:left; padding:0.5rem 0.75rem;">ID</th>
+        <th style="text-align:left; padding:0.5rem 0.75rem;">Email</th>
+        <th style="text-align:left; padding:0.5rem 0.75rem;">Role</th>
+        <th style="text-align:left; padding:0.5rem 0.75rem;">Tier</th>
+        <th style="text-align:left; padding:0.5rem 0.75rem;">Joined</th>
+        <th style="text-align:left; padding:0.5rem 0.75rem;">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for u in users %}
+      <tr style="border-bottom:1px solid var(--border);">
+        <td style="padding:0.5rem 0.75rem;">{{ u.id }}</td>
+        <td style="padding:0.5rem 0.75rem;">{{ u.email }}</td>
+        <td style="padding:0.5rem 0.75rem;">{{ u.role }}</td>
+        <td style="padding:0.5rem 0.75rem; color:var(--accent-light);">{{ u.tier }}</td>
+        <td style="padding:0.5rem 0.75rem; color:var(--text-muted);">{{ u.created_at.strftime('%b %d, %Y') }}</td>
+        <td style="padding:0.5rem 0.75rem;">
+          <form method="POST" action="{{ url_for('admin.set_tier', user_id=u.id) }}" style="display:flex; gap:0.5rem;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <select name="tier" style="padding:0.3rem; border-radius:4px; border:1px solid var(--border); background:var(--bg); color:var(--text); font-size:0.85rem;">
+              <option value="free" {% if u.tier=='free' %}selected{% endif %}>free</option>
+              <option value="basic" {% if u.tier=='basic' %}selected{% endif %}>basic</option>
+              <option value="vip" {% if u.tier=='vip' %}selected{% endif %}>vip</option>
+            </select>
+            <button type="submit" class="btn btn-outline" style="padding:0.3rem 0.7rem; font-size:0.8rem;">Set</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
