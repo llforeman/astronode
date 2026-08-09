@@ -15,10 +15,10 @@ redis==5.0.8
 rq==1.16.2
 openai==1.35.14
 stripe==10.3.0
-geopy==2.4.1
-timezonefinder==5.2.0
-pytz==2024.1
+geopy>=2.4.0
+timezonefinder>=5.2.0,<6.0.0
+pytz>=2024.1
 flatlib==0.2.3
-pyswisseph==2.10.3.2
-matplotlib==3.9.2
-numpy==1.26.4
+pyswisseph>=2.10.0
+matplotlib>=3.7.0
+numpy>=1.23.0,<2.0.0
