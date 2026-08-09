@@ -132,73 +132,88 @@ def _build_chart_kerykeion(birth_date, birth_time, birth_place):
 _PURPLE_THEME_CSS = """
 <style>
 :root, svg {
-  /* Backgrounds */
+  /* ── Backgrounds ──────────────────────────────────── */
   --kerykeion-chart-color-paper-0: #0d0d1a;
-  --kerykeion-chart-color-paper-1: #151528;
+  --kerykeion-chart-color-paper-1: #13101e;
 
-  /* 12 zodiac sign backgrounds — purple shades darkest→lightest */
-  --kerykeion-chart-color-zodiac-bg-0:  #1a0d26;
-  --kerykeion-chart-color-zodiac-bg-1:  #231333;
-  --kerykeion-chart-color-zodiac-bg-2:  #2e1a42;
-  --kerykeion-chart-color-zodiac-bg-3:  #3a2252;
-  --kerykeion-chart-color-zodiac-bg-4:  #472a63;
-  --kerykeion-chart-color-zodiac-bg-5:  #543375;
-  --kerykeion-chart-color-zodiac-bg-6:  #623c87;
-  --kerykeion-chart-color-zodiac-bg-7:  #70469a;
-  --kerykeion-chart-color-zodiac-bg-8:  #7f50ad;
-  --kerykeion-chart-color-zodiac-bg-9:  #8e5bc0;
-  --kerykeion-chart-color-zodiac-bg-10: #9e67d3;
-  --kerykeion-chart-color-zodiac-bg-11: #ae73e6;
+  /* ── Zodiac sign backgrounds — two close deep purples alternating ── */
+  --kerykeion-chart-color-zodiac-bg-0:  #1a1525;
+  --kerykeion-chart-color-zodiac-bg-1:  #221c30;
+  --kerykeion-chart-color-zodiac-bg-2:  #1a1525;
+  --kerykeion-chart-color-zodiac-bg-3:  #221c30;
+  --kerykeion-chart-color-zodiac-bg-4:  #1a1525;
+  --kerykeion-chart-color-zodiac-bg-5:  #221c30;
+  --kerykeion-chart-color-zodiac-bg-6:  #1a1525;
+  --kerykeion-chart-color-zodiac-bg-7:  #221c30;
+  --kerykeion-chart-color-zodiac-bg-8:  #1a1525;
+  --kerykeion-chart-color-zodiac-bg-9:  #221c30;
+  --kerykeion-chart-color-zodiac-bg-10: #1a1525;
+  --kerykeion-chart-color-zodiac-bg-11: #221c30;
 
-  /* Zodiac sign icons — light purple so they read against dark segments */
-  --kerykeion-chart-color-zodiac-icon-0:  #e8d5f5;
-  --kerykeion-chart-color-zodiac-icon-1:  #e8d5f5;
-  --kerykeion-chart-color-zodiac-icon-2:  #e8d5f5;
-  --kerykeion-chart-color-zodiac-icon-3:  #e8d5f5;
-  --kerykeion-chart-color-zodiac-icon-4:  #e8d5f5;
-  --kerykeion-chart-color-zodiac-icon-5:  #e8d5f5;
-  --kerykeion-chart-color-zodiac-icon-6:  #e8d5f5;
-  --kerykeion-chart-color-zodiac-icon-7:  #e8d5f5;
-  --kerykeion-chart-color-zodiac-icon-8:  #e8d5f5;
-  --kerykeion-chart-color-zodiac-icon-9:  #e8d5f5;
-  --kerykeion-chart-color-zodiac-icon-10: #e8d5f5;
-  --kerykeion-chart-color-zodiac-icon-11: #e8d5f5;
+  /* ── Zodiac sign icons — soft lavender, legible on dark segments ── */
+  --kerykeion-chart-color-zodiac-icon-0:  #c39bd3;
+  --kerykeion-chart-color-zodiac-icon-1:  #c39bd3;
+  --kerykeion-chart-color-zodiac-icon-2:  #c39bd3;
+  --kerykeion-chart-color-zodiac-icon-3:  #c39bd3;
+  --kerykeion-chart-color-zodiac-icon-4:  #c39bd3;
+  --kerykeion-chart-color-zodiac-icon-5:  #c39bd3;
+  --kerykeion-chart-color-zodiac-icon-6:  #c39bd3;
+  --kerykeion-chart-color-zodiac-icon-7:  #c39bd3;
+  --kerykeion-chart-color-zodiac-icon-8:  #c39bd3;
+  --kerykeion-chart-color-zodiac-icon-9:  #c39bd3;
+  --kerykeion-chart-color-zodiac-icon-10: #c39bd3;
+  --kerykeion-chart-color-zodiac-icon-11: #c39bd3;
 
-  /* Ring borders */
-  --kerykeion-chart-color-zodiac-radix-ring-0: #9b59b6;
-  --kerykeion-chart-color-zodiac-radix-ring-1: #7d3c98;
-  --kerykeion-chart-color-zodiac-radix-ring-2: #5b2c6f;
+  /* ── Concentric ring borders — muted gold ── */
+  --kerykeion-chart-color-zodiac-radix-ring-0: #b89947;
+  --kerykeion-chart-color-zodiac-radix-ring-1: #a08535;
+  --kerykeion-chart-color-zodiac-radix-ring-2: #8a7020;
 
-  /* House division lines — black, continuous */
-  --kerykeion-chart-color-houses-radix-line: #000000;
+  /* ── House division lines — muted slate, no dash ── */
+  --kerykeion-chart-color-houses-radix-line: #6b637d;
 
-  /* Planets — purple gradient light→dark */
-  --kerykeion-chart-color-sun:      #f0e8ff;
-  --kerykeion-chart-color-moon:     #e4d0ff;
-  --kerykeion-chart-color-mercury:  #d8b8ff;
-  --kerykeion-chart-color-venus:    #cca0ff;
-  --kerykeion-chart-color-mars:     #c088ff;
-  --kerykeion-chart-color-jupiter:  #b470ff;
-  --kerykeion-chart-color-saturn:   #a858e8;
-  --kerykeion-chart-color-uranus:   #9c40d0;
-  --kerykeion-chart-color-neptune:  #9034c0;
-  --kerykeion-chart-color-pluto:    #8028b0;
+  /* ── All planets unified — crisp off-white for max contrast ── */
+  --kerykeion-chart-color-sun:     #f8f9fa;
+  --kerykeion-chart-color-moon:    #f8f9fa;
+  --kerykeion-chart-color-mercury: #f8f9fa;
+  --kerykeion-chart-color-venus:   #f8f9fa;
+  --kerykeion-chart-color-mars:    #f8f9fa;
+  --kerykeion-chart-color-jupiter: #f8f9fa;
+  --kerykeion-chart-color-saturn:  #f8f9fa;
+  --kerykeion-chart-color-uranus:  #f8f9fa;
+  --kerykeion-chart-color-neptune: #f8f9fa;
+  --kerykeion-chart-color-pluto:   #f8f9fa;
 
-  /* Angles (ASC, MC, DC, IC) — white to stand out */
-  --kerykeion-chart-color-first-house:   #ffffff;
-  --kerykeion-chart-color-tenth-house:   #ffffff;
-  --kerykeion-chart-color-seventh-house: #ffffff;
-  --kerykeion-chart-color-fourth-house:  #ffffff;
+  /* Nodes, Lilith, Chiron etc. also off-white */
+  --kerykeion-chart-color-mean-node:  #f8f9fa;
+  --kerykeion-chart-color-true-node:  #f8f9fa;
+  --kerykeion-chart-color-chiron:     #f8f9fa;
+  --kerykeion-chart-color-mean-lilith: #f8f9fa;
 
-  /* Aspects — purple tones */
-  --kerykeion-chart-color-aspect-conjunction: #e0c8ff;
-  --kerykeion-chart-color-aspect-opposition:  #c8a8f0;
-  --kerykeion-chart-color-aspect-trine:       #b090e0;
-  --kerykeion-chart-color-aspect-square:      #9878d0;
-  --kerykeion-chart-color-aspect-sextile:     #8060c0;
+  /* ── Angles (ASC/MC/DC/IC) — gold to match rings ── */
+  --kerykeion-chart-color-first-house:   #d4af37;
+  --kerykeion-chart-color-tenth-house:   #d4af37;
+  --kerykeion-chart-color-seventh-house: #d4af37;
+  --kerykeion-chart-color-fourth-house:  #d4af37;
+
+  /* ── Aspect lines — muted pastels, not neon ── */
+  --kerykeion-chart-color-aspect-conjunction: #e0d0f5;
+  --kerykeion-chart-color-aspect-opposition:  #e07a5f;
+  --kerykeion-chart-color-aspect-trine:       #88d4b0;
+  --kerykeion-chart-color-aspect-square:      #e07a5f;
+  --kerykeion-chart-color-aspect-sextile:     #8ecae6;
+  --kerykeion-chart-color-aspect-quintile:         #c9b8e8;
+  --kerykeion-chart-color-aspect-bi-quintile:      #c9b8e8;
+  --kerykeion-chart-color-aspect-semi-sextile:     #a8c8d8;
+  --kerykeion-chart-color-aspect-semi-square:      #d4906a;
+  --kerykeion-chart-color-aspect-sesqui-square:    #d4906a;
+  --kerykeion-chart-color-aspect-quincunx:         #b8a8d8;
 }
 
-/* Ensure house lines have no dash pattern */
+/* All SVG text defaults to light grey for legibility in the info panels */
+text { fill: #e0e0e0; }
+
+/* House division lines — no dashes */
 line { stroke-dasharray: none; }
 </style>
 """
@@ -210,7 +225,7 @@ def _apply_purple_theme(svg_string):
     return re.sub(r'(<svg\b[^>]*>)', r'\1' + _PURPLE_THEME_CSS, svg_string, count=1)
 
 
-def _scale_planet_glyphs(svg_string, factor=0.75):
+def _scale_planet_glyphs(svg_string, factor=0.85):
     """Scale down planet glyphs inside ChartPoint groups."""
     import re
     # Kerykeion renders natal chart planets at scale(1.0). Reduce to factor.
