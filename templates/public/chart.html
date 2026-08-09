@@ -60,6 +60,20 @@
 
   .section-title { color: var(--accent-light); font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin: 1.5rem 0 0.75rem; }
   .section-title span.star { color: #d4af37; }
+
+  .place-autocomplete { position: relative; }
+  .autocomplete-dropdown {
+    display: none; position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+    background: #241d33; border: 1px solid rgba(212,175,55,0.3); border-radius: 8px;
+    max-height: 220px; overflow-y: auto; z-index: 200;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+  }
+  .autocomplete-item {
+    padding: 0.65rem 1rem; cursor: pointer; font-size: 0.9rem;
+    color: #e0e0e0; border-bottom: 1px solid rgba(255,255,255,0.05);
+  }
+  .autocomplete-item:last-child { border-bottom: none; }
+  .autocomplete-item:hover, .autocomplete-item.active { background: rgba(212,175,55,0.12); color: #fff; }
 </style>
 {% endblock %}
 
@@ -83,10 +97,18 @@
           <input type="time" name="birth_time" required value="{{ form_data.get('birth_time', '') }}"
                  placeholder="HH:MM">
         </div>
-        <div class="form-group" style="flex: 2; min-width: 220px;">
+        <div class="form-group place-autocomplete" style="flex: 2; min-width: 220px;">
           <label>Ciudad y país de nacimiento</label>
-          <input type="text" name="birth_place" required value="{{ form_data.get('birth_place', '') }}"
+          <input type="text" id="place-display" autocomplete="off" required
+                 value="{{ form_data.get('birth_place', '') }}"
                  placeholder="ej. Madrid, España">
+          <input type="hidden" name="birth_place" id="birth-place-hidden"
+                 value="{{ form_data.get('birth_place', '') }}">
+          <input type="hidden" name="birth_lat" id="birth-lat"
+                 value="{{ form_data.get('birth_lat', '') }}">
+          <input type="hidden" name="birth_lng" id="birth-lng"
+                 value="{{ form_data.get('birth_lng', '') }}">
+          <div id="place-dropdown" class="autocomplete-dropdown"></div>
         </div>
       </div>
       <button type="submit" class="btn btn-primary" style="width:100%; padding: 0.85rem; font-size:1rem; margin-top: 0.5rem;">
@@ -182,4 +204,63 @@
 
   {% endif %}
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  var display  = document.getElementById('place-display');
+  var hidden   = document.getElementById('birth-place-hidden');
+  var latInput = document.getElementById('birth-lat');
+  var lngInput = document.getElementById('birth-lng');
+  var dropdown = document.getElementById('place-dropdown');
+  var timer;
+
+  display.addEventListener('input', function () {
+    var q = this.value.trim();
+    hidden.value   = q;   // keep hidden field in sync for fallback geocoding
+    latInput.value = '';  // clear resolved coords — user is editing
+    lngInput.value = '';
+
+    clearTimeout(timer);
+    if (q.length < 2) { dropdown.style.display = 'none'; return; }
+
+    timer = setTimeout(function () {
+      fetch('https://photon.komoot.io/api/?q=' + encodeURIComponent(q) + '&limit=6&lang=es')
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          dropdown.innerHTML = '';
+          if (!data.features || !data.features.length) {
+            dropdown.style.display = 'none'; return;
+          }
+          data.features.forEach(function (f) {
+            var p      = f.properties;
+            var coords = f.geometry.coordinates; // [lng, lat]
+            var parts  = [p.name, p.state, p.country].filter(Boolean);
+            var label  = parts.filter(function (v, i, a) { return a.indexOf(v) === i; }).join(', ');
+
+            var item = document.createElement('div');
+            item.className   = 'autocomplete-item';
+            item.textContent = label;
+            item.addEventListener('mousedown', function (e) {
+              e.preventDefault();
+              display.value  = label;
+              hidden.value   = label;
+              latInput.value = coords[1];
+              lngInput.value = coords[0];
+              dropdown.style.display = 'none';
+            });
+            dropdown.appendChild(item);
+          });
+          dropdown.style.display = 'block';
+        })
+        .catch(function () { dropdown.style.display = 'none'; });
+    }, 300);
+  });
+
+  display.addEventListener('blur', function () {
+    setTimeout(function () { dropdown.style.display = 'none'; }, 200);
+  });
+})();
+</script>
 {% endblock %}

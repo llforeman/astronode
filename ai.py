@@ -13,32 +13,32 @@ _geocode_cache = {}
 
 
 def _geocode(place):
-    """Return (lat, lng) for a place string, with cache + retry on 429."""
-    from geopy.geocoders import Nominatim
-    from geopy.exc import GeocoderRateLimited, GeocoderTimedOut
+    """Return (lat, lng) for a place string, with cache + fallback geocoders."""
+    from geopy.geocoders import Photon, Nominatim
+    from geopy.exc import GeocoderRateLimited, GeocoderTimedOut, GeocoderServiceError
 
     key = place.strip().lower()
     if key in _geocode_cache:
         return _geocode_cache[key]
 
-    geolocator = Nominatim(user_agent='astronode/1.0')
+    # Photon (komoot.io) — OSM-backed, no API key, no strict rate limit
+    # Nominatim kept as fallback only
+    geocoders = [
+        Photon(user_agent='astronode/1.0', timeout=10),
+        Nominatim(user_agent='astronode/1.0', timeout=10),
+    ]
 
-    for attempt in range(4):
+    for geocoder in geocoders:
         try:
-            location = geolocator.geocode(place, timeout=10)
-            if not location:
-                raise ValueError(f'Place not found: {place}')
-            result = (location.latitude, location.longitude)
-            _geocode_cache[key] = result
-            return result
-        except (GeocoderRateLimited, GeocoderTimedOut) as e:
-            if attempt == 3:
-                raise ValueError('Geocoding service is busy — please try again in a moment.') from e
-            wait = 2 ** attempt          # 1 s, 2 s, 4 s
-            log.warning('Geocoder error (%s), retrying in %ds', e, wait)
-            time.sleep(wait)
+            location = geocoder.geocode(place)
+            if location:
+                result = (location.latitude, location.longitude)
+                _geocode_cache[key] = result
+                return result
+        except (GeocoderRateLimited, GeocoderTimedOut, GeocoderServiceError) as e:
+            log.warning('Geocoder %s failed for "%s": %s', type(geocoder).__name__, place, e)
 
-    raise ValueError(f'Could not geocode: {place}')
+    raise ValueError(f'Could not geocode "{place}". Check the city name and try again.')
 
 
 def _get_client():
@@ -100,13 +100,14 @@ def _house_num(val):
     return _HOUSE_NAME_MAP.get(str(val), 1)
 
 
-def _build_chart_kerykeion(birth_date, birth_time, birth_place):
+def _build_chart_kerykeion(birth_date, birth_time, birth_place, lat=None, lng=None):
     import pytz
     import datetime
     from timezonefinder import TimezoneFinder
     from kerykeion import AstrologicalSubject
 
-    lat, lng = _geocode(birth_place)
+    if lat is None or lng is None:
+        lat, lng = _geocode(birth_place)
 
     # Timezone
     tf = TimezoneFinder()
@@ -378,10 +379,10 @@ def _house_group_text(start, end, positions, house_cusps):
 
 # ── Public chart computation (no AI) ──────────────────────────────────────────
 
-def compute_chart(birth_date, birth_time, birth_place):
+def compute_chart(birth_date, birth_time, birth_place, lat=None, lng=None):
     """Compute chart data and SVG image without AI text. Used for the free public chart page."""
     positions, house_cusps, local_dt, lat, lng, subject = \
-        _build_chart_kerykeion(birth_date, birth_time, birth_place)
+        _build_chart_kerykeion(birth_date, birth_time, birth_place, lat=lat, lng=lng)
 
     chart_image = None
     try:

@@ -29,7 +29,19 @@ def chart():
         birth_date_str  = request.form.get('birth_date', '').strip()
         birth_time_str  = request.form.get('birth_time', '').strip()
         birth_place     = request.form.get('birth_place', '').strip()
-        form_data = {'birth_date': birth_date_str, 'birth_time': birth_time_str, 'birth_place': birth_place}
+        birth_lat_str   = request.form.get('birth_lat', '').strip()
+        birth_lng_str   = request.form.get('birth_lng', '').strip()
+
+        try:
+            birth_lat = float(birth_lat_str) if birth_lat_str else None
+            birth_lng = float(birth_lng_str) if birth_lng_str else None
+        except ValueError:
+            birth_lat = birth_lng = None
+
+        form_data = {
+            'birth_date': birth_date_str, 'birth_time': birth_time_str,
+            'birth_place': birth_place, 'birth_lat': birth_lat_str, 'birth_lng': birth_lng_str,
+        }
 
         if not birth_date_str or not birth_time_str or not birth_place:
             error = 'All fields are required.'
@@ -45,7 +57,8 @@ def chart():
             if not error:
                 try:
                     from ai import compute_chart
-                    result = compute_chart(birth_date, birth_time, birth_place)
+                    result = compute_chart(birth_date, birth_time, birth_place,
+                                          lat=birth_lat, lng=birth_lng)
                     result['birth_place'] = birth_place
                     result['birth_date']  = birth_date
                     result['birth_time']  = birth_time
