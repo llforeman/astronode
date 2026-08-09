@@ -15,7 +15,7 @@ _client = None
 # ── Model env vars ─────────────────────────────────────────────────────────────
 _MODEL_PROSE    = os.environ.get('AI_MODEL_PROSE',    os.environ.get('AI_MODEL', 'anthropic/claude-sonnet-4-5'))
 _MODEL_ANALYSIS = os.environ.get('AI_MODEL_ANALYSIS', _MODEL_PROSE)
-_MODEL_CHEAP    = os.environ.get('AI_MODEL_CHEAP',    'anthropic/claude-haiku-4-5-20251001')
+_MODEL_CHEAP    = os.environ.get('AI_MODEL_CHEAP',    _MODEL_PROSE)
 
 # ── Geocoding cache (process-lifetime) ────────────────────────────────────────
 _geocode_cache: dict = {}
