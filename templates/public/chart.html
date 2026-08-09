@@ -13,8 +13,8 @@
   .form-group input:focus { outline: none; border-color: var(--accent); }
   .error-msg { color: #e74c3c; margin-bottom: 1rem; font-size: 0.95rem; }
 
-  .chart-img-wrap { text-align: center; margin-bottom: 2rem; }
-  .chart-img-wrap img { max-width: 100%; border-radius: 10px; box-shadow: 0 0 40px rgba(155,89,182,0.3); }
+  .chart-img-wrap { text-align: center; margin-bottom: 2rem; overflow-x: auto; }
+  .chart-img-wrap svg { max-width: 100%; height: auto; border-radius: 10px; box-shadow: 0 0 40px rgba(155,89,182,0.3); }
 
   table.planets { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
   table.planets th { color: var(--text-muted); text-align: left; padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--border); font-weight: 600; }
@@ -71,7 +71,7 @@
   <!-- Chart image -->
   {% if result.chart_image %}
   <div class="chart-img-wrap">
-    <img src="data:image/png;base64,{{ result.chart_image }}" alt="Carta natal de {{ result.birth_place }}">
+    {{ result.chart_image | safe }}
   </div>
   {% endif %}
 
