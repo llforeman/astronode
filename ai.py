@@ -17,6 +17,9 @@ _MODEL_PROSE    = os.environ.get('AI_MODEL_PROSE',    os.environ.get('AI_MODEL',
 _MODEL_ANALYSIS = os.environ.get('AI_MODEL_ANALYSIS', _MODEL_PROSE)
 _MODEL_CHEAP    = os.environ.get('AI_MODEL_CHEAP',    _MODEL_PROSE)
 
+log.info('Models — prose: %s | analysis: %s | cheap: %s',
+         _MODEL_PROSE, _MODEL_ANALYSIS, _MODEL_CHEAP)
+
 # ── Geocoding cache (process-lifetime) ────────────────────────────────────────
 _geocode_cache: dict = {}
 
@@ -440,7 +443,8 @@ def _extract_tells(n: int, text: str) -> tuple[int, list[str]]:
             model=_MODEL_CHEAP, max_tokens=400, temperature=0.3, json_mode=True)
         got = _json_parse(raw)
         return n, got.get('senales', [])
-    except Exception:
+    except Exception as e:
+        log.warning('_extract_tells ch%d failed: %s', n, e)
         return n, []
 
 
@@ -457,7 +461,8 @@ def _build_index(plan: dict) -> str:
             caps = ', '.join(str(c) for c in entry.get('capitulos', []))
             lines.append(f"**{entry['area']}** (cap. {caps}): {entry['frase']}")
         return '\n'.join(lines)
-    except Exception:
+    except Exception as e:
+        log.warning('_build_index failed: %s', e)
         return ''
 
 
