@@ -391,139 +391,124 @@ def compute_chart(birth_date, birth_time, birth_place, lat=None, lng=None) -> di
 
 # ── Pipeline ───────────────────────────────────────────────────────────────────
 
-def _plan(dossier: dict) -> dict:
-    """One planning call: sees whole dossier, produces theses + beats for all 5 sections."""
-    import prompts as P
-    material_per_cap = {}
-    for spec in P.SECCIONES:
-        sel = P.seleccionar_material(dossier, spec)
-        material_per_cap[spec['n']] = P.formatear_material(sel)
-
-    msg = P.PLANNER_PROMPT.format(
-        dossier=json.dumps(dossier, ensure_ascii=False, indent=2),
-        material=json.dumps(material_per_cap, ensure_ascii=False, indent=2),
-    )
-
-    plan = {}
-    for attempt in range(3):
-        try:
-            raw = _ask(
-                [{'role': 'user', 'content': msg}],
-                model=_MODEL_ANALYSIS, max_tokens=3000, temperature=0.7,
-                json_mode=True)
-            plan = _json_parse(raw)
-            errores = P.validar_plan(plan)
-            if not errores:
-                return plan
-            log.warning('Plan validation failed (attempt %d): %s', attempt + 1, errores)
-        except Exception as e:
-            log.warning('Plan call failed (attempt %d): %s', attempt + 1, e)
-    return plan  # best effort if all attempts had minor issues
+def _build_overall_text(pos_es: dict, house_cusps: dict) -> str:
+    """Full planet list + house cusps — included in every house-group call for context."""
+    ORDER = ['Sun', 'Moon', 'Mercury', 'Venus', 'Mars',
+             'Jupiter', 'Saturn', 'Uranus', 'Neptune', 'Pluto',
+             'Ascendant', 'Medium_Coeli', 'Descendant', 'Imum_Coeli']
+    lines = ['Posiciones planetarias:']
+    for name in ORDER:
+        if name in pos_es:
+            p     = pos_es[name]
+            retro = ' (retrógrado)' if p.get('retrogrado') else ''
+            dig   = f", {p['dignidad']}" if p.get('dignidad') else ''
+            lines.append(
+                f"  {p['planeta_es']}: {p['grado']} — {p['signo']} — "
+                f"Casa {p['casa']}{dig}{retro}")
+    lines.append('')
+    lines.append('Cúspides:')
+    for h in sorted(house_cusps):
+        lines.append(f'  Casa {h}: {house_cusps[h]:.2f}°')
+    return '\n'.join(lines)
 
 
-def _write_chapter(spec: dict, plan_cap: dict, dossier: dict,
-                   enlace_anterior: str, genero: str) -> tuple[int, str]:
-    import prompts as P
-    sel    = P.seleccionar_material(dossier, spec)
-    prompt = P.construir_prompt_escritura(spec, plan_cap, sel, enlace_anterior, genero)
-    raw = _ask(
-        [{'role': 'system', 'content': P.SYSTEM},
-         {'role': 'user',   'content': prompt}],
-        model=_MODEL_PROSE,
-        max_tokens=P.max_tokens_para(spec),
-        temperature=0.85)
-    return spec['n'], raw
+def _build_house_breakdown(houses: list, pos_es: dict, aspects: list) -> str:
+    """House-by-house: planets in each house + intra-house + inter-house aspects."""
+    house_set = set(houses)
+    by_house: dict = {h: [] for h in houses}
+    intra:    dict = {h: [] for h in houses}
+    inter:    dict = {h: [] for h in houses}
 
+    for name, p in pos_es.items():
+        h = p.get('casa')
+        if h in by_house:
+            retro = ' (retrógrado)' if p.get('retrogrado') else ''
+            dig   = f", {p['dignidad']}" if p.get('dignidad') else ''
+            by_house[h].append(
+                f"{p['planeta_es']}: {p['grado']} — {p['signo']}{dig}{retro}")
 
-def _extract_tells(n: int, text: str) -> tuple[int, list[str]]:
-    import prompts as P
-    try:
-        raw = _ask(
-            [{'role': 'user', 'content': P.COMPROBAR_PROMPT.format(chapter=text)}],
-            model=_MODEL_CHEAP, max_tokens=400, temperature=0.3, json_mode=True)
-        got = _json_parse(raw)
-        return n, got.get('senales', [])
-    except Exception as e:
-        log.warning('_extract_tells ch%d failed: %s', n, e)
-        return n, []
-
-
-def _build_index(plan: dict) -> str:
-    import prompts as P
-    try:
-        msg = P.construir_prompt_indice(plan)
-        raw = _ask(
-            [{'role': 'user', 'content': msg}],
-            model=_MODEL_CHEAP, max_tokens=600, temperature=0.3, json_mode=True)
-        got = _json_parse(raw)
-        lines = []
-        for entry in got.get('indice', []):
-            caps = ', '.join(str(c) for c in entry.get('capitulos', []))
-            lines.append(f"**{entry['area']}** (cap. {caps}): {entry['frase']}")
-        return '\n'.join(lines)
-    except Exception as e:
-        log.warning('_build_index failed: %s', e)
-        return ''
-
-
-def _write_all_chapters(dossier: dict, plan: dict,
-                        genero: str) -> tuple[dict[int, str], dict[int, list[str]]]:
-    """All 5 sections in parallel — enlaces come from the plan, not written text."""
-    import prompts as P
-    by_n      = {c['n']: c for c in P.SECCIONES}
-    plan_by_n = {c['n']: c for c in plan.get('capitulos', [])}
-
-    enlace_map: dict[int, str] = {}
-    for cap in plan.get('capitulos', []):
-        enlace_beat = next(
-            (b['contenido'] for b in cap.get('beats', []) if b.get('tipo') == 'enlace'),
-            '')
-        next_n = cap['n'] + 1
-        if next_n in by_n:
-            enlace_map[next_n] = enlace_beat
-
-    def _write(spec):
-        plan_cap        = plan_by_n.get(spec['n'], {})
-        enlace_anterior = enlace_map.get(spec['n'], '')
-        return _write_chapter(spec, plan_cap, dossier, enlace_anterior, genero)
-
-    with ThreadPoolExecutor(max_workers=len(P.SECCIONES)) as ex:
-        results = list(ex.map(_write, [by_n[n] for n in sorted(by_n)]))
-
-    written = {n: txt for n, txt in results}
-
-    # Extract tells in parallel (cheap calls on already-written text)
-    with ThreadPoolExecutor(max_workers=len(written)) as ex:
-        tells_results = list(ex.map(lambda kv: _extract_tells(*kv), written.items()))
-    tells_by_n = dict(tells_results)
-
-    return written, tells_by_n
-
-
-def _assemble(written: dict[int, str], tells_by_n: dict[int, list[str]],
-              index_text: str) -> str:
-    import prompts as P
-    parts = []
-    for spec in P.SECCIONES:
-        n = spec['n']
-        if n not in written:
+    for asp in aspects:
+        h1, h2 = asp.get('casa_a'), asp.get('casa_b')
+        if h1 is None or h2 is None:
             continue
-        block = f"## {spec['titulo']}\n\n{written[n]}"
-        tells = tells_by_n.get(n, [])
-        if tells:
-            tells_fmt = '\n'.join(f'· {t}' for t in tells)
-            block += f"\n\n---\n*Lo que puedes notar en ti:*\n{tells_fmt}"
-        parts.append(block)
+        a1, a2 = h1 in house_set, h2 in house_set
+        if not (a1 or a2):
+            continue
+        s1  = pos_es.get(asp['a'], {}).get('signo', '')
+        s2  = pos_es.get(asp['b'], {}).get('signo', '')
+        txt = (f"{asp['a_es']} ({s1}, Casa {h1}) {asp['aspecto']} "
+               f"{asp['b_es']} ({s2}, Casa {h2}), orbe {asp['orbe']:+.2f}°")
+        if a1 and a2:
+            intra[min(h1, h2)].append(txt)
+        elif a1:
+            inter[h1].append(txt)
+        else:
+            inter[h2].append(txt)
 
-    doc = '\n\n'.join(parts)
-    if index_text:
-        doc += f"\n\n---\n## Por dónde volver\n\n{index_text}"
-    return doc
+    lines = []
+    for h in houses:
+        lines.append(f'Casa {h}:')
+        if by_house[h]:
+            lines.append('  Planetas:')
+            for p in by_house[h]:
+                lines.append(f'    — {p}')
+        else:
+            lines.append('  Sin planetas.')
+        lines.append('  Aspectos intradomiciliarios:')
+        for a in (intra.get(h) or ['(ninguno)']):
+            lines.append(f'    — {a}')
+        lines.append('  Aspectos interdomiciliarios:')
+        for a in (inter.get(h) or ['(ninguno)']):
+            lines.append(f'    — {a}')
+        lines.append('')
+    return '\n'.join(lines)
+
+
+def _call_section(sec: dict, pos_es: dict, aspects: list,
+                  house_cusps: dict) -> tuple[int, str]:
+    import prompts as P
+    n = sec['n']
+    if not sec['casas']:
+        # Section 1: personality snapshot — Sun, Moon, Ascendant
+        data_lines = []
+        for name in ['Sun', 'Moon', 'Ascendant']:
+            if name in pos_es:
+                p     = pos_es[name]
+                retro = ' (retrógrado)' if p.get('retrogrado') else ''
+                dig   = f", {p['dignidad']}" if p.get('dignidad') else ''
+                data_lines.append(
+                    f"  {p['planeta_es']}: {p['grado']} — {p['signo']} — "
+                    f"Casa {p['casa']}{dig}{retro}")
+        msg = P.PROMPT_PERSONALIDAD.format(data='\n'.join(data_lines))
+        raw = _ask([{'role': 'user', 'content': msg}],
+                   model=_MODEL_PROSE, max_tokens=2000, temperature=0.85)
+    else:
+        overall   = _build_overall_text(pos_es, house_cusps)
+        breakdown = _build_house_breakdown(sec['casas'], pos_es, aspects)
+        msg = P.PROMPT_CASAS.format(
+            start=sec['casas'][0], end=sec['casas'][-1],
+            num_casas=len(sec['casas']),
+            overall=overall, breakdown=breakdown)
+        raw = _ask([{'role': 'user', 'content': msg}],
+                   model=_MODEL_PROSE, max_tokens=3000, temperature=0.85)
+    return n, raw
+
+
+def _assemble(results: list) -> str:
+    import prompts as P
+    by_n = dict(results)
+    parts = []
+    for sec in P.SECCIONES:
+        n = sec['n']
+        if n in by_n:
+            parts.append(f"## {sec['titulo']}\n\n{by_n[n]}")
+    return '\n\n'.join(parts)
 
 
 # ── Main entry point ───────────────────────────────────────────────────────────
 
 def generate_horoscope(user, reading_type) -> dict:
+    import prompts as P
     birth_date  = user.birth_date
     birth_time  = user.birth_time
     birth_place = user.birth_place or 'unknown'
@@ -532,36 +517,27 @@ def generate_horoscope(user, reading_type) -> dict:
         _build_chart_kerykeion(birth_date, birth_time, birth_place)
     log.info('Chart built for %s', birth_place)
 
-    # SVG chart
     chart_image = None
     try:
         chart_image = _generate_chart_svg(subject)
     except Exception as e:
         log.warning('Chart SVG generation failed: %s', e)
 
-    # Dossier (deterministic enrichment — no LLM)
     from chart_analysis import build_dossier
     known_time = birth_time is not None
-    dossier = build_dossier(subject, positions, house_cusps,
-                            known_birth_time=known_time)
-    log.info('Dossier built, %d signals', len(dossier.get('senales_principales', [])))
+    dossier    = build_dossier(subject, positions, house_cusps,
+                               known_birth_time=known_time)
+    pos_es     = dossier['posiciones']   # Spanish names, signs, dignity
+    aspects    = dossier['aspectos']     # graded, with casa_a / casa_b
+    log.info('Dossier built, %d aspects', len(aspects))
 
-    # Planner — one call, whole document, produces theses + beats for all 5 sections
-    plan = _plan(dossier)
-    log.info('Plan complete: %s', plan.get('tesis_global', '')[:80])
+    with ThreadPoolExecutor(max_workers=len(P.SECCIONES)) as ex:
+        results = list(ex.map(
+            lambda sec: _call_section(sec, pos_es, aspects, house_cusps),
+            P.SECCIONES))
+    log.info('Sections written: %d', len(results))
 
-    # Gender for grammatical agreement (neutral fallback if not set)
-    genero = getattr(user, 'gender', None) or 'desconocido'
-
-    # Sections — 5 parallel writing calls + parallel tell extraction
-    written, tells_by_n = _write_all_chapters(dossier, plan, genero)
-    log.info('Sections written: %d', len(written))
-
-    # Area index (cheap call, uses plan theses)
-    index_text = _build_index(plan)
-
-    # Concatenate with tells after each chapter and index at end
-    documento = _assemble(written, tells_by_n, index_text)
+    documento = _assemble(results)
     log.info('Document assembled: ~%d words', len(documento.split()))
 
     return {
