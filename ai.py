@@ -8,6 +8,38 @@ log = logging.getLogger(__name__)
 
 _client = None
 
+# ── Geocoding cache (process-lifetime) ────────────────────────────────────────
+_geocode_cache = {}
+
+
+def _geocode(place):
+    """Return (lat, lng) for a place string, with cache + retry on 429."""
+    from geopy.geocoders import Nominatim
+    from geopy.exc import GeocoderRateLimited, GeocoderTimedOut
+
+    key = place.strip().lower()
+    if key in _geocode_cache:
+        return _geocode_cache[key]
+
+    geolocator = Nominatim(user_agent='astronode/1.0')
+
+    for attempt in range(4):
+        try:
+            location = geolocator.geocode(place, timeout=10)
+            if not location:
+                raise ValueError(f'Place not found: {place}')
+            result = (location.latitude, location.longitude)
+            _geocode_cache[key] = result
+            return result
+        except (GeocoderRateLimited, GeocoderTimedOut) as e:
+            if attempt == 3:
+                raise ValueError('Geocoding service is busy — please try again in a moment.') from e
+            wait = 2 ** attempt          # 1 s, 2 s, 4 s
+            log.warning('Geocoder error (%s), retrying in %ds', e, wait)
+            time.sleep(wait)
+
+    raise ValueError(f'Could not geocode: {place}')
+
 
 def _get_client():
     global _client
@@ -71,16 +103,10 @@ def _house_num(val):
 def _build_chart_kerykeion(birth_date, birth_time, birth_place):
     import pytz
     import datetime
-    from geopy.geocoders import Nominatim
     from timezonefinder import TimezoneFinder
     from kerykeion import AstrologicalSubject
 
-    # Geocode
-    geolocator = Nominatim(user_agent='astronode_app')
-    location = geolocator.geocode(birth_place, timeout=10)
-    if not location:
-        raise ValueError(f'Could not geocode: {birth_place}')
-    lat, lng = location.latitude, location.longitude
+    lat, lng = _geocode(birth_place)
 
     # Timezone
     tf = TimezoneFinder()
