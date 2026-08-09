@@ -106,99 +106,95 @@ cuando la conversación ya ha pasado de largo.»
 
 
 # ==========================================================================
-# 2. NINE CHAPTERS — three acts, not a topic list
+# 2. FIVE SECTIONS — organized by house groups, not by planet
 # ==========================================================================
 
-CAPITULOS = [
+# Each section covers a group of houses. Material selection uses house
+# membership (which houses the planets are in) rather than planet identity.
+# casas=[] means the section uses Sun/Moon/ASC directly (personality snapshot).
+
+SECCIONES = [
     dict(
-        n=1, acto=1, palabras=900,
-        titulo="La cara que muestras antes de hablar",
-        pregunta="¿Qué nota la gente en los primeros diez segundos, y en qué "
-                 "se equivoca?",
-        escena="conocer a alguien por primera vez",
+        n=1, palabras=900,
+        titulo="Quién eres",
+        pregunta="¿Cómo te ven desde fuera, cómo lo vives tú por dentro, y "
+                 "dónde no coinciden?",
+        escena="la primera vez que alguien te describe a otra persona y usas "
+               "esa descripción para contrastarte con ella",
         max_factores=3,
-        fuente=["Ascendant", "regente_carta", "planetas_angulares"],
+        casas=[],   # special: Sun, Moon, Ascendant + their mutual aspects
+        fuente_extra=["Sun", "Moon", "Ascendant", "fase_lunar", "regente_carta",
+                      "ranking_prominencia"],
+        nota="Instantánea de identidad. Sol: quién eres. Luna: cómo lo vives. "
+             "Ascendente: cómo te ven. Muestra dónde coinciden y dónde se "
+             "contradicen.",
     ),
     dict(
-        n=2, acto=1, palabras=1100,
-        titulo="Quién eres cuando nadie mira",
-        pregunta="¿Qué hay debajo de esa primera impresión, y por qué no "
-                 "coinciden?",
-        escena="un domingo solo en casa",
-        max_factores=3,
-        fuente=["Sun", "Moon", "fase_lunar"],
+        n=2, palabras=1200,
+        titulo="Tu mundo propio",
+        pregunta="¿Cómo construye esta persona su identidad, sus recursos y "
+                 "su manera de pensar?",
+        escena="un momento a solas con algo que te importa mucho y que casi "
+               "nadie sabe que te importa",
+        max_factores=4,
+        casas=[1, 2, 3],
+        fuente_extra=["Ascendant", "regente_carta"],
+        nota="Casas 1-3: cuerpo e identidad visible (casa 1), recursos y "
+             "valores propios (casa 2), mente y entorno inmediato (casa 3). "
+             "Los aspectos intragrupo operan dentro de esta zona. Los cruzados "
+             "conectan esta zona con otra parte de la vida.",
     ),
     dict(
-        n=3, acto=1, palabras=1000,
-        titulo="Cómo llegas a una conclusión",
-        pregunta="¿Cómo piensa esta persona, y en qué se le nota que piensa "
-                 "así?",
-        escena="una discusión donde tienes razón y no te creen",
-        max_factores=2,
-        fuente=["Mercury"],
+        n=3, palabras=1200,
+        titulo="Raíces y creación",
+        pregunta="¿De dónde viene esta persona y qué crea desde ahí?",
+        escena="una conversación con alguien de tu familia de origen que saca "
+               "a la superficie algo que creías superado",
+        max_factores=4,
+        casas=[4, 5, 6],
+        fuente_extra=["Imum_Coeli"],
+        nota="Casas 4-6: hogar y origen privado (casa 4), expresión creativa "
+             "y deseo (casa 5), salud y trabajo cotidiano (casa 6). "
+             "Los aspectos intragrupo operan dentro de esta zona. Los cruzados "
+             "conectan esta zona con otra parte de la vida.",
     ),
     dict(
-        n=4, acto=2, palabras=1200,
-        titulo="Qué te atrae y qué te asusta de que te atraiga",
-        pregunta="¿Qué quiere esta persona de otra persona, y qué le cuesta "
-                 "admitir que quiere?",
-        escena="la tercera cita, cuando ya no hay guion",
-        max_factores=3,
-        fuente=["Venus", "Descendant"],
+        n=4, palabras=1400,
+        titulo="Vínculos y fondo",
+        pregunta="¿Cómo se relaciona esta persona, y qué hay debajo de esas "
+                 "relaciones que ella misma tarda en ver?",
+        escena="cuando alguien cruza un límite que no habías dicho en voz alta "
+               "y tú tienes que decidir si lo nombras",
+        max_factores=4,
+        casas=[7, 8, 9],
+        fuente_extra=["Descendant"],
+        nota="Casas 7-9: relaciones y socios (casa 7), transformación y "
+             "recursos compartidos (casa 8), filosofía y horizonte (casa 9). "
+             "Los aspectos intragrupo operan dentro de esta zona. Los cruzados "
+             "conectan esta zona con otra parte de la vida.",
     ),
     dict(
-        n=5, acto=2, palabras=1100,
-        titulo="Cómo peleas",
-        pregunta="¿Qué hace esta persona cuando algo se le pone enfrente?",
-        escena="un conflicto que no puedes ganar del todo",
-        max_factores=2,
-        fuente=["Mars"],
-    ),
-    dict(
-        n=6, acto=2, palabras=1100,
-        titulo="Dónde das de más",
-        pregunta="¿En qué se excede esta persona, y por qué le sale gratis "
-                 "hasta que no le sale gratis?",
-        escena="decir que sí a algo que no tienes tiempo de hacer",
-        max_factores=2,
-        fuente=["Jupiter", "Medium_Coeli"],
-    ),
-    dict(
-        n=7, acto=3, palabras=1400,
-        titulo="Aquello con lo que te enseñaron a tener cuidado",
-        pregunta="¿Dónde aprendió esta persona a contenerse, y qué le ha "
-                 "costado esa cautela?",
-        escena="un momento en el que te callaste algo",
-        max_factores=3,
-        fuente=["Saturn"],
-    ),
-    dict(
-        n=8, acto=3, palabras=1400,
-        titulo="El patrón que repites",
-        pregunta="¿Qué situación se le repite a esta persona sin que entienda "
-                 "por qué?",
-        escena="darte cuenta de que ya has estado aquí antes",
-        max_factores=3,
-        fuente=["configuraciones", "aspecto_mas_estrecho"],
-        nota="Solo contactos de Urano, Neptuno o Plutón a planetas personales "
-             "o ángulos. Prohibido hablar de ellos por signo: eso lo comparten "
-             "millones de personas nacidas los mismos años.",
-    ),
-    dict(
-        n=9, acto=3, palabras=1000,
-        titulo="El hilo, y lo que esto no puede decirte",
-        pregunta="¿Qué atraviesa todo lo anterior, y dónde se acaba lo que "
-                 "una carta puede afirmar?",
-        escena=None,
-        max_factores=1,
-        fuente=[],
-        nota="Síntesis, no resumen. No introduzcas ni un dato nuevo de la "
-             "carta. El último tercio es honesto sobre los límites. "
-             "PROHIBIDO el giro de cuarta pared ('no has leído para sentirte "
-             "descrito'): si el lector no se identifica, el final invalida todo "
-             "lo anterior. Cierra sobre la carta, no sobre el acto de leerla.",
+        n=5, palabras=1400,
+        titulo="Misión y sombra",
+        pregunta="¿Qué papel ocupa esta persona en el mundo, y qué lleva "
+                 "consigo que casi nadie ve?",
+        escena="cuando algo que guardabas sale a la superficie sin que lo "
+               "eligieras y tienes que decidir qué hacer con eso",
+        max_factores=4,
+        casas=[10, 11, 12],
+        fuente_extra=["Medium_Coeli", "configuraciones", "aspecto_mas_estrecho",
+                      "planetas_sin_aspectos"],
+        nota="Casas 10-12: carrera y reputación pública (casa 10), comunidad "
+             "y esperanzas (casa 11), lo oculto y el inconsciente (casa 12). "
+             "Los aspectos intragrupo operan dentro de esta zona. Los cruzados "
+             "conectan esta zona con otra parte de la vida. "
+             "PROHIBIDO el giro de cuarta pared. Cierra sobre la carta, no "
+             "sobre el acto de leerla.",
     ),
 ]
+
+# Keep CAPITULOS as alias so any residual references don't crash
+CAPITULOS = SECCIONES
 
 
 # ==========================================================================
@@ -206,29 +202,50 @@ CAPITULOS = [
 # ==========================================================================
 
 def seleccionar_material(dossier: dict, spec: dict) -> dict:
-    """Hard-cap the factors a chapter may use. Ranked, then truncated."""
-    aspectos = [a for a in dossier.get("aspectos", [])
-                if a.get("capitulo") == spec["n"]]
+    """Hard-cap the factors a section may use, organized by house group."""
+    casas = spec.get("casas", [])
 
-    duros   = sorted([a for a in aspectos if a.get("tipo") == "tenso"],
+    if not casas:
+        # Section 1: personality snapshot — Sun, Moon, Ascendant and their
+        # mutual aspects only.
+        nucleos = {"Sun", "Moon", "Ascendant"}
+        all_asp = [a for a in dossier.get("aspectos", [])
+                   if a["a"] in nucleos and a["b"] in nucleos]
+        for a in all_asp:
+            a["tipo_relacion"] = "intra"
+        planetas_en_grupo = {k: v for k, v in dossier.get("posiciones", {}).items()
+                             if k in nucleos}
+    else:
+        # Sections 2-5: filter aspects where at least one planet is in this
+        # section's house group. Mark intra vs cross.
+        casas_set = set(casas)
+        all_asp = []
+        for a in dossier.get("aspectos", []):
+            a_in = a.get("casa_a") in casas_set
+            b_in = a.get("casa_b") in casas_set
+            if a_in or b_in:
+                tagged = dict(a)
+                tagged["tipo_relacion"] = "intra" if (a_in and b_in) else "cruzado"
+                all_asp.append(tagged)
+
+        planetas_en_grupo = {k: v for k, v in dossier.get("posiciones", {}).items()
+                             if v.get("casa") in casas_set}
+
+    duros   = sorted([a for a in all_asp if a.get("tipo") == "tenso"],
                      key=lambda a: a["orbe"])
-    blandos = sorted([a for a in aspectos if a.get("tipo") == "fluido"],
+    blandos = sorted([a for a in all_asp if a.get("tipo") == "fluido"],
                      key=lambda a: a["orbe"])
 
-    elegidos    = (duros + blandos)[: spec["max_factores"]]
-    descartados = [a for a in aspectos if a not in elegidos]
+    elegidos = (duros + blandos)[: spec["max_factores"]]
 
-    posiciones = {k: v for k, v in dossier.get("posiciones", {}).items()
-                  if k in spec.get("fuente", [])}
-
-    extra = {k: dossier[k] for k in spec.get("fuente", [])
-             if k in dossier and k not in posiciones}
+    extra = {k: dossier[k] for k in spec.get("fuente_extra", [])
+             if k in dossier and k not in planetas_en_grupo}
 
     return {
-        "posiciones":        posiciones,
+        "planetas_en_grupo": planetas_en_grupo,
         "aspectos":          elegidos,
         "extra":             extra,
-        "descartados_count": len(descartados),
+        "descartados_count": len(all_asp) - len(elegidos),
     }
 
 
@@ -237,29 +254,31 @@ def seleccionar_material(dossier: dict, spec: dict) -> dict:
 # ==========================================================================
 
 PLANNER_PROMPT = """\
-Eres el editor que planifica un documento astrológico de nueve capítulos \
+Eres el editor que planifica un documento astrológico de cinco secciones \
 sobre una persona. NO escribes prosa. Decides la historia.
 
 DOSIER TÉCNICO
 {dossier}
 
-MATERIAL YA ASIGNADO A CADA CAPÍTULO
+MATERIAL YA ASIGNADO A CADA SECCIÓN
 {material}
 
-Tu trabajo es que los nueve capítulos formen UNA historia, no nueve fichas. \
+Tu trabajo es que las cinco secciones formen UNA historia, no cinco fichas. \
 Eso significa tres cosas:
 
-1. UNA TESIS POR CAPÍTULO. Una sola frase sobre esta persona, en segunda \
-persona, SIN NOMBRAR NINGÚN PLANETA NI SIGNO. Si la tesis necesita nombrar a \
-Saturno para sostenerse, es que no has entendido qué dice Saturno.
+1. UNA TESIS POR SECCIÓN. Una sola frase sobre esta persona, en segunda \
+persona, SIN NOMBRAR NINGÚN PLANETA, SIGNO NI CASA. Si la tesis necesita \
+nombrar a Saturno o la casa 8 para sostenerse, es que no has entendido qué \
+dice ese factor.
 
-2. DEPENDENCIA. Cada capítulo termina dejando una pregunta abierta que el \
-siguiente responde. El capítulo 5 debe ser ilegible fuera de orden. Escribe \
-explícitamente el "enlace" de cada capítulo.
+2. DEPENDENCIA. Cada sección termina dejando una pregunta abierta que la \
+siguiente responde. La sección 4 debe ser ilegible fuera de orden. Escribe \
+explícitamente el "enlace" de cada sección.
 
-3. ESCALADA. Acto 1 (caps 1-3) describe. Acto 2 (caps 4-6) muestra qué quiere \
-y qué le cuesta. Acto 3 (caps 7-9) llega al problema y lo nombra. El documento \
-tiene que ponerse más incómodo, no más simpático.
+3. PROGRESIÓN. Sección 1 muestra quién es. Secciones 2-3 muestran cómo \
+funciona y de dónde viene. Sección 4 muestra cómo se relaciona y qué hay \
+debajo. Sección 5 llega a la misión y a lo que esta persona no ha visto aún. \
+El documento tiene que ponerse más incómodo, no más simpático.
 
 Devuelve JSON con esta forma exacta:
 
@@ -268,7 +287,7 @@ Devuelve JSON con esta forma exacta:
   "capitulos": [
     {{
       "n": 1,
-      "tesis": "Una frase sobre esta persona. Sin planetas ni signos.",
+      "tesis": "Una sola frase sobre esta persona. Sin planetas, signos ni casas.",
       "beats": [
         {{"tipo": "apertura", "contenido": "Qué afirmar. PROHIBIDO mencionar \
 astrología en este beat."}},
@@ -284,20 +303,22 @@ persona puede pillarse a sí misma haciéndolo. NO es un consejo. No digas qué 
 debería hacer: di qué va a notar. Tiene que ser algo que ocurra en menos de \
 un segundo y que se pueda comprobar."}},
         {{"tipo": "enlace", "contenido": "La pregunta que queda abierta para \
-el capítulo siguiente"}}
+la siguiente sección"}}
       ]
     }}
   ]
 }}
 
 REGLAS
-- Nueve capítulos, en orden.
-- Ninguna tesis puede repetir la idea de otra. Si dos capítulos dicen lo \
-mismo, uno de los dos está mal planteado: cámbialo.
+- Cinco secciones, en orden del 1 al 5.
+- Ninguna tesis puede repetir la idea de otra. Si dos secciones dicen lo \
+mismo, una de las dos está mal planteada: cámbiala.
 - Cada beat es una instrucción para el que escribe, no prosa acabada.
-- Si un capítulo no tiene material suficiente para seis beats, dale cuatro. \
+- Si una sección no tiene material suficiente para seis beats, dale cuatro. \
 Es preferible a rellenar.
-- El capítulo 9 no lleva beat de escena.
+- La sección 5 no lleva beat de escena.
+- Los aspectos marcados [cruzado] conectan zonas de la vida distintas: son \
+los que más revelan cómo un área interfiere en otra. Úsalos para eso.
 
 Solo el JSON.
 """
@@ -320,22 +341,22 @@ def validar_plan(plan: dict) -> list[str]:
     """Deterministic gate before a single word is written."""
     errores = []
     caps = plan.get("capitulos", [])
-    if len(caps) != len(CAPITULOS):
-        errores.append(f"faltan capítulos: se esperan {len(CAPITULOS)}, hay {len(caps)}")
+    if len(caps) != len(SECCIONES):
+        errores.append(f"faltan secciones: se esperan {len(SECCIONES)}, hay {len(caps)}")
 
     vistas = []
     for c in caps:
         t = (c.get("tesis") or "").lower()
         if any(w in t for w in _ASTRO):
-            errores.append(f"cap {c.get('n')}: tesis nombra astrología → {t}")
+            errores.append(f"sec {c.get('n')}: tesis nombra astrología → {t}")
         if t in vistas:
-            errores.append(f"cap {c.get('n')}: tesis duplicada")
+            errores.append(f"sec {c.get('n')}: tesis duplicada")
         vistas.append(t)
         tipos = [b.get("tipo") for b in c.get("beats", [])]
-        if c.get("n") != len(CAPITULOS) and "enlace" not in tipos:
-            errores.append(f"cap {c.get('n')}: sin beat de enlace")
+        if c.get("n") != len(SECCIONES) and "enlace" not in tipos:
+            errores.append(f"sec {c.get('n')}: sin beat de enlace")
         if "coste" not in tipos:
-            errores.append(f"cap {c.get('n')}: sin beat de coste")
+            errores.append(f"sec {c.get('n')}: sin beat de coste")
     return errores
 
 
@@ -355,29 +376,35 @@ def max_tokens_para(spec: dict) -> int:
 ESCRIBIR_PROMPT = """\
 {exemplars}
 
-Escribes UN capítulo. Las decisiones narrativas ya están tomadas: no las \
+Escribes UNA sección. Las decisiones narrativas ya están tomadas: no las \
 cambies, ejecútalas.
 
-CAPÍTULO {n} DE 9 — «{titulo}»
-PREGUNTA QUE RESPONDE ESTE CAPÍTULO
+SECCIÓN {n} DE 5 — «{titulo}»
+ZONA DE LA CARTA QUE CUBRE ESTA SECCIÓN
+{nota}
+
+PREGUNTA QUE RESPONDE ESTA SECCIÓN
 {pregunta}
 
-TESIS — todo el capítulo sostiene esta frase y ninguna otra
+TESIS — toda la sección sostiene esta frase y ninguna otra
 {tesis}
 
 BEATS — escribe uno o dos párrafos por beat, EN ESTE ORDEN
 {beats}
 
 MATERIAL DE LA CARTA — solo esto. No uses ningún otro dato.
+Los aspectos marcados [intragrupo] conectan planetas dentro de la misma zona \
+de la vida. Los marcados [cruzado con otra zona] conectan esta zona con otra \
+parte de la vida: son los que más revelan interferencias entre áreas.
 {material}
 
-ESCENA ASIGNADA — la única escena del capítulo
+ESCENA ASIGNADA — la única escena de la sección
 {escena}
 
-DE DÓNDE VIENE EL LECTOR — el capítulo anterior terminó preguntando:
+DE DÓNDE VIENE EL LECTOR — la sección anterior terminó preguntando:
 {enlace_anterior}
 
-CINCO REGLAS QUE ANULAN EL CAPÍTULO SI SE INCUMPLEN
+CINCO REGLAS QUE ANULAN LA SECCIÓN SI SE INCUMPLEN
 1. El primer párrafo no contiene NI UN nombre de planeta, signo, casa o \
 aspecto. Habla de la persona. La carta aparece después.
 2. Ninguna frase empieza por el nombre de un planeta. El sujeto de tus frases \
@@ -401,7 +428,7 @@ segundo, comprobable, imposible de escribir para otra carta.
 
 GÉNERO GRAMATICAL
 Esta persona es: {genero}. Mantén ese género en todos los adjetivos y \
-participios del capítulo. Si es desconocido, escribe en español neutro: evita \
+participios de la sección. Si es desconocido, escribe en español neutro: evita \
 adjetivos con marca de género referidos al lector.
 
 EXTENSIÓN
@@ -420,19 +447,25 @@ def formatear_beats(beats: list[dict]) -> str:
 
 def formatear_material(sel: dict) -> str:
     lineas = []
-    for k, p in sel["posiciones"].items():
+    # Planets in this section's house group (or Sun/Moon/ASC for section 1)
+    planetas = sel.get("planetas_en_grupo") or sel.get("posiciones", {})
+    for k, p in planetas.items():
         lineas.append(
             f"  - {p.get('planeta_es', k)}: {p.get('grado', '')}, "
             f"casa {p.get('casa', '')}"
             + (f", {p['dignidad']}" if p.get("dignidad") else "")
             + (", retrógrado" if p.get("retrogrado") else ""))
     for a in sel["aspectos"]:
+        rel = a.get("tipo_relacion", "")
+        rel_str = (" [intragrupo]" if rel == "intra"
+                   else " [cruzado con otra zona]" if rel == "cruzado"
+                   else "")
         lineas.append(
             f"  - {a['a_es']} {a['aspecto']} {a['b_es']} · orbe {a['orbe']}° "
-            f"· {a['peso']} · {a['tipo']}")
-    if sel["extra"]:
+            f"· {a['peso']} · {a['tipo']}{rel_str}")
+    if sel.get("extra"):
         lineas.append("  - " + json.dumps(sel["extra"], ensure_ascii=False))
-    if sel["descartados_count"]:
+    if sel.get("descartados_count"):
         lineas.append(f"  ({sel['descartados_count']} factores menores "
                       f"descartados a propósito — no los busques)")
     return "\n".join(lineas) or "  (sin material asignado)"
@@ -444,11 +477,12 @@ def construir_prompt_escritura(spec: dict, plan_cap: dict, sel: dict,
     return ESCRIBIR_PROMPT.format(
         exemplars=EXEMPLARS,
         n=spec["n"], titulo=spec["titulo"], pregunta=spec["pregunta"],
+        nota=spec.get("nota", ""),
         tesis=plan_cap.get("tesis", ""),
         beats=formatear_beats(plan_cap.get("beats", [])),
         material=formatear_material(sel),
-        escena=spec.get("escena") or "(este capítulo no lleva escena)",
-        enlace_anterior=enlace_anterior or "(es el primer capítulo)",
+        escena=spec.get("escena") or "(esta sección no lleva escena)",
+        enlace_anterior=enlace_anterior or "(es la primera sección)",
         genero=genero,
         palabras=spec["palabras"],
     )
@@ -486,28 +520,28 @@ Devuelve JSON: {{"senales": ["...", "...", "..."]}}
 # ==========================================================================
 
 AREAS = {
-    "Amor y pareja":    [2, 4, 8],
-    "Amistad y grupo":  [1, 6, 8],
-    "Trabajo y dinero": [3, 6, 7],
-    "Conflicto":        [3, 5],
-    "Soledad":          [2, 7, 9],
+    "Amor y pareja":       [1, 4],
+    "Amistad y grupo":     [2, 5],
+    "Trabajo y propósito": [3, 5],
+    "Conflicto":           [2, 4],
+    "Raíces y soledad":    [1, 3],
 }
 
 INDICE_PROMPT = """\
-Aquí están las tesis de los nueve capítulos de un documento astrológico:
+Aquí están las tesis de las cinco secciones de un documento astrológico:
 
 {tesis}
 
 Escribe el índice por áreas de la vida que cierra el documento. Para cada \
 área, una sola frase que diga qué dice este documento concreto sobre ella y \
-en qué capítulos está.
+en qué secciones está.
 
-Áreas y capítulos donde aparece cada una:
+Áreas y secciones donde aparece cada una:
 {areas}
 
 REGLAS
-- Una frase por área. Sin astrología, sin nombres de planetas.
-- No resumas los capítulos: di qué encontrará el lector si vuelve ahí.
+- Una frase por área. Sin astrología, sin nombres de planetas ni casas.
+- No resumas las secciones: di qué encontrará el lector si vuelve ahí.
 - Segunda persona.
 
 Devuelve JSON: {{"indice": [{{"area": "...", "frase": "...", \
@@ -518,6 +552,6 @@ Devuelve JSON: {{"indice": [{{"area": "...", "frase": "...", \
 def construir_prompt_indice(plan: dict) -> str:
     tesis = "\n".join(f"  {c['n']}. {c.get('tesis', '')}"
                       for c in plan.get("capitulos", []))
-    areas = "\n".join(f"  {k}: capítulos {', '.join(map(str, v))}"
+    areas = "\n".join(f"  {k}: secciones {', '.join(map(str, v))}"
                       for k, v in AREAS.items())
     return INDICE_PROMPT.format(tesis=tesis, areas=areas)

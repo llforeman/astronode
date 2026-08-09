@@ -392,10 +392,10 @@ def compute_chart(birth_date, birth_time, birth_place, lat=None, lng=None) -> di
 # ── Pipeline ───────────────────────────────────────────────────────────────────
 
 def _plan(dossier: dict) -> dict:
-    """One planning call: sees whole dossier, produces theses + beats for all 9 chapters."""
+    """One planning call: sees whole dossier, produces theses + beats for all 5 sections."""
     import prompts as P
     material_per_cap = {}
-    for spec in P.CAPITULOS:
+    for spec in P.SECCIONES:
         sel = P.seleccionar_material(dossier, spec)
         material_per_cap[spec['n']] = P.formatear_material(sel)
 
@@ -468,9 +468,9 @@ def _build_index(plan: dict) -> str:
 
 def _write_all_chapters(dossier: dict, plan: dict,
                         genero: str) -> tuple[dict[int, str], dict[int, list[str]]]:
-    """All 9 chapters in parallel — enlaces come from the plan, not written text."""
+    """All 5 sections in parallel — enlaces come from the plan, not written text."""
     import prompts as P
-    by_n      = {c['n']: c for c in P.CAPITULOS}
+    by_n      = {c['n']: c for c in P.SECCIONES}
     plan_by_n = {c['n']: c for c in plan.get('capitulos', [])}
 
     enlace_map: dict[int, str] = {}
@@ -487,7 +487,7 @@ def _write_all_chapters(dossier: dict, plan: dict,
         enlace_anterior = enlace_map.get(spec['n'], '')
         return _write_chapter(spec, plan_cap, dossier, enlace_anterior, genero)
 
-    with ThreadPoolExecutor(max_workers=len(P.CAPITULOS)) as ex:
+    with ThreadPoolExecutor(max_workers=len(P.SECCIONES)) as ex:
         results = list(ex.map(_write, [by_n[n] for n in sorted(by_n)]))
 
     written = {n: txt for n, txt in results}
@@ -504,11 +504,11 @@ def _assemble(written: dict[int, str], tells_by_n: dict[int, list[str]],
               index_text: str) -> str:
     import prompts as P
     parts = []
-    for spec in P.CAPITULOS:
+    for spec in P.SECCIONES:
         n = spec['n']
         if n not in written:
             continue
-        block = f"## {n:02d}. {spec['titulo']}\n\n{written[n]}"
+        block = f"## {spec['titulo']}\n\n{written[n]}"
         tells = tells_by_n.get(n, [])
         if tells:
             tells_fmt = '\n'.join(f'· {t}' for t in tells)
@@ -546,16 +546,16 @@ def generate_horoscope(user, reading_type) -> dict:
                             known_birth_time=known_time)
     log.info('Dossier built, %d signals', len(dossier.get('senales_principales', [])))
 
-    # Planner — one call, whole document, produces theses + beats for all 9 chapters
+    # Planner — one call, whole document, produces theses + beats for all 5 sections
     plan = _plan(dossier)
     log.info('Plan complete: %s', plan.get('tesis_global', '')[:80])
 
     # Gender for grammatical agreement (neutral fallback if not set)
     genero = getattr(user, 'gender', None) or 'desconocido'
 
-    # Chapters — 9 parallel writing calls + parallel tell extraction
+    # Sections — 5 parallel writing calls + parallel tell extraction
     written, tells_by_n = _write_all_chapters(dossier, plan, genero)
-    log.info('Chapters written: %d', len(written))
+    log.info('Sections written: %d', len(written))
 
     # Area index (cheap call, uses plan theses)
     index_text = _build_index(plan)

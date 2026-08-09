@@ -77,17 +77,6 @@ OWNER_RANK = {
     "Uranus": 9, "Neptune": 9, "Pluto": 9,
 }
 
-CHAPTER_OF_POINT = {
-    "Ascendant": 1,
-    "Sun": 2, "Moon": 2, "Imum_Coeli": 2,
-    "Mercury": 3,
-    "Venus": 4, "Descendant": 4,
-    "Mars": 5,
-    "Jupiter": 6, "Medium_Coeli": 6, "MC": 6,
-    "Saturn": 7,
-    "Uranus": 8, "Neptune": 8, "Pluto": 8,
-}
-
 # (name, angle, max_orb)
 ACTIVE_ASPECTS = [
     ("conjunction",  0,   8),
@@ -201,7 +190,8 @@ def _compute_graded_aspects(pos: dict) -> list[dict]:
                     "tier": tier,
                     "peso": peso,
                     "movimiento": "separativo",   # simplified; applying needs ephemeris velocity
-                    "capitulo": CHAPTER_OF_POINT.get(owner, 10),
+                    "casa_a": pos.get(n1, {}).get("house"),
+                    "casa_b": pos.get(n2, {}).get("house"),
                     "condicionado_por": other,
                 })
                 break   # one aspect per pair
