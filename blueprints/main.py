@@ -37,6 +37,8 @@ def profile():
                 flash('Invalid birth time.')
                 return render_template('main/profile.html')
         current_user.birth_place = birth_place or None
+        gender = request.form.get('gender', '').strip()
+        current_user.gender = gender if gender in ('masculino', 'femenino') else None
         db.session.commit()
         flash('Profile updated.')
         return redirect(url_for('main.profile'))
