@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Dev Generate Reading{% endblock %}
+
+{% block content %}
+<div style="max-width:560px; margin:80px auto; padding:0 1.5rem;">
+  <h1 style="font-size:1.6rem; margin-bottom:.5rem;">Generate reading (dev mode)</h1>
+  <p style="color:var(--text-muted); margin-bottom:2rem;">
+    This bypasses Stripe and Redis. The request will block for several minutes while
+    the AI pipeline runs. Do not close or refresh the tab.
+  </p>
+
+  <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:10px; padding:1.5rem; margin-bottom:2rem;">
+    <div style="display:flex; gap:1rem; margin-bottom:.75rem;">
+      <span style="color:var(--text-muted); min-width:100px;">Name</span>
+      <strong>{{ current_user.name or current_user.email }}</strong>
+    </div>
+    <div style="display:flex; gap:1rem; margin-bottom:.75rem;">
+      <span style="color:var(--text-muted); min-width:100px;">Birth date</span>
+      <strong>{{ current_user.birth_date }}</strong>
+    </div>
+    <div style="display:flex; gap:1rem;">
+      <span style="color:var(--text-muted); min-width:100px;">Birth place</span>
+      <strong>{{ current_user.birth_place }}</strong>
+    </div>
+  </div>
+
+  <form method="POST" onsubmit="this.querySelector('button').disabled=true; this.querySelector('button').textContent='Generating… (may take 5–10 min)';">
+    <button type="submit" class="btn btn-primary" style="width:100%; padding:.85rem; font-size:1rem;">
+      Generate my reading →
+    </button>
+  </form>
+
+  <p style="margin-top:1.25rem; font-size:.85rem; color:var(--text-muted); text-align:center;">
+    DEV_SKIP_PAYMENT is active &mdash; no charge will be made.
+  </p>
+</div>
+{% endblock %}

@@ -1,9 +1,14 @@
+import os
+from datetime import datetime
+
 from flask import Blueprint, render_template, redirect, url_for, request, jsonify, flash, abort
 from flask_login import login_required, current_user
 from extensions import db, limiter
 from models import Reading, ReadingType
 
 readings_bp = Blueprint('readings', __name__, url_prefix='/readings')
+
+_DEV = os.environ.get('DEV_SKIP_PAYMENT', '').lower() in ('1', 'true', 'yes')
 
 
 @readings_bp.route('/')
@@ -32,15 +37,16 @@ def request_reading(reading_type_id):
         return redirect(url_for('main.profile'))
 
     # Check if this type requires payment
-    if rtype.price_cents and rtype.min_tier == 'free':
-        return redirect(url_for('billing.checkout_reading', reading_type_id=reading_type_id))
+    if not _DEV:
+        if rtype.price_cents and rtype.min_tier == 'free':
+            return redirect(url_for('billing.checkout_reading', reading_type_id=reading_type_id))
 
-    # Check tier access
-    tier_order = ['free', 'basic', 'vip']
-    user_tier_idx = tier_order.index(current_user.tier) if current_user.tier in tier_order else 0
-    min_tier_idx  = tier_order.index(rtype.min_tier) if rtype.min_tier in tier_order else 0
-    if user_tier_idx < min_tier_idx:
-        return redirect(url_for('billing.pricing'))
+        # Check tier access
+        tier_order = ['free', 'basic', 'vip']
+        user_tier_idx = tier_order.index(current_user.tier) if current_user.tier in tier_order else 0
+        min_tier_idx  = tier_order.index(rtype.min_tier) if rtype.min_tier in tier_order else 0
+        if user_tier_idx < min_tier_idx:
+            return redirect(url_for('billing.pricing'))
 
     reading = Reading(user_id=current_user.id, reading_type_id=rtype.id)
     db.session.add(reading)
@@ -58,3 +64,54 @@ def request_reading(reading_type_id):
 def status(reading_id):
     reading = Reading.query.filter_by(id=reading_id, user_id=current_user.id).first_or_404()
     return jsonify({'status': reading.status})
+
+
+@readings_bp.route('/dev-generate', methods=['GET', 'POST'])
+@login_required
+def dev_generate():
+    """Synchronous dev route — no Stripe, no Redis. Only active when DEV_SKIP_PAYMENT=1."""
+    if not _DEV:
+        abort(404)
+
+    if not current_user.birth_date or not current_user.birth_place:
+        flash('Complete your birth data in your profile first.')
+        return redirect(url_for('main.profile'))
+
+    if request.method == 'GET':
+        return render_template('readings/dev_generate.html')
+
+    # Ensure a reading type exists
+    rtype = ReadingType.query.filter_by(active=True).first()
+    if not rtype:
+        rtype = ReadingType(
+            name='Carta Natal Completa',
+            description='Interpretación completa de tu carta natal con IA.',
+            price_cents=999,
+            min_tier='free',
+            active=True,
+        )
+        db.session.add(rtype)
+        db.session.commit()
+
+    # Create the reading record
+    reading = Reading(user_id=current_user.id, reading_type_id=rtype.id,
+                      status='generating')
+    db.session.add(reading)
+    db.session.commit()
+
+    # Generate synchronously (blocks — takes a few minutes)
+    try:
+        from ai import generate_horoscope
+        result = generate_horoscope(current_user, rtype)
+        reading.content      = result['text']
+        reading.chart_image  = result.get('chart_image')
+        reading.status       = 'completed'
+        reading.completed_at = datetime.utcnow()
+    except Exception as e:
+        reading.status = 'failed'
+        db.session.commit()
+        flash(f'Generation failed: {e}')
+        return redirect(url_for('readings.index'))
+
+    db.session.commit()
+    return redirect(url_for('readings.view', reading_id=reading.id))
