@@ -25,18 +25,44 @@
     body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; min-height: 100vh; }
     a { color: var(--accent-light); text-decoration: none; }
     a:hover { text-decoration: underline; }
-    nav.topnav { background: var(--bg2); border-bottom: 1px solid var(--border); padding: 1rem 2rem; display: flex; align-items: center; justify-content: space-between; }
+    nav.topnav { background: var(--bg2); border-bottom: 1px solid var(--border); padding: 1rem 2rem; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 50; }
     nav.topnav .logo { font-size: 1.3rem; font-weight: 700; color: var(--accent-light); letter-spacing: 2px; }
     nav.topnav .logo span.star { color: var(--gold); }
     nav.topnav .nav-links { display: flex; gap: 1.5rem; align-items: center; }
+    nav.topnav .nav-links a:not(.btn) { color: var(--text-muted); font-size: 0.9rem; }
+    nav.topnav .nav-links a:not(.btn):hover { color: var(--text); text-decoration: none; }
+    .nav-mobile { display: none; gap: 0.75rem; align-items: center; }
+    @media (max-width: 640px) {
+      nav.topnav .nav-links { display: none; }
+      .nav-mobile { display: flex; }
+    }
     .container { max-width: 960px; margin: 0 auto; padding: 2rem 1rem; }
-    .btn { display: inline-block; padding: 0.6rem 1.5rem; border-radius: 8px; border: none; cursor: pointer; font-size: 1rem; font-weight: 500; letter-spacing: 0.4px; transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s; text-decoration: none; }
+    .btn { display: inline-block; padding: 0.6rem 1.5rem; border-radius: 8px; border: none; cursor: pointer; font-size: 0.95rem; font-weight: 500; letter-spacing: 0.4px; transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s; text-decoration: none; }
     .btn-primary { background: linear-gradient(135deg, #7c5295 0%, #5d3876 100%); border: 1px solid rgba(255,255,255,0.1); color: #fff; }
     .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(124,82,149,0.45); color: #fff; text-decoration: none; }
     .btn-outline { background: transparent; color: var(--accent-light); border: 1px solid var(--accent); }
     .btn-outline:hover { transform: translateY(-2px); text-decoration: none; }
     .flash { padding: 0.75rem 1rem; border-radius: 6px; margin-bottom: 1rem; background: var(--border); color: var(--text); max-width: 960px; margin: 0 auto 1rem; }
     .theme-toggle { background: none; border: 1px solid var(--border); color: var(--text-muted); padding: 0.3rem 0.7rem; border-radius: 6px; cursor: pointer; }
+    /* Footer */
+    footer.site-footer { border-top: 1px solid var(--border); padding: 3rem 2rem 2rem; margin-top: 4rem; }
+    .footer-inner { max-width: 1100px; margin: 0 auto; display: grid; grid-template-columns: 1fr auto auto; gap: 2rem; align-items: start; }
+    @media (max-width: 640px) { .footer-inner { grid-template-columns: 1fr; gap: 1.5rem; } }
+    .footer-brand { font-size: 1.1rem; font-weight: 700; color: var(--accent-light); letter-spacing: 2px; }
+    .footer-brand span { color: var(--gold); }
+    .footer-links { display: flex; flex-direction: column; gap: 0.5rem; }
+    .footer-links a { font-size: 0.85rem; color: var(--text-muted); }
+    .footer-links a:hover { color: var(--text); text-decoration: none; }
+    .footer-legal { display: flex; flex-direction: column; gap: 0.5rem; }
+    .footer-legal a { font-size: 0.85rem; color: var(--text-muted); }
+    .footer-legal a:hover { color: var(--text); text-decoration: none; }
+    .footer-copy { font-size: 0.75rem; color: var(--text-muted); margin-top: 2rem; }
+    /* Autocomplete shared styles */
+    .place-autocomplete { position: relative; }
+    .autocomplete-dropdown { display: none; position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: #241d33; border: 1px solid rgba(212,175,55,0.3); border-radius: 8px; max-height: 220px; overflow-y: auto; z-index: 200; box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
+    .autocomplete-item { padding: 0.65rem 1rem; cursor: pointer; font-size: 0.9rem; color: #e0e0e0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+    .autocomplete-item:last-child { border-bottom: none; }
+    .autocomplete-item:hover { background: rgba(212,175,55,0.12); color: #fff; }
   </style>
   {% block extra_css %}{% endblock %}
 </head>
@@ -44,10 +70,20 @@
   <nav class="topnav">
     <a href="{{ url_for('public.landing') }}" class="logo"><span class="star">✦</span> ASTRONODE</a>
     <div class="nav-links">
-      <a href="{{ url_for('public.chart') }}">Carta Natal</a>
-      <a href="{{ url_for('public.pricing') }}">Pricing</a>
-      <a href="{{ url_for('auth.login') }}">Log in</a>
-      <a href="{{ url_for('auth.register') }}" class="btn btn-primary">Get started</a>
+      {% if current_user.is_authenticated %}
+        <a href="#sample">A sample</a>
+        <a href="#contents">What's inside</a>
+        <a href="{{ url_for('main.dashboard') }}" class="btn btn-primary">Dashboard →</a>
+      {% else %}
+        <a href="#sample">A sample</a>
+        <a href="#contents">What's inside</a>
+        <a href="{{ url_for('auth.login') }}">Sign in</a>
+        <a href="{{ url_for('auth.register') }}" class="btn btn-primary">Draw my chart →</a>
+      {% endif %}
+      <button class="theme-toggle" onclick="toggleTheme()">◐</button>
+    </div>
+    <div class="nav-mobile">
+      <a href="{{ url_for('auth.register') }}" class="btn btn-primary" style="font-size:0.85rem; padding:0.45rem 1rem;">Draw my chart →</a>
       <button class="theme-toggle" onclick="toggleTheme()">◐</button>
     </div>
   </nav>
@@ -63,5 +99,28 @@
     }
   </script>
   {% block extra_js %}{% endblock %}
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <div>
+        <div class="footer-brand"><span>✦</span> ASTRONODE</div>
+        <p style="font-size:0.8rem; color:var(--text-muted); margin-top:0.5rem; max-width:220px;">AI-powered natal chart readings. Personalized, in-depth, in your language.</p>
+        <p class="footer-copy">© 2026 Astronode. All rights reserved.</p>
+      </div>
+      <div class="footer-links">
+        <strong style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px;">Product</strong>
+        <a href="#sample">A sample</a>
+        <a href="#contents">What's inside</a>
+        <a href="#how">How it works</a>
+        <a href="{{ url_for('public.chart') }}">Free chart</a>
+        <a href="{{ url_for('public.pricing') }}">Pricing</a>
+      </div>
+      <div class="footer-legal">
+        <strong style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px;">Legal</strong>
+        <a href="/privacy">Privacy</a>
+        <a href="/terms">Terms</a>
+        <a href="/refunds">Refunds</a>
+      </div>
+    </div>
+  </footer>
 </body>
 </html>

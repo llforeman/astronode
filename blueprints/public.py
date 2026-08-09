@@ -18,6 +18,21 @@ def pricing():
     return render_template('public/pricing.html')
 
 
+@public_bp.route('/privacy')
+def privacy():
+    return render_template('public/legal.html', title='Privacy Policy', body='Privacy policy coming soon.')
+
+
+@public_bp.route('/terms')
+def terms():
+    return render_template('public/legal.html', title='Terms of Service', body='Terms of service coming soon.')
+
+
+@public_bp.route('/refunds')
+def refunds():
+    return render_template('public/legal.html', title='Refund Policy', body='Refund policy coming soon.')
+
+
 @public_bp.route('/chart', methods=['GET', 'POST'])
 @limiter.limit("20 per hour")
 def chart():

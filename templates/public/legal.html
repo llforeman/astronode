@@ -1,0 +1,8 @@
+{% extends "public_base.html" %}
+{% block title %}{{ title }} — Astronode{% endblock %}
+{% block content %}
+<div class="container" style="max-width:700px; padding-top:3rem; padding-bottom:4rem;">
+  <h1 style="color:var(--accent-light); margin-bottom:2rem;">{{ title }}</h1>
+  <p style="color:var(--text-muted); line-height:1.7;">{{ body }}</p>
+</div>
+{% endblock %}
