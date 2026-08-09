@@ -99,19 +99,30 @@ def dev_generate():
     db.session.add(reading)
     db.session.commit()
 
-    # Generate synchronously (blocks — takes a few minutes)
-    try:
-        from ai import generate_horoscope
-        result = generate_horoscope(current_user, rtype)
-        reading.content      = result['text']
-        reading.chart_image  = result.get('chart_image')
-        reading.status       = 'completed'
-        reading.completed_at = datetime.utcnow()
-    except Exception as e:
-        reading.status = 'failed'
-        db.session.commit()
-        flash(f'Generation failed: {e}')
-        return redirect(url_for('readings.index'))
+    # Run in a background thread so the browser isn't holding the connection open
+    reading_id = reading.id
+    user_id    = current_user.id
 
-    db.session.commit()
+    def _run(app, rid, uid, rt):
+        with app.app_context():
+            from ai import generate_horoscope
+            from models import Reading, User
+            r = Reading.query.get(rid)
+            u = User.query.get(uid)
+            try:
+                result = generate_horoscope(u, rt)
+                r.content      = result['text']
+                r.chart_image  = result.get('chart_image')
+                r.status       = 'completed'
+                r.completed_at = datetime.utcnow()
+            except Exception as e:
+                r.status = 'failed'
+                print(f'[dev-generate] generation failed: {e}')
+            db.session.commit()
+
+    import threading
+    from flask import current_app
+    t = threading.Thread(target=_run, args=(current_app._get_current_object(), reading_id, user_id, rtype), daemon=True)
+    t.start()
+
     return redirect(url_for('readings.view', reading_id=reading.id))
