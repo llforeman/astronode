@@ -34,7 +34,7 @@ def refunds():
 
 
 @public_bp.route('/chart', methods=['GET', 'POST'])
-@limiter.limit("20 per hour")
+@limiter.limit("200 per hour")
 def chart():
     result     = None
     error      = None
