@@ -103,11 +103,20 @@ def dev_generate():
     reading_id = reading.id
     user_id    = current_user.id
 
-    def _run(app, rid, uid, rt):
+    def _run(app, rid, uid, rtid):
         with app.app_context():
             from ai import generate_horoscope
-            from models import Reading, User
-            u = User.query.get(uid)
+            from models import Reading, User, ReadingType
+            u  = User.query.get(uid)
+            rt = ReadingType.query.get(rtid)
+
+            # Detach objects from the session and close the connection while it
+            # is still alive. This prevents "MySQL server has gone away" when the
+            # LLM pipeline runs for several minutes with no DB activity.
+            db.session.expunge(u)
+            db.session.expunge(rt)
+            db.session.close()
+
             try:
                 result = generate_horoscope(u, rt)
                 status = 'completed'
@@ -116,9 +125,7 @@ def dev_generate():
                 status = 'failed'
                 print(f'[dev-generate] generation failed: {e}')
 
-            # Release the stale connection held during LLM generation,
-            # then re-fetch the reading with a fresh connection to commit.
-            db.session.remove()
+            # Fresh connection for the save.
             r = Reading.query.get(rid)
             r.status = status
             if result:
@@ -129,7 +136,7 @@ def dev_generate():
 
     import threading
     from flask import current_app
-    t = threading.Thread(target=_run, args=(current_app._get_current_object(), reading_id, user_id, rtype), daemon=True)
+    t = threading.Thread(target=_run, args=(current_app._get_current_object(), reading_id, user_id, rtype.id), daemon=True)
     t.start()
 
     return redirect(url_for('readings.view', reading_id=reading.id))
