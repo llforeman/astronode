@@ -132,11 +132,11 @@ def _build_chart_kerykeion(birth_date, birth_time, birth_place):
 _PURPLE_THEME_CSS = """
 <style>
 :root, svg {
-  /* ── Backgrounds ──────────────────────────────────── */
+  /* ── Backgrounds ── */
   --kerykeion-chart-color-paper-0: #0d0d1a;
   --kerykeion-chart-color-paper-1: #13101e;
 
-  /* ── Zodiac sign backgrounds — two close deep purples alternating ── */
+  /* ── Zodiac segments — two close deep purples alternating ── */
   --kerykeion-chart-color-zodiac-bg-0:  #1a1525;
   --kerykeion-chart-color-zodiac-bg-1:  #221c30;
   --kerykeion-chart-color-zodiac-bg-2:  #1a1525;
@@ -150,7 +150,7 @@ _PURPLE_THEME_CSS = """
   --kerykeion-chart-color-zodiac-bg-10: #1a1525;
   --kerykeion-chart-color-zodiac-bg-11: #221c30;
 
-  /* ── Zodiac sign icons — soft lavender, legible on dark segments ── */
+  /* ── Zodiac sign icons — soft lavender ── */
   --kerykeion-chart-color-zodiac-icon-0:  #c39bd3;
   --kerykeion-chart-color-zodiac-icon-1:  #c39bd3;
   --kerykeion-chart-color-zodiac-icon-2:  #c39bd3;
@@ -169,48 +169,75 @@ _PURPLE_THEME_CSS = """
   --kerykeion-chart-color-zodiac-radix-ring-1: #a08535;
   --kerykeion-chart-color-zodiac-radix-ring-2: #8a7020;
 
-  /* ── House division lines — muted slate, no dash ── */
+  /* ── House division lines — muted slate ── */
   --kerykeion-chart-color-houses-radix-line: #6b637d;
 
-  /* ── All planets unified — crisp off-white for max contrast ── */
-  --kerykeion-chart-color-sun:     #f8f9fa;
-  --kerykeion-chart-color-moon:    #f8f9fa;
-  --kerykeion-chart-color-mercury: #f8f9fa;
-  --kerykeion-chart-color-venus:   #f8f9fa;
-  --kerykeion-chart-color-mars:    #f8f9fa;
-  --kerykeion-chart-color-jupiter: #f8f9fa;
-  --kerykeion-chart-color-saturn:  #f8f9fa;
-  --kerykeion-chart-color-uranus:  #f8f9fa;
-  --kerykeion-chart-color-neptune: #f8f9fa;
-  --kerykeion-chart-color-pluto:   #f8f9fa;
+  /* ── House numbers — gold ── */
+  --kerykeion-chart-color-house-number: #d4af37;
 
-  /* Nodes, Lilith, Chiron etc. also off-white */
-  --kerykeion-chart-color-mean-node:  #f8f9fa;
-  --kerykeion-chart-color-true-node:  #f8f9fa;
-  --kerykeion-chart-color-chiron:     #f8f9fa;
-  --kerykeion-chart-color-mean-lilith: #f8f9fa;
+  /* ── All planets — crisp off-white ── */
+  --kerykeion-chart-color-sun:      #f8f9fa;
+  --kerykeion-chart-color-moon:     #f8f9fa;
+  --kerykeion-chart-color-mercury:  #f8f9fa;
+  --kerykeion-chart-color-venus:    #f8f9fa;
+  --kerykeion-chart-color-mars:     #f8f9fa;
+  --kerykeion-chart-color-jupiter:  #f8f9fa;
+  --kerykeion-chart-color-saturn:   #f8f9fa;
+  --kerykeion-chart-color-uranus:   #f8f9fa;
+  --kerykeion-chart-color-neptune:  #f8f9fa;
+  --kerykeion-chart-color-pluto:    #f8f9fa;
+  --kerykeion-chart-color-mean-node: #f8f9fa;
+  --kerykeion-chart-color-true-node: #f8f9fa;
 
-  /* ── Angles (ASC/MC/DC/IC) — gold to match rings ── */
+  /* ── Chiron and Lilith — hidden via transparent color ── */
+  --kerykeion-chart-color-chiron:      transparent;
+  --kerykeion-chart-color-mean-lilith: transparent;
+  --kerykeion-chart-color-true-lilith: transparent;
+
+  /* ── Angles (ASC/MC/DC/IC) — gold ── */
   --kerykeion-chart-color-first-house:   #d4af37;
   --kerykeion-chart-color-tenth-house:   #d4af37;
   --kerykeion-chart-color-seventh-house: #d4af37;
   --kerykeion-chart-color-fourth-house:  #d4af37;
 
-  /* ── Aspect lines — muted pastels, not neon ── */
-  --kerykeion-chart-color-aspect-conjunction: #e0d0f5;
-  --kerykeion-chart-color-aspect-opposition:  #e07a5f;
-  --kerykeion-chart-color-aspect-trine:       #88d4b0;
-  --kerykeion-chart-color-aspect-square:      #e07a5f;
-  --kerykeion-chart-color-aspect-sextile:     #8ecae6;
-  --kerykeion-chart-color-aspect-quintile:         #c9b8e8;
-  --kerykeion-chart-color-aspect-bi-quintile:      #c9b8e8;
-  --kerykeion-chart-color-aspect-semi-sextile:     #a8c8d8;
-  --kerykeion-chart-color-aspect-semi-square:      #d4906a;
-  --kerykeion-chart-color-aspect-sesqui-square:    #d4906a;
-  --kerykeion-chart-color-aspect-quincunx:         #b8a8d8;
+  /* ── Major aspects — muted pastels ── */
+  --kerykeion-chart-color-conjunction: #d8c8f8;
+  --kerykeion-chart-color-sextile:     #8ecae6;
+  --kerykeion-chart-color-square:      #e8907a;
+  --kerykeion-chart-color-trine:       #88d4b0;
+  --kerykeion-chart-color-opposition:  #e8907a;
+
+  /* ── Minor aspects — transparent (removed from view) ── */
+  --kerykeion-chart-color-semi-sextile:   transparent;
+  --kerykeion-chart-color-semi-square:    transparent;
+  --kerykeion-chart-color-quintile:       transparent;
+  --kerykeion-chart-color-sesquiquadrate: transparent;
+  --kerykeion-chart-color-biquintile:     transparent;
+  --kerykeion-chart-color-quincunx:       transparent;
+
+  /* ── Element percentages — pastel tones ── */
+  --kerykeion-chart-color-fire-percentage:    #f4a87c;
+  --kerykeion-chart-color-earth-percentage:   #a8c090;
+  --kerykeion-chart-color-air-percentage:     #8ecae6;
+  --kerykeion-chart-color-water-percentage:   #b8a8e8;
+
+  /* ── Quality/modality percentages ── */
+  --kerykeion-chart-color-cardinal-percentage: #88d4b0;
+  --kerykeion-chart-color-fixed-percentage:    #e8cc84;
+  --kerykeion-chart-color-mutable-percentage:  #e8a08c;
 }
 
-/* All SVG text defaults to light grey for legibility in the info panels */
+/* ── Hide all info panels — only the Full_Wheel remains ── */
+[kr\:node="Top_Left_Text"],
+[kr\:node="Bottom_Left_Text"],
+[kr\:node="Elements_Percentages"],
+[kr\:node="Qualities_Percentages"],
+[kr\:node="Houses_And_Planets_Grid"],
+[kr\:node="Aspect_Grid"],
+[kr\:node="Aspect_List"],
+[kr\:node="Lunar_Phase"] { display: none; }
+
+/* Fallback text color for any unstyled text elements */
 text { fill: #e0e0e0; }
 
 /* House division lines — no dashes */
@@ -221,8 +248,14 @@ line { stroke-dasharray: none; }
 
 def _apply_purple_theme(svg_string):
     import re
-    # Inject style block right after the opening <svg ...> tag
-    return re.sub(r'(<svg\b[^>]*>)', r'\1' + _PURPLE_THEME_CSS, svg_string, count=1)
+    svg_string = re.sub(r'(<svg\b[^>]*>)', r'\1' + _PURPLE_THEME_CSS, svg_string, count=1)
+    # Crop SVG to wheel square — panels are hidden via CSS so this removes dead space
+    m = re.search(r'<svg\b[^>]+\bwidth=["\'](\d+(?:\.\d+)?)["\']', svg_string)
+    if m:
+        w = m.group(1)
+        svg_string = re.sub(r'(<svg\b[^>]*\bheight=)["\'][\d. ]+["\']', rf'\g<1>"{w}"', svg_string)
+        svg_string = re.sub(r'(<svg\b[^>]*\bviewBox=)["\'][\d. ]+["\']', rf'\g<1>"0 0 {w} {w}"', svg_string)
+    return svg_string
 
 
 def _scale_planet_glyphs(svg_string, factor=0.85):
