@@ -71,6 +71,7 @@ def generate_reading_task(reading_id):
         # 4. Re-fetch and write
         reading = Reading.query.get(reading_id)
         reading.content      = result['text']
+        reading.chart_image  = result.get('chart_image')
         reading.status       = 'completed'
         reading.completed_at = datetime.utcnow()
         db.session.commit()

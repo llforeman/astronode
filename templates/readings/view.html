@@ -9,6 +9,12 @@
     {% if reading.sent_by_email %} · ✉ sent to your email{% endif %}
   </p>
   {% if reading.status == 'completed' and reading.content %}
+    {% if reading.chart_image %}
+    <div class="card" style="text-align:center; padding: 1rem; margin-bottom: 1rem;">
+      <img src="data:image/png;base64,{{ reading.chart_image }}"
+           alt="Carta Natal" style="max-width:100%; border-radius:8px;">
+    </div>
+    {% endif %}
     <div class="card" style="line-height: 1.8; white-space: pre-wrap;">{{ reading.content }}</div>
   {% elif reading.status == 'generating' %}
     <div class="card" style="text-align:center; padding: 3rem;">

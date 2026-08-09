@@ -19,3 +19,6 @@ geopy==2.4.1
 timezonefinder==5.2.0
 pytz==2024.1
 flatlib==0.2.3
+pyswisseph==2.10.3.2
+matplotlib==3.9.2
+numpy==1.26.4

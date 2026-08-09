@@ -64,6 +64,7 @@ class Reading(db.Model):
     reading_type_id = db.Column(db.Integer, db.ForeignKey('reading_type.id'), nullable=False)
     status          = db.Column(db.String(20), default='pending')  # pending | generating | completed | failed
     content         = db.Column(db.Text, nullable=True)            # generated horoscope text
+    chart_image     = db.Column(db.MediumText, nullable=True)     # base64 encoded PNG
     sent_by_email   = db.Column(db.Boolean, default=False)
     job_id          = db.Column(db.String(255), nullable=True)
     created_at      = db.Column(db.DateTime, default=datetime.utcnow)
