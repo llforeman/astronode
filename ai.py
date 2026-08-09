@@ -229,10 +229,17 @@ _PURPLE_THEME_CSS = """
   --kerykeion-chart-color-mutable-percentage:  #e8a08c;
 }
 
-/* Info panel text — muted grey, sits quietly behind the wheel */
-text { fill: #a0a0b0; }
+/* Hide all info panels — wheel only */
+[kr\:node="Top_Left_Text"],
+[kr\:node="Bottom_Left_Text"],
+[kr\:node="Elements_Percentages"],
+[kr\:node="Qualities_Percentages"],
+[kr\:node="Houses_And_Planets_Grid"],
+[kr\:node="Aspect_Grid"],
+[kr\:node="Aspect_List"],
+[kr\:node="Lunar_Phase"] { display: none; }
 
-/* House division lines — no dashes */
+text { fill: #e0e0e0; }
 line { stroke-dasharray: none; }
 </style>
 """
@@ -240,7 +247,14 @@ line { stroke-dasharray: none; }
 
 def _apply_purple_theme(svg_string):
     import re
-    return re.sub(r'(<svg\b[^>]*>)', r'\1' + _PURPLE_THEME_CSS, svg_string, count=1)
+    svg_string = re.sub(r'(<svg\b[^>]*>)', r'\1' + _PURPLE_THEME_CSS, svg_string, count=1)
+    # Crop to wheel square — panels are hidden so this removes the empty space below
+    m = re.search(r'<svg\b[^>]+\bwidth=["\'](\d+(?:\.\d+)?)["\']', svg_string)
+    if m:
+        w = m.group(1)
+        svg_string = re.sub(r'(<svg\b[^>]*\bheight=)["\'][\d. ]+["\']', rf'\g<1>"{w}"', svg_string)
+        svg_string = re.sub(r'(<svg\b[^>]*\bviewBox=)["\'][\d. ]+["\']', rf'\g<1>"0 0 {w} {w}"', svg_string)
+    return svg_string
 
 
 def _scale_planet_glyphs(svg_string, factor=0.85):
