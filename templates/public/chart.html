@@ -5,16 +5,43 @@
 {% block extra_css %}
 <style>
   .chart-wrap { max-width: 860px; margin: 0 auto; padding: 2rem 1rem; }
-  .form-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 2rem; margin-bottom: 2rem; }
-  .form-row { display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; }
+  .form-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-top: 1px solid var(--gold-dim);
+    border-radius: 12px;
+    padding: 2.5rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  }
+  .form-row { display: flex; gap: 1.25rem; flex-wrap: wrap; margin-bottom: 1.5rem; }
   .form-group { display: flex; flex-direction: column; flex: 1; min-width: 180px; }
-  .form-group label { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.4rem; }
-  .form-group input { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 0.6rem 0.8rem; color: var(--text); font-size: 1rem; }
-  .form-group input:focus { outline: none; border-color: var(--accent); }
+  .form-group label {
+    font-size: 0.72rem;
+    color: #b3a9c4;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+  }
+  .form-group input {
+    background: #241d33;
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    color: #fff;
+    font-size: 1rem;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .form-group input:focus {
+    outline: none;
+    border-color: #d4af37;
+    box-shadow: 0 0 0 2px rgba(212,175,55,0.2);
+  }
   .error-msg { color: #e74c3c; margin-bottom: 1rem; font-size: 0.95rem; }
 
   .chart-img-wrap { text-align: center; margin-bottom: 2rem; overflow-x: auto; }
-  .chart-img-wrap svg { max-width: 100%; height: auto; border-radius: 10px; box-shadow: 0 0 40px rgba(155,89,182,0.3); }
+  .chart-img-wrap svg { max-width: 100%; height: auto; border-radius: 12px; box-shadow: 0 0 60px rgba(212,175,55,0.15), 0 0 30px rgba(155,89,182,0.25); }
 
   table.planets { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
   table.planets th { color: var(--text-muted); text-align: left; padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--border); font-weight: 600; }
@@ -31,13 +58,14 @@
   .cta-banner p { color: var(--text-muted); margin-bottom: 1.5rem; max-width: 500px; margin-left: auto; margin-right: auto; }
   .cta-actions { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
 
-  .section-title { color: var(--accent-light); font-size: 1rem; font-weight: 600; margin: 1.5rem 0 0.75rem; }
+  .section-title { color: var(--accent-light); font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin: 1.5rem 0 0.75rem; }
+  .section-title span.star { color: #d4af37; }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="chart-wrap">
-  <h1 style="color: var(--accent-light); margin-bottom: 0.5rem;">✦ Tu Carta Natal Gratuita</h1>
+  <h1 style="color: var(--accent-light); margin-bottom: 0.5rem;"><span style="color:#d4af37;">✦</span> Tu Carta Natal Gratuita</h1>
   <p style="color: var(--text-muted); margin-bottom: 2rem;">Introduce tus datos de nacimiento para calcular tu carta natal al instante. Sin registro.</p>
 
   <!-- Form -->
@@ -61,7 +89,7 @@
                  placeholder="ej. Madrid, España">
         </div>
       </div>
-      <button type="submit" class="btn btn-primary" style="width:100%; padding: 0.75rem; font-size:1rem;">
+      <button type="submit" class="btn btn-primary" style="width:100%; padding: 0.85rem; font-size:1rem; margin-top: 0.5rem;">
         Calcular carta natal →
       </button>
     </form>

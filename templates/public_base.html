@@ -13,8 +13,9 @@
   </script>
   <style>
     :root[data-theme="dark"] {
-      --bg: #0d0d1a; --bg2: #151528; --text: #e8e0f0; --text-muted: #8a7fa0;
-      --accent: #9b59b6; --accent-light: #c39bd3; --border: #2a2a45; --card: #1a1a30;
+      --bg: #0d0d1a; --bg2: #13101e; --text: #e8e0f0; --text-muted: #8a7fa0;
+      --accent: #9b59b6; --accent-light: #c39bd3; --border: #2a2a45; --card: #1a1525;
+      --gold: #d4af37; --gold-dim: rgba(212,175,55,0.25);
     }
     :root[data-theme="light"] {
       --bg: #f5f0ff; --bg2: #ffffff; --text: #1a0a2e; --text-muted: #6b5b80;
@@ -26,12 +27,14 @@
     a:hover { text-decoration: underline; }
     nav.topnav { background: var(--bg2); border-bottom: 1px solid var(--border); padding: 1rem 2rem; display: flex; align-items: center; justify-content: space-between; }
     nav.topnav .logo { font-size: 1.3rem; font-weight: 700; color: var(--accent-light); letter-spacing: 2px; }
+    nav.topnav .logo span.star { color: var(--gold); }
     nav.topnav .nav-links { display: flex; gap: 1.5rem; align-items: center; }
     .container { max-width: 960px; margin: 0 auto; padding: 2rem 1rem; }
-    .btn { display: inline-block; padding: 0.6rem 1.5rem; border-radius: 6px; border: none; cursor: pointer; font-size: 1rem; transition: all 0.2s; text-decoration: none; }
-    .btn-primary { background: var(--accent); color: #fff; }
-    .btn-primary:hover { background: var(--accent-light); color: #fff; text-decoration: none; }
+    .btn { display: inline-block; padding: 0.6rem 1.5rem; border-radius: 8px; border: none; cursor: pointer; font-size: 1rem; font-weight: 500; letter-spacing: 0.4px; transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s; text-decoration: none; }
+    .btn-primary { background: linear-gradient(135deg, #7c5295 0%, #5d3876 100%); border: 1px solid rgba(255,255,255,0.1); color: #fff; }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(124,82,149,0.45); color: #fff; text-decoration: none; }
     .btn-outline { background: transparent; color: var(--accent-light); border: 1px solid var(--accent); }
+    .btn-outline:hover { transform: translateY(-2px); text-decoration: none; }
     .flash { padding: 0.75rem 1rem; border-radius: 6px; margin-bottom: 1rem; background: var(--border); color: var(--text); max-width: 960px; margin: 0 auto 1rem; }
     .theme-toggle { background: none; border: 1px solid var(--border); color: var(--text-muted); padding: 0.3rem 0.7rem; border-radius: 6px; cursor: pointer; }
   </style>
@@ -39,7 +42,7 @@
 </head>
 <body>
   <nav class="topnav">
-    <a href="{{ url_for('public.landing') }}" class="logo">✦ ASTRONODE</a>
+    <a href="{{ url_for('public.landing') }}" class="logo"><span class="star">✦</span> ASTRONODE</a>
     <div class="nav-links">
       <a href="{{ url_for('public.chart') }}">Carta Natal</a>
       <a href="{{ url_for('public.pricing') }}">Pricing</a>
