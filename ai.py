@@ -388,125 +388,81 @@ def compute_chart(birth_date, birth_time, birth_place, lat=None, lng=None) -> di
 
 # ── Pipeline ───────────────────────────────────────────────────────────────────
 
-def _brief(dossier: dict) -> dict:
+def _plan(dossier: dict) -> dict:
+    """One planning call: sees whole dossier, produces theses + beats for all 9 chapters."""
     import prompts as P
-    slim = {k: v for k, v in dossier.items() if not k.startswith('_')}
-    raw = _ask(
-        [{'role': 'system', 'content': P.SYSTEM},
-         {'role': 'user',   'content': P.BRIEF_PROMPT.format(
-             dossier=json.dumps(slim, ensure_ascii=False, indent=2))}],
-        model=_MODEL_ANALYSIS, max_tokens=2000, temperature=0.6, json_mode=True)
-    return _json_parse(raw)
+    material_per_cap = {}
+    for spec in P.CAPITULOS:
+        sel = P.seleccionar_material(dossier, spec)
+        material_per_cap[spec['n']] = P.formatear_material(sel)
+
+    msg = P.PLANNER_PROMPT.format(
+        dossier=json.dumps(dossier, ensure_ascii=False, indent=2),
+        material=json.dumps(material_per_cap, ensure_ascii=False, indent=2),
+    )
+
+    plan = {}
+    for attempt in range(3):
+        try:
+            raw = _ask(
+                [{'role': 'user', 'content': msg}],
+                model=_MODEL_ANALYSIS, max_tokens=3000, temperature=0.7,
+                json_mode=True)
+            plan = _json_parse(raw)
+            errores = P.validar_plan(plan)
+            if not errores:
+                return plan
+            log.warning('Plan validation failed (attempt %d): %s', attempt + 1, errores)
+        except Exception as e:
+            log.warning('Plan call failed (attempt %d): %s', attempt + 1, e)
+    return plan  # best effort if all attempts had minor issues
 
 
-def _one_chapter(spec: dict, dossier: dict, brf: dict, ledger: list[str]) -> tuple[int, str]:
+def _write_chapter(spec: dict, plan_cap: dict, dossier: dict,
+                   enlace_anterior: str) -> tuple[int, str]:
     import prompts as P
-    msg = P.build_chapter_prompt(spec, dossier, brf, ledger)
+    sel    = P.seleccionar_material(dossier, spec)
+    prompt = P.construir_prompt_escritura(spec, plan_cap, sel, enlace_anterior)
     txt = _ask(
         [{'role': 'system', 'content': P.SYSTEM},
-         {'role': 'user',   'content': msg}],
+         {'role': 'user',   'content': prompt}],
         model=_MODEL_PROSE,
         max_tokens=int(spec['palabras'] * 2.2),
         temperature=0.85)
     return spec['n'], txt
 
 
-def _extract_claims(chapter_text: str) -> list[str]:
+def _write_all_chapters(dossier: dict, plan: dict) -> dict[int, str]:
+    """All 9 chapters in parallel — enlaces come from the plan, not from written text."""
     import prompts as P
-    try:
-        raw = _ask(
-            [{'role': 'user', 'content': P.LEDGER_PROMPT.format(chapter=chapter_text)}],
-            model=_MODEL_CHEAP, max_tokens=800, temperature=0.2, json_mode=True)
-        got = _json_parse(raw)
-        return got if isinstance(got, list) else []
-    except Exception:
-        return []   # ledger is best-effort, never fatal
+    by_n      = {c['n']: c for c in P.CAPITULOS}
+    plan_by_n = {c['n']: c for c in plan.get('capitulos', [])}
 
+    # Pre-compute enlace_anterior for each chapter from the plan beats
+    enlace_map: dict[int, str] = {}
+    for cap in plan.get('capitulos', []):
+        enlace_beat = next(
+            (b['contenido'] for b in cap.get('beats', []) if b.get('tipo') == 'enlace'),
+            '')
+        next_n = cap['n'] + 1
+        if next_n in by_n:
+            enlace_map[next_n] = enlace_beat
 
-def _chapters(dossier: dict, brf: dict) -> dict[int, str]:
-    import prompts as P
-    WAVE_A = [1, 2, 3, 8, 10]
-    WAVE_B = [4, 5, 6, 7, 9, 11]
-    by_n   = {c['n']: c for c in P.CHAPTERS}
-    written: dict[int, str] = {}
-    ledger:  list[str] = []
+    def _write(spec):
+        plan_cap        = plan_by_n.get(spec['n'], {})
+        enlace_anterior = enlace_map.get(spec['n'], '')
+        return _write_chapter(spec, plan_cap, dossier, enlace_anterior)
 
-    for wave in (WAVE_A, WAVE_B):
-        specs    = [by_n[n] for n in wave]
-        snapshot = list(ledger)
+    with ThreadPoolExecutor(max_workers=len(P.CAPITULOS)) as ex:
+        results = list(ex.map(_write, [by_n[n] for n in sorted(by_n)]))
 
-        with ThreadPoolExecutor(max_workers=len(specs)) as ex:
-            results = list(ex.map(
-                lambda s: _one_chapter(s, dossier, brf, snapshot), specs))
-
-        for n, txt in results:
-            written[n] = txt
-
-        with ThreadPoolExecutor(max_workers=len(results)) as ex:
-            claim_sets = list(ex.map(lambda r: _extract_claims(r[1]), results))
-        for cs in claim_sets:
-            ledger.extend(cs)
-
-    return written
-
-
-def _check_chapter(n: int, text: str) -> dict:
-    import prompts as P
-    try:
-        raw = _ask(
-            [{'role': 'user', 'content': P.QA_CHAPTER_PROMPT.format(chapter=text)}],
-            model=_MODEL_ANALYSIS, max_tokens=900, temperature=0.2, json_mode=True)
-        r = _json_parse(raw)
-        r['capitulo'] = n
-        return r
-    except Exception:
-        return {'capitulo': n, 'veredicto': 'publicable', '_qa_failed': True}
-
-
-def _repair_chapter(spec: dict, text: str, report: dict) -> str:
-    import prompts as P
-    msg = P.REPAIR_PROMPT.format(
-        chapter=text,
-        problemas=json.dumps(report, ensure_ascii=False, indent=2),
-        palabras=spec['palabras'])
-    return _ask(
-        [{'role': 'system', 'content': P.SYSTEM},
-         {'role': 'user',   'content': msg}],
-        model=_MODEL_PROSE,
-        max_tokens=int(spec['palabras'] * 2.2),
-        temperature=0.75)
-
-
-def _qa_and_repair(written: dict[int, str], dossier: dict, brf: dict,
-                   max_rounds: int = 1) -> tuple[dict[int, str], list[dict]]:
-    import prompts as P
-    by_n    = {c['n']: c for c in P.CHAPTERS}
-    reports: list[dict] = []
-
-    for _ in range(max_rounds):
-        with ThreadPoolExecutor(max_workers=6) as ex:
-            checks = list(ex.map(
-                lambda kv: _check_chapter(*kv), sorted(written.items())))
-        reports = checks
-        bad = [c for c in checks if c.get('veredicto') == 'regenerar']
-        if not bad:
-            break
-        with ThreadPoolExecutor(max_workers=min(len(bad), 6)) as ex:
-            fixed = list(ex.map(
-                lambda c: (c['capitulo'],
-                           _repair_chapter(by_n[c['capitulo']],
-                                           written[c['capitulo']], c)),
-                bad))
-        for n, txt in fixed:
-            written[n] = txt
-
-    return written, reports
+    return {n: txt for n, txt in results}
 
 
 def _assemble(written: dict[int, str]) -> str:
     import prompts as P
     parts = []
-    for spec in P.CHAPTERS:
+    for spec in P.CAPITULOS:
         n = spec['n']
         if n in written:
             parts.append(f"## {n:02d}. {spec['titulo']}\n\n{written[n]}")
@@ -538,19 +494,13 @@ def generate_horoscope(user, reading_type) -> dict:
                             known_birth_time=known_time)
     log.info('Dossier built, %d signals', len(dossier.get('senales_principales', [])))
 
-    # Brief — analytical spine
-    brf = _brief(dossier)
-    log.info('Brief complete: %s', brf.get('hilo_conductor', '')[:80])
+    # Planner — one call, whole document, produces theses + beats for all 9 chapters
+    plan = _plan(dossier)
+    log.info('Plan complete: %s', plan.get('tesis_global', '')[:80])
 
-    # Chapters — 11 calls in 2 parallel waves
-    written = _chapters(dossier, brf)
+    # Chapters — 9 parallel writing calls, each executing pre-decided beats
+    written = _write_all_chapters(dossier, plan)
     log.info('Chapters written: %d', len(written))
-
-    # QA + targeted repair (1 round max to stay within job timeout)
-    written, qa_reports = _qa_and_repair(written, dossier, brf, max_rounds=1)
-    failed = [r['capitulo'] for r in qa_reports if r.get('veredicto') == 'regenerar']
-    if failed:
-        log.warning('Chapters still failing QA after repair: %s', failed)
 
     # Concatenate
     documento = _assemble(written)

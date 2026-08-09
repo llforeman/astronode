@@ -78,11 +78,14 @@ OWNER_RANK = {
 }
 
 CHAPTER_OF_POINT = {
-    "Ascendant": 2, "Sun": 3, "Moon": 4, "Mercury": 5, "Venus": 6,
-    "Mars": 7, "Saturn": 8, "Jupiter": 9,
-    "Uranus": 10, "Neptune": 10, "Pluto": 10,
-    "Medium_Coeli": 9, "MC": 9,
-    "Descendant": 6, "Imum_Coeli": 4,
+    "Ascendant": 1,
+    "Sun": 2, "Moon": 2, "Imum_Coeli": 2,
+    "Mercury": 3,
+    "Venus": 4, "Descendant": 4,
+    "Mars": 5,
+    "Jupiter": 6, "Medium_Coeli": 6, "MC": 6,
+    "Saturn": 7,
+    "Uranus": 8, "Neptune": 8, "Pluto": 8,
 }
 
 # (name, angle, max_orb)

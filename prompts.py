@@ -1,14 +1,18 @@
 """
 prompts.py
 
-Everything the model is told. Three stages:
-  1. BRIEF     — one analytical call, no prose. Produces the spine.
-  2. CHAPTERS  — 11 calls, 2 parallel waves, each with assigned factors.
-  3. QA/REPAIR — per-chapter quality gate and targeted rewrite if needed.
+Storytelling layer. Two stages:
+  1. PLANNER  — one call, whole document, no prose. Produces theses + beats.
+  2. CHAPTERS — 9 parallel writing calls, each executing pre-decided beats.
 
-The system prompt is the single highest-leverage artefact in the pipeline.
-Facts vary per person; voice must not vary at all.
+No ledger, no QA/repair. The planner prevents repetition upstream;
+seleccionar_material caps what each writer can see.
 """
+
+from __future__ import annotations
+import json
+from typing import Any
+
 
 # ==========================================================================
 # 1. SYSTEM PROMPT — sent with every generation call
@@ -101,304 +105,322 @@ cuando la conversación ya ha pasado de largo.»
 
 
 # ==========================================================================
-# 2. BRIEF — stage 2. Analytical, not prose. Produces the spine.
+# 2. NINE CHAPTERS — three acts, not a topic list
 # ==========================================================================
+# Chapters are questions about the reader's life. Planets are evidence
+# marshalled to answer them, never the subject of the chapter.
+#
+# 'escena' assigned deterministically — the model cannot reuse scenes.
+# 'max_factores' hard cap. Selection is what makes writing feel authored.
 
-BRIEF_PROMPT = """\
-Aquí está el dosier técnico de una carta natal, ya calculado y jerarquizado.
-
-{dossier}
-
-NO escribas prosa todavía. Analiza y devuelve un JSON con esta forma exacta:
-
-{{
-  "tensiones_centrales": [
-    "Dos o tres tensiones estructurales de esta carta, en una frase cada una. \
-Una tensión es un conflicto entre dos funciones, no una descripción."
-  ],
-  "hilo_conductor": "Una sola frase: el tema que atraviesa toda la carta. \
-Debe apoyarse en el regente, el aspecto más estrecho o la configuración \
-principal.",
-  "lo_que_quiere": "Qué busca esta persona, en una frase.",
-  "lo_que_lo_impide": "Qué se lo impide, en una frase. Debe salir de un \
-aspecto tenso concreto.",
-  "contradiccion_principal": "Dos cosas de esta carta que no encajan entre \
-sí. No la resuelvas.",
-  "lo_que_no_es": [
-    "Dos o tres afirmaciones NEGATIVAS: cosas que la gente asumiría de esta \
-persona y que la carta desmiente."
-  ],
-  "riesgo_generico": "Qué parte de esta carta es la más banal y corre más \
-riesgo de producir texto que valdría para cualquiera. Nómbrala para evitarla."
-}}
-
-Solo el JSON. Sin preámbulo, sin markdown, sin ```.
-"""
-
-
-# ==========================================================================
-# 3. CHAPTERS — the structure
-# ==========================================================================
-# 'factores' are the dossier keys this chapter owns.
-# Aspects are routed here automatically by chart_analysis (campo 'capitulo').
-
-CHAPTERS = [
+CAPITULOS = [
     dict(
-        n=1, palabras=800,
-        titulo="La forma del conjunto",
-        encargo=(
-            "Capítulo de apertura. NO empieces por el Sol ni por el "
-            "Ascendente. Describe la carta como una figura: dónde se "
-            "concentra, qué hemisferio pesa, qué elemento falta, qué "
-            "planetas están sobre los ángulos, qué stelliums hay. La "
-            "ausencia es información. El objetivo es que el lector piense "
-            "'esto no es un horóscopo' en la segunda página."),
-        factores=["elementos", "modalidades", "elementos_ausentes",
-                  "hemisferios", "stelliums", "planetas_angulares",
-                  "ranking_prominencia", "retrogrados", "fase_lunar",
-                  "planetas_sin_aspectos"],
-    ),
-    dict(
-        n=2, palabras=1400,
+        n=1, acto=1, palabras=900,
         titulo="La cara que muestras antes de hablar",
-        encargo=(
-            "Ascendente y regente de la carta. El regente es lo importante: "
-            "es el hilo conductor de todo el documento, y aquí es donde se "
-            "presenta. Incluye la cadena de dispositores si dice algo. "
-            "Planetas angulares en casa 1."),
-        factores=["regente_carta", "cadena_dispositores", "planetas_angulares"],
-        puntos=["Ascendant"],
+        pregunta="¿Qué nota la gente en los primeros diez segundos, y en qué "
+                 "se equivoca?",
+        escena="conocer a alguien por primera vez",
+        max_factores=3,
+        fuente=["Ascendant", "regente_carta", "planetas_angulares"],
     ),
     dict(
-        n=3, palabras=1300,
-        titulo="El motor de debajo",
-        encargo=(
-            "Sol: signo, casa, aspectos, dignidad, y su relación con la fase "
-            "lunar (el ángulo Sol-Luna dice si esta persona se vive como una "
-            "cosa o como tres). Menciona al regente del Sol."),
-        factores=["fase_lunar"],
-        puntos=["Sun"],
+        n=2, acto=1, palabras=1100,
+        titulo="Quién eres cuando nadie mira",
+        pregunta="¿Qué hay debajo de esa primera impresión, y por qué no "
+                 "coinciden?",
+        escena="un domingo solo en casa",
+        max_factores=3,
+        fuente=["Sun", "Moon", "fase_lunar"],
     ),
     dict(
-        n=4, palabras=1300,
-        titulo="Lo que necesitas para estar en casa",
-        encargo=(
-            "Luna: signo, casa, aspectos, condición. Aquí van los aspectos de "
-            "Saturno o de los exteriores a la Luna: se viven como una "
-            "condición emocional, no como un dato sobre Saturno. Fondo del "
-            "Cielo si tiene contactos."),
-        puntos=["Moon", "Imum_Coeli"],
+        n=3, acto=1, palabras=1000,
+        titulo="Cómo llegas a una conclusión",
+        pregunta="¿Cómo piensa esta persona, y en qué se le nota que piensa "
+                 "así?",
+        escena="una discusión donde tienes razón y no te creen",
+        max_factores=2,
+        fuente=["Mercury"],
     ),
     dict(
-        n=5, palabras=1200,
-        titulo="Cómo funciona tu cabeza",
-        encargo=(
-            "Mercurio: signo, casa, aspectos, retrogradación si la hay, "
-            "velocidad respecto al Sol. Cómo piensa y cómo habla, que no son "
-            "lo mismo."),
-        puntos=["Mercury"],
+        n=4, acto=2, palabras=1200,
+        titulo="Qué te atrae y qué te asusta de que te atraiga",
+        pregunta="¿Qué quiere esta persona de otra persona, y qué le cuesta "
+                 "admitir que quiere?",
+        escena="la tercera cita, cuando ya no hay guion",
+        max_factores=3,
+        fuente=["Venus", "Descendant"],
     ),
     dict(
-        n=6, palabras=1400,
-        titulo="El amor, el deseo y lo que te parece bello",
-        encargo=(
-            "Venus: signo, casa, aspectos, dignidad. Descendente y casa 7. "
-            "Si Venus y Marte se aspectan, el aspecto se explica aquí o en el "
-            "capítulo 7, nunca en los dos."),
-        puntos=["Venus", "Descendant"],
+        n=5, acto=2, palabras=1100,
+        titulo="Cómo peleas",
+        pregunta="¿Qué hace esta persona cuando algo se le pone enfrente?",
+        escena="un conflicto que no puedes ganar del todo",
+        max_factores=2,
+        fuente=["Mars"],
     ),
     dict(
-        n=7, palabras=1300,
-        titulo="Cómo vas a por lo que quieres",
-        encargo=(
-            "Marte: signo, casa, aspectos. Cómo discute, cómo se enfada, cómo "
-            "empieza cosas. Presta atención especial al aspecto tenso más "
-            "estrecho que haga Marte."),
-        puntos=["Mars"],
+        n=6, acto=2, palabras=1100,
+        titulo="Dónde das de más",
+        pregunta="¿En qué se excede esta persona, y por qué le sale gratis "
+                 "hasta que no le sale gratis?",
+        escena="decir que sí a algo que no tienes tiempo de hacer",
+        max_factores=2,
+        fuente=["Jupiter", "Medium_Coeli"],
     ),
     dict(
-        n=8, palabras=1600,
-        titulo="Lo que has venido a dominar",
-        encargo=(
-            "Saturno: casa, signo, aspectos, dignidad. Suele ser el centro "
-            "emocional del documento: dale el espacio más largo. Habla de lo "
-            "que a esta persona le enseñaron a tener cuidado, y de qué le "
-            "cuesta esa cautela."),
-        puntos=["Saturn"],
+        n=7, acto=3, palabras=1400,
+        titulo="Aquello con lo que te enseñaron a tener cuidado",
+        pregunta="¿Dónde aprendió esta persona a contenerse, y qué le ha "
+                 "costado esa cautela?",
+        escena="un momento en el que te callaste algo",
+        max_factores=3,
+        fuente=["Saturn"],
     ),
     dict(
-        n=9, palabras=1200,
-        titulo="En qué eres bueno y qué te cuesta",
-        encargo=(
-            "Júpiter: casa, signo, aspectos. NO lo escribas como 'dónde está "
-            "tu suerte' — eso es promesa de horóscopo. Escríbelo como dónde "
-            "esta persona se excede, dónde da de más, dónde su virtud se le "
-            "va de las manos. Medio Cielo si tiene contactos."),
-        puntos=["Jupiter", "Medium_Coeli"],
-    ),
-    dict(
-        n=10, palabras=1600,
+        n=8, acto=3, palabras=1400,
         titulo="El patrón que repites",
-        encargo=(
-            "El capítulo estructural. Configuración principal y su apex (el "
-            "apex suele ser el problema central de la persona). Contactos de "
-            "Urano, Neptuno y Plutón A PLANETAS PERSONALES O ÁNGULOS "
-            "únicamente. Nodos. Quirón.\n"
-            "PROHIBIDO hablar de Urano, Neptuno o Plutón por signo: eso lo "
-            "comparten millones de personas nacidas en los mismos años y no "
-            "dice nada de este individuo. Solo son personales por aspecto, "
-            "por casa o por ser apex."),
-        factores=["configuraciones", "aspecto_mas_estrecho"],
-        puntos=["Uranus", "Neptune", "Pluto"],
+        pregunta="¿Qué situación se le repite a esta persona sin que entienda "
+                 "por qué?",
+        escena="darte cuenta de que ya has estado aquí antes",
+        max_factores=3,
+        fuente=["configuraciones", "aspecto_mas_estrecho"],
+        nota="Solo contactos de Urano, Neptuno o Plutón a planetas personales "
+             "o ángulos. Prohibido hablar de ellos por signo: eso lo comparten "
+             "millones de personas nacidas los mismos años.",
     ),
     dict(
-        n=11, palabras=900,
+        n=9, acto=3, palabras=1000,
         titulo="El hilo, y lo que esto no puede decirte",
-        encargo=(
-            "Síntesis. Recoge el hilo conductor del brief y muéstralo "
-            "atravesando los capítulos anteriores. No resumas: cierra.\n"
-            "El último tercio del capítulo debe ser honesto sobre los límites: "
-            "que una carta describe disposiciones, no destinos; que nada de "
-            "esto determina decisiones; que dos personas con cartas casi "
-            "idénticas llevan vidas completamente distintas. Sin ironía y sin "
-            "desdecirse: es el capítulo que la gente cita a sus amigos."),
-        factores=["hilo_conductor"],
+        pregunta="¿Qué atraviesa todo lo anterior, y dónde se acaba lo que "
+                 "una carta puede afirmar?",
+        escena=None,
+        max_factores=1,
+        fuente=[],
+        nota="Síntesis, no resumen. No introduzcas ni un dato nuevo de la "
+             "carta. El último tercio es honesto sobre los límites.",
     ),
 ]
 
 
-CHAPTER_PROMPT = """\
-{exemplars}
+# ==========================================================================
+# 3. DETERMINISTIC MATERIAL SELECTION
+# ==========================================================================
 
-DOSIER TÉCNICO COMPLETO DE LA CARTA
-(lo tienes entero para no contradecirte, pero solo escribes sobre lo asignado)
+def seleccionar_material(dossier: dict, spec: dict) -> dict:
+    """Hard-cap the factors a chapter may use. Ranked, then truncated."""
+    aspectos = [a for a in dossier.get("aspectos", [])
+                if a.get("capitulo") == spec["n"]]
 
+    duros   = sorted([a for a in aspectos if a.get("tipo") == "tenso"],
+                     key=lambda a: a["orbe"])
+    blandos = sorted([a for a in aspectos if a.get("tipo") == "fluido"],
+                     key=lambda a: a["orbe"])
+
+    elegidos    = (duros + blandos)[: spec["max_factores"]]
+    descartados = [a for a in aspectos if a not in elegidos]
+
+    posiciones = {k: v for k, v in dossier.get("posiciones", {}).items()
+                  if k in spec.get("fuente", [])}
+
+    extra = {k: dossier[k] for k in spec.get("fuente", [])
+             if k in dossier and k not in posiciones}
+
+    return {
+        "posiciones":       posiciones,
+        "aspectos":         elegidos,
+        "extra":            extra,
+        "descartados_count": len(descartados),
+    }
+
+
+# ==========================================================================
+# 4. THE PLANNER — one call, whole document, no prose
+# ==========================================================================
+
+PLANNER_PROMPT = """\
+Eres el editor que planifica un documento astrológico de nueve capítulos \
+sobre una persona. NO escribes prosa. Decides la historia.
+
+DOSIER TÉCNICO
 {dossier}
 
-BRIEF ANALÍTICO — la columna vertebral del documento
-{brief}
+MATERIAL YA ASIGNADO A CADA CAPÍTULO
+{material}
 
-CAPÍTULO {n} DE 11 — «{titulo}»
+Tu trabajo es que los nueve capítulos formen UNA historia, no nueve fichas. \
+Eso significa tres cosas:
 
-ENCARGO
-{encargo}
+1. UNA TESIS POR CAPÍTULO. Una sola frase sobre esta persona, en segunda \
+persona, SIN NOMBRAR NINGÚN PLANETA NI SIGNO. Si la tesis necesita nombrar a \
+Saturno para sostenerse, es que no has entendido qué dice Saturno.
 
-FACTORES ASIGNADOS A ESTE CAPÍTULO
-Posiciones: {puntos}
-Aspectos que se explican AQUÍ y en ningún otro sitio:
-{aspectos}
-Datos adicionales:
-{factores}
+2. DEPENDENCIA. Cada capítulo termina dejando una pregunta abierta que el \
+siguiente responde. El capítulo 5 debe ser ilegible fuera de orden. Escribe \
+explícitamente el "enlace" de cada capítulo.
 
-YA DICHO EN CAPÍTULOS ANTERIORES — no lo repitas ni lo reformules
-{ledger}
+3. ESCALADA. Acto 1 (caps 1-3) describe. Acto 2 (caps 4-6) muestra qué quiere \
+y qué le cuesta. Acto 3 (caps 7-9) llega al problema y lo nombra. El documento \
+tiene que ponerse más incómodo, no más simpático.
 
-EXTENSIÓN
-Unas {palabras} palabras. Es un objetivo real, no un techo. Si no llegas con \
-material verdadero, es que el capítulo no da para más: escribe menos antes que \
-rellenar.
+Devuelve JSON con esta forma exacta:
 
-Escribe solo el texto del capítulo. Sin título, sin encabezados, sin listas.
-"""
+{{
+  "tesis_global": "Una frase. Quién es esta persona. Sin astrología.",
+  "capitulos": [
+    {{
+      "n": 1,
+      "tesis": "Una frase sobre esta persona. Sin planetas ni signos.",
+      "beats": [
+        {{"tipo": "apertura", "contenido": "Qué afirmar. PROHIBIDO mencionar \
+astrología en este beat."}},
+        {{"tipo": "evidencia", "contenido": "Qué factor de la carta lo \
+sostiene y por qué significa eso"}},
+        {{"tipo": "complicacion", "contenido": "Qué contradice lo anterior. \
+No lo resuelvas."}},
+        {{"tipo": "coste", "contenido": "Qué rompe esto. Quién paga."}},
+        {{"tipo": "escena", "contenido": "Qué ocurre exactamente en la escena \
+asignada"}},
+        {{"tipo": "enlace", "contenido": "La pregunta que queda abierta para \
+el capítulo siguiente"}}
+      ]
+    }}
+  ]
+}}
 
-
-# ==========================================================================
-# 4. LEDGER + QA/REPAIR
-# ==========================================================================
-
-LEDGER_PROMPT = """\
-Este es un capítulo de un documento astrológico:
-
-{chapter}
-
-Extrae las afirmaciones sustantivas que hace sobre la persona, como lista \
-JSON de strings breves (máximo 12 palabras cada una). Solo afirmaciones sobre \
-el carácter o la conducta, no descripciones técnicas de la carta.
+REGLAS
+- Nueve capítulos, en orden.
+- Ninguna tesis puede repetir la idea de otra. Si dos capítulos dicen lo \
+mismo, uno de los dos está mal planteado: cámbialo.
+- Cada beat es una instrucción para el que escribe, no prosa acabada.
+- Si un capítulo no tiene material suficiente para seis beats, dale cuatro. \
+Es preferible a rellenar.
+- El capítulo 9 no lleva beat de escena.
 
 Solo el JSON.
 """
 
-QA_CHAPTER_PROMPT = """\
-Lee este capítulo de un documento astrológico y devuelve un JSON:
 
-{{
-  "frases_genericas": ["frases que valdrían para cualquier persona"],
-  "porcentaje_generico": 0-100,
-  "formulas_prohibidas": ["muletillas vetadas que aparecen"],
-  "tiene_coste": true/false,
-  "tiene_escena_concreta": true/false,
-  "solo_halaga": true/false,
-  "veredicto": "publicable" | "regenerar"
-}}
+# ==========================================================================
+# 5. PLAN VALIDATION — deterministic gate, no LLM
+# ==========================================================================
 
-Criterio: veredicto "regenerar" si el porcentaje genérico supera el 10%, si \
-falta el coste, si falta la escena concreta, o si el capítulo solo halaga.
+_ASTRO = ["sol", "luna", "mercurio", "venus", "marte", "júpiter", "jupiter",
+          "saturno", "urano", "neptuno", "plutón", "pluton", "ascendente",
+          "quirón", "quiron", "aries", "tauro", "géminis", "geminis",
+          "cáncer", "cancer", "leo", "virgo", "libra", "escorpio",
+          "sagitario", "capricornio", "acuario", "piscis", "casa ",
+          "cuadratura", "trígono", "trigono", "oposición", "oposicion",
+          "conjunción", "conjuncion", "orbe"]
 
-Sé severo. Solo el JSON.
 
-CAPÍTULO:
-{chapter}
+def validar_plan(plan: dict) -> list[str]:
+    """Deterministic gate before a single word is written."""
+    errores = []
+    caps = plan.get("capitulos", [])
+    if len(caps) != len(CAPITULOS):
+        errores.append(f"faltan capítulos: se esperan {len(CAPITULOS)}, hay {len(caps)}")
+
+    vistas = []
+    for c in caps:
+        t = (c.get("tesis") or "").lower()
+        if any(w in t for w in _ASTRO):
+            errores.append(f"cap {c.get('n')}: tesis nombra astrología → {t}")
+        if t in vistas:
+            errores.append(f"cap {c.get('n')}: tesis duplicada")
+        vistas.append(t)
+        tipos = [b.get("tipo") for b in c.get("beats", [])]
+        if c.get("n") != len(CAPITULOS) and "enlace" not in tipos:
+            errores.append(f"cap {c.get('n')}: sin beat de enlace")
+        if "coste" not in tipos:
+            errores.append(f"cap {c.get('n')}: sin beat de coste")
+    return errores
+
+
+# ==========================================================================
+# 6. WRITING CALL — executes beats, decides nothing
+# ==========================================================================
+
+ESCRIBIR_PROMPT = """\
+{exemplars}
+
+Escribes UN capítulo. Las decisiones narrativas ya están tomadas: no las \
+cambies, ejecútalas.
+
+CAPÍTULO {n} DE 9 — «{titulo}»
+PREGUNTA QUE RESPONDE ESTE CAPÍTULO
+{pregunta}
+
+TESIS — todo el capítulo sostiene esta frase y ninguna otra
+{tesis}
+
+BEATS — escribe uno o dos párrafos por beat, EN ESTE ORDEN
+{beats}
+
+MATERIAL DE LA CARTA — solo esto. No uses ningún otro dato.
+{material}
+
+ESCENA ASIGNADA — la única escena del capítulo
+{escena}
+
+DE DÓNDE VIENE EL LECTOR — el capítulo anterior terminó preguntando:
+{enlace_anterior}
+
+CINCO REGLAS QUE ANULAN EL CAPÍTULO SI SE INCUMPLEN
+1. El primer párrafo no contiene NI UN nombre de planeta, signo, casa o \
+aspecto. Habla de la persona. La carta aparece después.
+2. Ninguna frase empieza por el nombre de un planeta. El sujeto de tus frases \
+es esta persona, no el cielo.
+3. Prohibida la construcción «X en Y sugiere que…» y todas sus variantes \
+(«indica que», «se debe a que», «lo que sugiere»). Afirma primero; explica \
+después, en otra frase.
+4. Una sola escena, la asignada. No inventes reuniones de trabajo ni cenas \
+con amigos.
+5. Sin párrafo de resumen. Nada de «en resumen» ni «en conclusión». El último \
+párrafo es el enlace: deja la pregunta abierta.
+
+EXTENSIÓN
+Unas {palabras} palabras. Si el material no da, escribe menos. Rellenar es \
+peor que quedarse corto.
+
+Solo el texto. Sin título, sin encabezados, sin listas.
 """
 
-REPAIR_PROMPT = """\
-Este capítulo no ha pasado el control de calidad.
 
-PROBLEMAS DETECTADOS
-{problemas}
-
-Reescríbelo entero corrigiendo esos problemas concretos. Mantén intacta toda \
-afirmación técnica (grados, signos, casas, aspectos): no cambies ni un dato \
-de la carta. Si has de quitar frases genéricas y el capítulo se queda corto, \
-déjalo corto: es preferible a rellenar.
-
-Unas {palabras} palabras. Solo el texto del capítulo, sin título ni \
-encabezados.
-
-CAPÍTULO ORIGINAL:
-{chapter}
-"""
+def formatear_beats(beats: list[dict]) -> str:
+    return "\n".join(
+        f"  {i+1}. [{b.get('tipo','')}] {b.get('contenido','')}"
+        for i, b in enumerate(beats))
 
 
-def build_chapter_prompt(spec, dossier_json, brief_json, ledger_lines):
-    """Assemble the per-chapter user message."""
-    import json
+def formatear_material(sel: dict) -> str:
+    lineas = []
+    for k, p in sel["posiciones"].items():
+        lineas.append(
+            f"  - {p.get('planeta_es', k)}: {p.get('grado', '')}, "
+            f"casa {p.get('casa', '')}"
+            + (f", {p['dignidad']}" if p.get("dignidad") else "")
+            + (", retrógrado" if p.get("retrogrado") else ""))
+    for a in sel["aspectos"]:
+        lineas.append(
+            f"  - {a['a_es']} {a['aspecto']} {a['b_es']} · orbe {a['orbe']}° "
+            f"· {a['peso']} · {a['tipo']}")
+    if sel["extra"]:
+        lineas.append("  - " + json.dumps(sel["extra"], ensure_ascii=False))
+    if sel["descartados_count"]:
+        lineas.append(f"  ({sel['descartados_count']} factores menores "
+                      f"descartados a propósito — no los busques)")
+    return "\n".join(lineas) or "  (sin material asignado)"
 
-    aspects = [a for a in dossier_json.get("aspectos", [])
-               if a["capitulo"] == spec["n"]]
-    aspects.sort(key=lambda a: (a["tier"], a["orbe"]))
-    if aspects:
-        asp_txt = "\n".join(
-            f"  - {a['a_es']} {a['aspecto']} {a['b_es']} · orbe {a['orbe']}° · "
-            f"{a['peso']} · {a['tipo']}"
-            for a in aspects)
-    else:
-        asp_txt = "  (ninguno — no inventes aspectos)"
 
-    puntos = spec.get("puntos", [])
-    if puntos:
-        pos = dossier_json.get("posiciones", {})
-        pts_txt = "\n".join(
-            f"  - {pos[p]['planeta_es']}: {pos[p]['grado']}, casa "
-            f"{pos[p]['casa']}"
-            + (f", {pos[p]['dignidad']}" if pos[p].get("dignidad") else "")
-            + (", retrógrado" if pos[p].get("retrogrado") else "")
-            for p in puntos if p in pos)
-    else:
-        pts_txt = "  (capítulo estructural, sin planeta asignado)"
-
-    extra = {k: dossier_json[k] for k in spec.get("factores", [])
-             if k in dossier_json}
-    extra_txt = json.dumps(extra, ensure_ascii=False, indent=2) if extra \
-        else "  (ninguno)"
-
-    ledger_txt = "\n".join(f"  - {l}" for l in ledger_lines) or \
-        "  (primer capítulo)"
-
-    return CHAPTER_PROMPT.format(
+def construir_prompt_escritura(spec: dict, plan_cap: dict, sel: dict,
+                               enlace_anterior: str) -> str:
+    return ESCRIBIR_PROMPT.format(
         exemplars=EXEMPLARS,
-        dossier=json.dumps(dossier_json, ensure_ascii=False, indent=2),
-        brief=json.dumps(brief_json, ensure_ascii=False, indent=2),
-        n=spec["n"], titulo=spec["titulo"], encargo=spec["encargo"],
-        puntos=pts_txt, aspectos=asp_txt, factores=extra_txt,
-        ledger=ledger_txt, palabras=spec["palabras"],
+        n=spec["n"], titulo=spec["titulo"], pregunta=spec["pregunta"],
+        tesis=plan_cap.get("tesis", ""),
+        beats=formatear_beats(plan_cap.get("beats", [])),
+        material=formatear_material(sel),
+        escena=spec.get("escena") or "(este capítulo no lleva escena)",
+        enlace_anterior=enlace_anterior or "(es el primer capítulo)",
+        palabras=spec["palabras"],
     )
