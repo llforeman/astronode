@@ -1,0 +1,157 @@
+{% extends "public_base.html" %}
+{% block title %}Carta Natal Gratuita — Astronode{% endblock %}
+{% block meta_desc %}Calcula tu carta natal gratis. Posiciones planetarias, casas y aspectos basados en tu fecha, hora y lugar de nacimiento.{% endblock %}
+
+{% block extra_css %}
+<style>
+  .chart-wrap { max-width: 860px; margin: 0 auto; padding: 2rem 1rem; }
+  .form-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 2rem; margin-bottom: 2rem; }
+  .form-row { display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; }
+  .form-group { display: flex; flex-direction: column; flex: 1; min-width: 180px; }
+  .form-group label { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.4rem; }
+  .form-group input { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 0.6rem 0.8rem; color: var(--text); font-size: 1rem; }
+  .form-group input:focus { outline: none; border-color: var(--accent); }
+  .error-msg { color: #e74c3c; margin-bottom: 1rem; font-size: 0.95rem; }
+
+  .chart-img-wrap { text-align: center; margin-bottom: 2rem; }
+  .chart-img-wrap img { max-width: 100%; border-radius: 10px; box-shadow: 0 0 40px rgba(155,89,182,0.3); }
+
+  table.planets { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+  table.planets th { color: var(--text-muted); text-align: left; padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--border); font-weight: 600; }
+  table.planets td { padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--border); }
+  table.planets tr:last-child td { border-bottom: none; }
+  .sign-pill { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.8rem; background: var(--border); color: var(--accent-light); }
+
+  .aspects-list { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+  .aspect-tag { background: var(--bg2); border: 1px solid var(--border); border-radius: 6px; padding: 0.3rem 0.6rem; font-size: 0.8rem; color: var(--text-muted); }
+  .aspect-tag strong { color: var(--accent-light); }
+
+  .cta-banner { background: linear-gradient(135deg, #1a1a30, #2a1040); border: 1px solid var(--accent); border-radius: 12px; padding: 2.5rem; text-align: center; margin-top: 2.5rem; }
+  .cta-banner h2 { color: var(--accent-light); margin-bottom: 0.75rem; font-size: 1.5rem; }
+  .cta-banner p { color: var(--text-muted); margin-bottom: 1.5rem; max-width: 500px; margin-left: auto; margin-right: auto; }
+  .cta-actions { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+
+  .section-title { color: var(--accent-light); font-size: 1rem; font-weight: 600; margin: 1.5rem 0 0.75rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="chart-wrap">
+  <h1 style="color: var(--accent-light); margin-bottom: 0.5rem;">✦ Tu Carta Natal Gratuita</h1>
+  <p style="color: var(--text-muted); margin-bottom: 2rem;">Introduce tus datos de nacimiento para calcular tu carta natal al instante. Sin registro.</p>
+
+  <!-- Form -->
+  <div class="form-card">
+    <form method="POST" action="{{ url_for('public.chart') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      {% if error %}<div class="error-msg">{{ error }}</div>{% endif %}
+      <div class="form-row">
+        <div class="form-group">
+          <label>Fecha de nacimiento</label>
+          <input type="date" name="birth_date" required value="{{ form_data.get('birth_date', '') }}">
+        </div>
+        <div class="form-group">
+          <label>Hora de nacimiento (exacta)</label>
+          <input type="time" name="birth_time" required value="{{ form_data.get('birth_time', '') }}"
+                 placeholder="HH:MM">
+        </div>
+        <div class="form-group" style="flex: 2; min-width: 220px;">
+          <label>Ciudad y país de nacimiento</label>
+          <input type="text" name="birth_place" required value="{{ form_data.get('birth_place', '') }}"
+                 placeholder="ej. Madrid, España">
+        </div>
+      </div>
+      <button type="submit" class="btn btn-primary" style="width:100%; padding: 0.75rem; font-size:1rem;">
+        Calcular carta natal →
+      </button>
+    </form>
+  </div>
+
+  {% if result %}
+  <!-- Chart image -->
+  {% if result.chart_image %}
+  <div class="chart-img-wrap">
+    <img src="data:image/png;base64,{{ result.chart_image }}" alt="Carta natal de {{ result.birth_place }}">
+  </div>
+  {% endif %}
+
+  <!-- Planet positions -->
+  <div class="form-card">
+    <div class="section-title">Posiciones Planetarias</div>
+    <table class="planets">
+      <thead>
+        <tr>
+          <th>Planeta</th>
+          <th>Signo</th>
+          <th>Grado</th>
+          <th>Casa</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% set planet_order = ['Sun','Moon','Mercury','Venus','Mars','Jupiter','Saturn','Uranus','Neptune','Pluto','Ascendant','MC'] %}
+        {% set planet_names_es = {
+          'Sun': '☉ Sol', 'Moon': '☽ Luna', 'Mercury': '☿ Mercurio', 'Venus': '♀ Venus',
+          'Mars': '♂ Marte', 'Jupiter': '♃ Júpiter', 'Saturn': '♄ Saturno',
+          'Uranus': '♅ Urano', 'Neptune': '♆ Neptuno', 'Pluto': '♇ Plutón',
+          'Ascendant': 'AC Ascendente', 'MC': 'MC Medio Cielo'
+        } %}
+        {% for name in planet_order %}
+          {% if name in result.positions %}
+          {% set p = result.positions[name] %}
+          <tr>
+            <td><strong>{{ planet_names_es.get(name, name) }}</strong></td>
+            <td><span class="sign-pill">{{ p.sign }}</span></td>
+            <td>{{ "%.1f"|format(p.longitude % 30) }}°</td>
+            <td>{% if p.house and p.house != 'Unknown' %}Casa {{ p.house }}{% else %}—{% endif %}</td>
+          </tr>
+          {% endif %}
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- House cusps -->
+  <div class="form-card">
+    <div class="section-title">Cúspides de Casas</div>
+    <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+      {% for i in range(1, 13) %}
+      {% if i in result.house_cusps %}
+      <div style="background: var(--bg2); border: 1px solid var(--border); border-radius: 6px; padding: 0.4rem 0.8rem; font-size: 0.85rem;">
+        <span style="color: var(--text-muted);">Casa {{ i }}</span>
+        <strong style="margin-left: 0.5rem; color: var(--accent-light);">{{ "%.1f"|format(result.house_cusps[i]) }}°</strong>
+      </div>
+      {% endif %}
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Aspects -->
+  {% if result.aspects %}
+  <div class="form-card">
+    <div class="section-title">Aspectos Principales</div>
+    <div class="aspects-list">
+      {% for asp in result.aspects %}
+      <div class="aspect-tag">
+        <strong>{{ asp.p1 }}</strong> {{ asp.aspect }} <strong>{{ asp.p2 }}</strong>
+        <span style="color: var(--text-muted); font-size: 0.75rem;">(orb {{ asp.orb }}°)</span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- CTA -->
+  <div class="cta-banner">
+    <h2>✦ Descubre lo que los astros revelan sobre ti</h2>
+    <p>Tu carta natal muestra las posiciones, pero la interpretación completa con IA analiza cada planeta, casa y aspecto en profundidad — en español, personalizada para ti.</p>
+    <div class="cta-actions">
+      <a href="{{ url_for('auth.register') }}" class="btn btn-primary" style="font-size: 1.05rem; padding: 0.75rem 2rem;">
+        Crear cuenta y obtener interpretación →
+      </a>
+      <a href="{{ url_for('public.pricing') }}" class="btn btn-outline">Ver precios</a>
+    </div>
+  </div>
+
+  {% endif %}
+</div>
+{% endblock %}

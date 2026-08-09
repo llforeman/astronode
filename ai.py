@@ -309,6 +309,81 @@ def _house_group_text(start, end, positions, house_cusps):
     return text
 
 
+# ── Aspects ───────────────────────────────────────────────────────────────────
+
+ASPECT_TYPES = [
+    ('Conjunción',  0,   8),
+    ('Oposición',   180, 8),
+    ('Trígono',     120, 8),
+    ('Cuadratura',  90,  7),
+    ('Sextil',      60,  6),
+]
+
+def _compute_aspects(positions):
+    planets = [(name, data['longitude']) for name, data in positions.items()
+               if name not in ('MC',)]
+    aspects = []
+    for i in range(len(planets)):
+        for j in range(i + 1, len(planets)):
+            n1, lon1 = planets[i]
+            n2, lon2 = planets[j]
+            diff = abs(lon1 - lon2) % 360
+            if diff > 180:
+                diff = 360 - diff
+            for asp_name, asp_angle, orb in ASPECT_TYPES:
+                if abs(diff - asp_angle) <= orb:
+                    aspects.append({
+                        'p1': n1, 'p2': n2,
+                        'aspect': asp_name,
+                        'orb': round(abs(diff - asp_angle), 2),
+                    })
+                    break
+    return aspects
+
+
+# ── Public chart computation (no AI) ──────────────────────────────────────────
+
+def compute_chart(birth_date, birth_time, birth_place):
+    """Compute chart data and image without AI text. Used for the free public chart page."""
+    positions   = None
+    house_cusps = {}
+    local_dt    = None
+
+    try:
+        import swisseph  # noqa
+        positions, house_cusps, local_dt, lat, lon = \
+            _build_chart_swisseph(birth_date, birth_time, birth_place)
+    except Exception as e:
+        log.warning('Swiss Ephemeris failed in compute_chart: %s', e)
+
+    if positions is None:
+        try:
+            from flatlib import const  # noqa
+            positions, house_cusps, local_dt, lat, lon = \
+                _build_chart_flatlib(birth_date, birth_time, birth_place)
+        except Exception as e:
+            log.warning('flatlib failed in compute_chart: %s', e)
+
+    if positions is None:
+        raise RuntimeError('Could not compute chart — check birth data and location')
+
+    chart_image = None
+    try:
+        chart_image = _generate_chart_image(positions, house_cusps, local_dt, birth_place)
+    except Exception as e:
+        log.warning('Chart image failed: %s', e)
+
+    aspects = _compute_aspects(positions)
+
+    return {
+        'positions':   positions,
+        'house_cusps': house_cusps,
+        'aspects':     aspects,
+        'chart_image': chart_image,
+        'local_dt':    local_dt,
+    }
+
+
 # ── Main entry point ───────────────────────────────────────────────────────────
 
 def generate_horoscope(user, reading_type):
