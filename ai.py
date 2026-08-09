@@ -129,11 +129,31 @@ def _build_chart_kerykeion(birth_date, birth_time, birth_place):
     return positions, house_cusps, local_dt, lat, lng, subject
 
 
+def _crop_svg_to_wheel(svg_string):
+    """Crop Kerykeion SVG to only the chart wheel by trimming the info panel below."""
+    import re
+
+    # Kerykeion SVG width == the chart wheel diameter; info panel adds extra height.
+    # Setting height = width and adjusting viewBox crops to a square = just the wheel.
+    m = re.search(r'<svg\b[^>]+\bwidth=["\'](\d+(?:\.\d+)?)["\']', svg_string)
+    if not m:
+        return svg_string
+    width = m.group(1)
+
+    svg_string = re.sub(r'(<svg\b[^>]*\bheight=)["\'][\d. ]+["\']',
+                        rf'\g<1>"{width}"', svg_string)
+    svg_string = re.sub(r'(<svg\b[^>]*\bviewBox=)["\'][\d. ]+["\']',
+                        rf'\g<1>"0 0 {width} {width}"', svg_string)
+    return svg_string
+
+
 def _generate_chart_svg(subject):
-    """Generate SVG natal chart using Kerykeion. Returns SVG string."""
+    """Generate SVG natal chart using Kerykeion. Returns wheel-only SVG string."""
     import tempfile
     import os as _os
     from kerykeion import KerykeionChartSVG
+
+    svg_string = None
 
     with tempfile.TemporaryDirectory() as tmpdir:
         chart = KerykeionChartSVG(subject, 'Natal', new_output_directory=tmpdir)
@@ -141,15 +161,19 @@ def _generate_chart_svg(subject):
         svg_files = [f for f in _os.listdir(tmpdir) if f.endswith('.svg')]
         if svg_files:
             with open(_os.path.join(tmpdir, svg_files[0]), 'r', encoding='utf-8') as f:
-                return f.read()
+                svg_string = f.read()
 
-    # Fallback: try makeTemplate() if makeSVG() produced nothing
-    try:
-        chart = KerykeionChartSVG(subject, 'Natal')
-        return chart.makeTemplate()
-    except Exception as e:
-        log.warning('KerykeionChartSVG.makeTemplate() failed: %s', e)
-    return None
+    if svg_string is None:
+        try:
+            chart = KerykeionChartSVG(subject, 'Natal')
+            svg_string = chart.makeTemplate()
+        except Exception as e:
+            log.warning('KerykeionChartSVG.makeTemplate() failed: %s', e)
+
+    if svg_string:
+        svg_string = _crop_svg_to_wheel(svg_string)
+
+    return svg_string
 
 
 # ── Aspects ───────────────────────────────────────────────────────────────────
