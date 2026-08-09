@@ -1,6 +1,10 @@
-import os
-import time
+import json
 import logging
+import os
+import re
+import time
+from concurrent.futures import ThreadPoolExecutor
+from typing import Any
 
 from openai import OpenAI
 
@@ -8,8 +12,13 @@ log = logging.getLogger(__name__)
 
 _client = None
 
+# ── Model env vars ─────────────────────────────────────────────────────────────
+_MODEL_PROSE    = os.environ.get('AI_MODEL_PROSE',    os.environ.get('AI_MODEL', 'anthropic/claude-sonnet-4-5'))
+_MODEL_ANALYSIS = os.environ.get('AI_MODEL_ANALYSIS', _MODEL_PROSE)
+_MODEL_CHEAP    = os.environ.get('AI_MODEL_CHEAP',    'anthropic/claude-haiku-4-5-20251001')
+
 # ── Geocoding cache (process-lifetime) ────────────────────────────────────────
-_geocode_cache = {}
+_geocode_cache: dict = {}
 
 
 def _geocode(place):
@@ -21,8 +30,6 @@ def _geocode(place):
     if key in _geocode_cache:
         return _geocode_cache[key]
 
-    # Photon (komoot.io) — OSM-backed, no API key, no strict rate limit
-    # Nominatim kept as fallback only
     geocoders = [
         Photon(user_agent='astronode/1.0', timeout=10),
         Nominatim(user_agent='astronode/1.0', timeout=10),
@@ -51,27 +58,47 @@ def _get_client():
     return _client
 
 
-def _ask(prompt, model, retry_delay=3, max_retries=5):
+def _ask(messages: list[dict], *, model: str, max_tokens: int = 4000,
+         temperature: float = 0.8, json_mode: bool = False,
+         retries: int = 3) -> str:
+    """Send a chat request. messages is a list of {role, content} dicts."""
     client = _get_client()
-    for attempt in range(max_retries):
+    kwargs: dict[str, Any] = dict(
+        model=model,
+        messages=messages,
+        max_tokens=max_tokens,
+        temperature=temperature,
+    )
+    if json_mode:
+        kwargs['response_format'] = {'type': 'json_object'}
+
+    for attempt in range(retries):
         try:
-            response = client.chat.completions.create(
-                model=model,
-                messages=[{'role': 'user', 'content': prompt}],
-                max_tokens=30000,
-            )
+            response = client.chat.completions.create(**kwargs)
             if response.choices:
-                text = response.choices[0].message.content.strip()
-                if text:
-                    return text
-            log.warning('Empty response on attempt %d', attempt + 1)
+                text = response.choices[0].message.content
+                if text and text.strip():
+                    return text.strip()
+            log.warning('Empty AI response on attempt %d', attempt + 1)
         except Exception as e:
             log.warning('AI call failed (attempt %d): %s', attempt + 1, e)
-        time.sleep(retry_delay)
-    raise RuntimeError('AI generation failed after %d attempts' % max_retries)
+        time.sleep(2 ** attempt)
+    raise RuntimeError(f'AI generation failed after {retries} attempts')
 
 
-# ── Kerykeion chart calculation ────────────────────────────────────────────────
+def _json_parse(text: str) -> Any:
+    """Parse JSON from a model response that may be wrapped in markdown fences."""
+    t = re.sub(r'^```(?:json)?\s*|```\s*$', '', text.strip(), flags=re.M).strip()
+    try:
+        return json.loads(t)
+    except json.JSONDecodeError:
+        m = re.search(r'[\{\[].*[\}\]]', t, re.S)
+        if m:
+            return json.loads(m.group(0))
+        raise
+
+
+# ── Kerykeion chart building ───────────────────────────────────────────────────
 
 _HOUSE_NAME_MAP = {
     'First_House': 1, 'Second_House': 2, 'Third_House': 3,
@@ -94,13 +121,14 @@ _PLANET_ATTRS = [
 ]
 
 
-def _house_num(val):
+def _house_num(val) -> int:
     if isinstance(val, int):
         return val
     return _HOUSE_NAME_MAP.get(str(val), 1)
 
 
-def _build_chart_kerykeion(birth_date, birth_time, birth_place, lat=None, lng=None):
+def _build_chart_kerykeion(birth_date, birth_time, birth_place,
+                            lat=None, lng=None):
     import pytz
     import datetime
     from timezonefinder import TimezoneFinder
@@ -109,19 +137,16 @@ def _build_chart_kerykeion(birth_date, birth_time, birth_place, lat=None, lng=No
     if lat is None or lng is None:
         lat, lng = _geocode(birth_place)
 
-    # Timezone
     tf = TimezoneFinder()
     tz_str = tf.timezone_at(lng=lng, lat=lat)
     if not tz_str:
         raise ValueError(f'Could not find timezone for {birth_place}')
 
-    # Localize datetime
     local_tz = pytz.timezone(tz_str)
-    local_dt = datetime.datetime(
+    local_dt = local_tz.localize(datetime.datetime(
         birth_date.year, birth_date.month, birth_date.day,
         birth_time.hour, birth_time.minute,
-    )
-    local_dt = local_tz.localize(local_dt)
+    ))
 
     subject = AstrologicalSubject(
         birth_place,
@@ -131,21 +156,28 @@ def _build_chart_kerykeion(birth_date, birth_time, birth_place, lat=None, lng=No
         online=False,
     )
 
-    # Planet positions
+    # Planet positions (include retrograde flag)
     positions = {}
     for name, attr in _PLANET_ATTRS:
         p = getattr(subject, attr)
         positions[name] = {
-            'longitude': p.abs_pos,
-            'sign':      p.sign,
-            'house':     _house_num(p.house),
+            'longitude':  p.abs_pos,
+            'sign':       p.sign,
+            'house':      _house_num(p.house),
+            'retrograde': bool(getattr(p, 'retrograde', False)),
         }
 
-    # Ascendant + MC from house objects
+    # Angles
     asc = getattr(subject, 'first_house')
     mc  = getattr(subject, 'tenth_house')
-    positions['Ascendant'] = {'longitude': asc.abs_pos, 'sign': asc.sign, 'house': 1}
-    positions['MC']        = {'longitude': mc.abs_pos,  'sign': mc.sign,  'house': 10}
+    dc  = getattr(subject, 'seventh_house')
+    ic  = getattr(subject, 'fourth_house')
+
+    positions['Ascendant']   = {'longitude': asc.abs_pos, 'sign': asc.sign, 'house': 1,  'retrograde': False}
+    positions['MC']          = {'longitude': mc.abs_pos,  'sign': mc.sign,  'house': 10, 'retrograde': False}
+    positions['Medium_Coeli']= {'longitude': mc.abs_pos,  'sign': mc.sign,  'house': 10, 'retrograde': False}
+    positions['Descendant']  = {'longitude': dc.abs_pos,  'sign': dc.sign,  'house': 7,  'retrograde': False}
+    positions['Imum_Coeli']  = {'longitude': ic.abs_pos,  'sign': ic.sign,  'house': 4,  'retrograde': False}
 
     # House cusps
     house_cusps = {}
@@ -156,18 +188,17 @@ def _build_chart_kerykeion(birth_date, birth_time, birth_place, lat=None, lng=No
     return positions, house_cusps, local_dt, lat, lng, subject
 
 
+# ── SVG chart ─────────────────────────────────────────────────────────────────
+
 _PURPLE_THEME_CSS = """
 <style>
 :root, svg {
-  /* ── General text/content colors — cascade into info panel labels ── */
   --kerykeion-color-neutral-content: #a0a0b0;
   --kerykeion-color-base-content:    #a0a0b0;
 
-  /* ── Backgrounds ── */
   --kerykeion-chart-color-paper-0: #0d0d1a;
   --kerykeion-chart-color-paper-1: #13101e;
 
-  /* ── Zodiac segments — two close deep purples alternating ── */
   --kerykeion-chart-color-zodiac-bg-0:  #1a1525;
   --kerykeion-chart-color-zodiac-bg-1:  #221c30;
   --kerykeion-chart-color-zodiac-bg-2:  #1a1525;
@@ -181,7 +212,6 @@ _PURPLE_THEME_CSS = """
   --kerykeion-chart-color-zodiac-bg-10: #1a1525;
   --kerykeion-chart-color-zodiac-bg-11: #221c30;
 
-  /* ── Zodiac sign icons — bright silvery-lavender ── */
   --kerykeion-chart-color-zodiac-icon-0:  #ddc8f5;
   --kerykeion-chart-color-zodiac-icon-1:  #ddc8f5;
   --kerykeion-chart-color-zodiac-icon-2:  #ddc8f5;
@@ -195,18 +225,13 @@ _PURPLE_THEME_CSS = """
   --kerykeion-chart-color-zodiac-icon-10: #ddc8f5;
   --kerykeion-chart-color-zodiac-icon-11: #ddc8f5;
 
-  /* ── Concentric ring borders — muted gold ── */
   --kerykeion-chart-color-zodiac-radix-ring-0: #b89947;
   --kerykeion-chart-color-zodiac-radix-ring-1: #a08535;
   --kerykeion-chart-color-zodiac-radix-ring-2: #8a7020;
 
-  /* ── House division lines — muted slate ── */
   --kerykeion-chart-color-houses-radix-line: #6b637d;
-
-  /* ── House numbers — gold ── */
   --kerykeion-chart-color-house-number: #d4af37;
 
-  /* ── All planets — crisp off-white ── */
   --kerykeion-chart-color-sun:       #f8f9fa;
   --kerykeion-chart-color-moon:      #f8f9fa;
   --kerykeion-chart-color-mercury:   #f8f9fa;
@@ -220,25 +245,21 @@ _PURPLE_THEME_CSS = """
   --kerykeion-chart-color-mean-node: #f8f9fa;
   --kerykeion-chart-color-true-node: #f8f9fa;
 
-  /* ── Chiron and Lilith — hidden ── */
   --kerykeion-chart-color-chiron:      transparent;
   --kerykeion-chart-color-mean-lilith: transparent;
   --kerykeion-chart-color-true-lilith: transparent;
 
-  /* ── Angles (ASC/MC/DC/IC) — gold ── */
   --kerykeion-chart-color-first-house:   #d4af37;
   --kerykeion-chart-color-tenth-house:   #d4af37;
   --kerykeion-chart-color-seventh-house: #d4af37;
   --kerykeion-chart-color-fourth-house:  #d4af37;
 
-  /* ── Major aspects — 35% opacity pastels, traceable without dominating ── */
   --kerykeion-chart-color-conjunction: rgba(216, 200, 248, 0.35);
   --kerykeion-chart-color-sextile:     rgba(142, 202, 230, 0.35);
   --kerykeion-chart-color-square:      rgba(232, 144, 122, 0.35);
   --kerykeion-chart-color-trine:       rgba(136, 212, 176, 0.35);
   --kerykeion-chart-color-opposition:  rgba(232, 144, 122, 0.35);
 
-  /* ── Minor aspects — transparent ── */
   --kerykeion-chart-color-semi-sextile:   transparent;
   --kerykeion-chart-color-semi-square:    transparent;
   --kerykeion-chart-color-quintile:       transparent;
@@ -246,7 +267,6 @@ _PURPLE_THEME_CSS = """
   --kerykeion-chart-color-biquintile:     transparent;
   --kerykeion-chart-color-quincunx:       transparent;
 
-  /* ── Element/modality percentages — pastels ── */
   --kerykeion-chart-color-fire-percentage:     #f4a87c;
   --kerykeion-chart-color-earth-percentage:    #a8c090;
   --kerykeion-chart-color-air-percentage:      #8ecae6;
@@ -256,7 +276,6 @@ _PURPLE_THEME_CSS = """
   --kerykeion-chart-color-mutable-percentage:  #e8a08c;
 }
 
-/* Hide all info panels — wheel only */
 [kr\:node="Top_Left_Text"],
 [kr\:node="Bottom_Left_Text"],
 [kr\:node="Elements_Percentages"],
@@ -272,10 +291,8 @@ line { stroke-dasharray: none; }
 """
 
 
-def _apply_purple_theme(svg_string):
-    import re
+def _apply_purple_theme(svg_string: str) -> str:
     svg_string = re.sub(r'(<svg\b[^>]*>)', r'\1' + _PURPLE_THEME_CSS, svg_string, count=1)
-    # Crop to wheel square — panels are hidden so this removes the empty space below
     m = re.search(r'<svg\b[^>]+\bwidth=["\'](\d+(?:\.\d+)?)["\']', svg_string)
     if m:
         w = m.group(1)
@@ -284,10 +301,7 @@ def _apply_purple_theme(svg_string):
     return svg_string
 
 
-def _scale_planet_glyphs(svg_string, factor=0.85):
-    """Scale down planet glyphs inside ChartPoint groups."""
-    import re
-    # Kerykeion renders natal chart planets at scale(1.0). Reduce to factor.
+def _scale_planet_glyphs(svg_string: str, factor: float = 0.85) -> str:
     def _shrink(m):
         tag = m.group(0)
         tag = re.sub(r'scale\(1(?:\.0)?(?:,\s*1(?:\.0)?)?\)', f'scale({factor},{factor})', tag)
@@ -295,14 +309,12 @@ def _scale_planet_glyphs(svg_string, factor=0.85):
     return re.sub(r'<use\b[^/]*/>', _shrink, svg_string)
 
 
-def _generate_chart_svg(subject):
-    """Generate styled SVG natal chart using Kerykeion."""
+def _generate_chart_svg(subject) -> str | None:
     import tempfile
     import os as _os
     from kerykeion import KerykeionChartSVG
 
     svg_string = None
-
     with tempfile.TemporaryDirectory() as tmpdir:
         chart = KerykeionChartSVG(subject, 'Natal', new_output_directory=tmpdir)
         chart.makeSVG()
@@ -325,20 +337,17 @@ def _generate_chart_svg(subject):
     return svg_string
 
 
-# ── Aspects ───────────────────────────────────────────────────────────────────
+# ── Aspects for public chart (simple, no grading) ─────────────────────────────
 
-ASPECT_TYPES = [
-    ('Conjuncion',  0,   8),
-    ('Oposicion',   180, 8),
-    ('Trigono',     120, 8),
-    ('Cuadratura',  90,  7),
-    ('Sextil',      60,  6),
+_ASPECT_TYPES = [
+    ('Conjuncion', 0, 8), ('Oposicion', 180, 8), ('Trigono', 120, 8),
+    ('Cuadratura', 90, 7), ('Sextil', 60, 6),
 ]
 
 
-def _compute_aspects(positions):
+def _compute_aspects(positions: dict) -> list[dict]:
     planets = [(name, data['longitude']) for name, data in positions.items()
-               if name not in ('MC',)]
+               if name not in ('MC', 'Medium_Coeli', 'Descendant', 'Imum_Coeli')]
     aspects = []
     for i in range(len(planets)):
         for j in range(i + 1, len(planets)):
@@ -347,40 +356,18 @@ def _compute_aspects(positions):
             diff = abs(lon1 - lon2) % 360
             if diff > 180:
                 diff = 360 - diff
-            for asp_name, asp_angle, orb in ASPECT_TYPES:
+            for asp_name, asp_angle, orb in _ASPECT_TYPES:
                 if abs(diff - asp_angle) <= orb:
-                    aspects.append({
-                        'p1': n1, 'p2': n2,
-                        'aspect': asp_name,
-                        'orb': round(abs(diff - asp_angle), 2),
-                    })
+                    aspects.append({'p1': n1, 'p2': n2, 'aspect': asp_name,
+                                    'orb': round(abs(diff - asp_angle), 2)})
                     break
     return aspects
 
 
-# ── Text prompts ───────────────────────────────────────────────────────────────
+# ── Public chart (no AI) ───────────────────────────────────────────────────────
 
-def _positions_text(positions):
-    lines = 'Posiciones Planetarias:\n'
-    for name, data in positions.items():
-        lines += f"  {name}: {data['longitude']:.2f}° - {data['sign']} - Casa {data['house']}\n"
-    return lines
-
-
-def _house_group_text(start, end, positions, house_cusps):
-    text = f'Casas {start} a {end}:\n'
-    for h in range(start, end + 1):
-        text += f'\nCasa {h} (cuspide {house_cusps.get(h, 0):.1f}°):\n'
-        planets = [f"{n} ({d['sign']}, {d['longitude']:.1f}°)"
-                   for n, d in positions.items() if d['house'] == h]
-        text += ('  Planetas: ' + ', '.join(planets) + '\n') if planets else '  Sin planetas.\n'
-    return text
-
-
-# ── Public chart computation (no AI) ──────────────────────────────────────────
-
-def compute_chart(birth_date, birth_time, birth_place, lat=None, lng=None):
-    """Compute chart data and SVG image without AI text. Used for the free public chart page."""
+def compute_chart(birth_date, birth_time, birth_place, lat=None, lng=None) -> dict:
+    """Compute positions + SVG only. Used by the free public /chart page."""
     positions, house_cusps, local_dt, lat, lng, subject = \
         _build_chart_kerykeion(birth_date, birth_time, birth_place, lat=lat, lng=lng)
 
@@ -390,74 +377,186 @@ def compute_chart(birth_date, birth_time, birth_place, lat=None, lng=None):
     except Exception as e:
         log.warning('Chart SVG generation failed: %s', e)
 
-    aspects = _compute_aspects(positions)
-
     return {
         'positions':   positions,
         'house_cusps': house_cusps,
-        'aspects':     aspects,
+        'aspects':     _compute_aspects(positions),
         'chart_image': chart_image,
         'local_dt':    local_dt,
     }
 
 
+# ── Pipeline ───────────────────────────────────────────────────────────────────
+
+def _brief(dossier: dict) -> dict:
+    import prompts as P
+    slim = {k: v for k, v in dossier.items() if not k.startswith('_')}
+    raw = _ask(
+        [{'role': 'system', 'content': P.SYSTEM},
+         {'role': 'user',   'content': P.BRIEF_PROMPT.format(
+             dossier=json.dumps(slim, ensure_ascii=False, indent=2))}],
+        model=_MODEL_ANALYSIS, max_tokens=2000, temperature=0.6, json_mode=True)
+    return _json_parse(raw)
+
+
+def _one_chapter(spec: dict, dossier: dict, brf: dict, ledger: list[str]) -> tuple[int, str]:
+    import prompts as P
+    msg = P.build_chapter_prompt(spec, dossier, brf, ledger)
+    txt = _ask(
+        [{'role': 'system', 'content': P.SYSTEM},
+         {'role': 'user',   'content': msg}],
+        model=_MODEL_PROSE,
+        max_tokens=int(spec['palabras'] * 2.2),
+        temperature=0.85)
+    return spec['n'], txt
+
+
+def _extract_claims(chapter_text: str) -> list[str]:
+    import prompts as P
+    try:
+        raw = _ask(
+            [{'role': 'user', 'content': P.LEDGER_PROMPT.format(chapter=chapter_text)}],
+            model=_MODEL_CHEAP, max_tokens=800, temperature=0.2, json_mode=True)
+        got = _json_parse(raw)
+        return got if isinstance(got, list) else []
+    except Exception:
+        return []   # ledger is best-effort, never fatal
+
+
+def _chapters(dossier: dict, brf: dict) -> dict[int, str]:
+    import prompts as P
+    WAVE_A = [1, 2, 3, 8, 10]
+    WAVE_B = [4, 5, 6, 7, 9, 11]
+    by_n   = {c['n']: c for c in P.CHAPTERS}
+    written: dict[int, str] = {}
+    ledger:  list[str] = []
+
+    for wave in (WAVE_A, WAVE_B):
+        specs    = [by_n[n] for n in wave]
+        snapshot = list(ledger)
+
+        with ThreadPoolExecutor(max_workers=len(specs)) as ex:
+            results = list(ex.map(
+                lambda s: _one_chapter(s, dossier, brf, snapshot), specs))
+
+        for n, txt in results:
+            written[n] = txt
+
+        with ThreadPoolExecutor(max_workers=len(results)) as ex:
+            claim_sets = list(ex.map(lambda r: _extract_claims(r[1]), results))
+        for cs in claim_sets:
+            ledger.extend(cs)
+
+    return written
+
+
+def _check_chapter(n: int, text: str) -> dict:
+    import prompts as P
+    try:
+        raw = _ask(
+            [{'role': 'user', 'content': P.QA_CHAPTER_PROMPT.format(chapter=text)}],
+            model=_MODEL_ANALYSIS, max_tokens=900, temperature=0.2, json_mode=True)
+        r = _json_parse(raw)
+        r['capitulo'] = n
+        return r
+    except Exception:
+        return {'capitulo': n, 'veredicto': 'publicable', '_qa_failed': True}
+
+
+def _repair_chapter(spec: dict, text: str, report: dict) -> str:
+    import prompts as P
+    msg = P.REPAIR_PROMPT.format(
+        chapter=text,
+        problemas=json.dumps(report, ensure_ascii=False, indent=2),
+        palabras=spec['palabras'])
+    return _ask(
+        [{'role': 'system', 'content': P.SYSTEM},
+         {'role': 'user',   'content': msg}],
+        model=_MODEL_PROSE,
+        max_tokens=int(spec['palabras'] * 2.2),
+        temperature=0.75)
+
+
+def _qa_and_repair(written: dict[int, str], dossier: dict, brf: dict,
+                   max_rounds: int = 1) -> tuple[dict[int, str], list[dict]]:
+    import prompts as P
+    by_n    = {c['n']: c for c in P.CHAPTERS}
+    reports: list[dict] = []
+
+    for _ in range(max_rounds):
+        with ThreadPoolExecutor(max_workers=6) as ex:
+            checks = list(ex.map(
+                lambda kv: _check_chapter(*kv), sorted(written.items())))
+        reports = checks
+        bad = [c for c in checks if c.get('veredicto') == 'regenerar']
+        if not bad:
+            break
+        with ThreadPoolExecutor(max_workers=min(len(bad), 6)) as ex:
+            fixed = list(ex.map(
+                lambda c: (c['capitulo'],
+                           _repair_chapter(by_n[c['capitulo']],
+                                           written[c['capitulo']], c)),
+                bad))
+        for n, txt in fixed:
+            written[n] = txt
+
+    return written, reports
+
+
+def _assemble(written: dict[int, str]) -> str:
+    import prompts as P
+    parts = []
+    for spec in P.CHAPTERS:
+        n = spec['n']
+        if n in written:
+            parts.append(f"## {n:02d}. {spec['titulo']}\n\n{written[n]}")
+    return '\n\n'.join(parts)
+
+
 # ── Main entry point ───────────────────────────────────────────────────────────
 
-def generate_horoscope(user, reading_type):
-    model       = os.environ.get('AI_MODEL', 'meta-llama/llama-3.3-70b-instruct')
+def generate_horoscope(user, reading_type) -> dict:
     birth_date  = user.birth_date
     birth_time  = user.birth_time
     birth_place = user.birth_place or 'unknown'
 
     positions, house_cusps, local_dt, lat, lng, subject = \
         _build_chart_kerykeion(birth_date, birth_time, birth_place)
-    log.info('Chart built with Kerykeion')
+    log.info('Chart built for %s', birth_place)
 
-    # Generate SVG chart
+    # SVG chart
     chart_image = None
     try:
         chart_image = _generate_chart_svg(subject)
     except Exception as e:
         log.warning('Chart SVG generation failed: %s', e)
 
-    # Generate text reading (5 AI calls in Spanish)
-    pos_text = _positions_text(positions)
-    asc      = positions.get('Ascendant', {})
-    asc_text = f"Ascendente: {asc.get('longitude', 0):.2f}° - {asc.get('sign', '')}\n"
+    # Dossier (deterministic enrichment — no LLM)
+    from chart_analysis import build_dossier
+    known_time = birth_time is not None
+    dossier = build_dossier(subject, positions, house_cusps,
+                            known_birth_time=known_time)
+    log.info('Dossier built, %d signals', len(dossier.get('senales_principales', [])))
 
-    cusps_text = 'Cuspides de Casas:\n' + ''.join(
-        f'  Casa {i}: {house_cusps.get(i, 0):.2f}°\n' for i in range(1, 13)
-    )
+    # Brief — analytical spine
+    brf = _brief(dossier)
+    log.info('Brief complete: %s', brf.get('hilo_conductor', '')[:80])
 
-    sun  = positions.get('Sun', {})
-    moon = positions.get('Moon', {})
-    quick_text = (
-        f"Sol: {sun.get('longitude', 0):.2f}° - {sun.get('sign', '')} - Casa {sun.get('house', '')}\n"
-        f"Luna: {moon.get('longitude', 0):.2f}° - {moon.get('sign', '')} - Casa {moon.get('house', '')}\n"
-        f"Ascendente: {asc.get('longitude', 0):.2f}° - {asc.get('sign', '')}\n"
-    )
+    # Chapters — 11 calls in 2 parallel waves
+    written = _chapters(dossier, brf)
+    log.info('Chapters written: %d', len(written))
 
-    sections = []
+    # QA + targeted repair (1 round max to stay within job timeout)
+    written, qa_reports = _qa_and_repair(written, dossier, brf, max_rounds=1)
+    failed = [r['capitulo'] for r in qa_reports if r.get('veredicto') == 'regenerar']
+    if failed:
+        log.warning('Chapters still failing QA after repair: %s', failed)
 
-    sections.append(_ask(
-        'Proporciona una identificacion rapida de la personalidad en ESPANOL basada en el Sol, la Luna y el Ascendente. '
-        'Analiza signos zodiacales, casas y posiciones. Explica los rasgos de personalidad generales.\n\n'
-        + quick_text,
-        model,
-    ))
+    # Concatenate
+    documento = _assemble(written)
+    log.info('Document assembled: ~%d words', len(documento.split()))
 
-    for start, end in [(1, 3), (4, 6), (7, 9), (10, 12)]:
-        group_text = _house_group_text(start, end, positions, house_cusps)
-        sections.append(_ask(
-            f'Analiza las casas {start} a {end} del tema natal casa por casa en ESPANOL. '
-            'Para cada casa explica la significancia de los planetas presentes (o su ausencia), '
-            'las influencias y los desafios especificos indicados por el tema natal. '
-            'Usa las posiciones planetarias y cuspides como contexto.\n\n'
-            + pos_text + '\n' + asc_text + '\n' + cusps_text + '\n\n' + group_text,
-            model,
-        ))
-
-    divider = '\n\n' + '-' * 60 + '\n\n'
-    full_text = divider.join(sections)
-
-    return {'text': full_text, 'chart_image': chart_image, 'usage': {'model': model}}
+    return {
+        'text':        documento,
+        'chart_image': chart_image,
+    }
