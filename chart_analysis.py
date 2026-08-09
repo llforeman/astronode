@@ -66,6 +66,7 @@ PERSONAL = ["Sun", "Moon", "Mercury", "Venus", "Mars"]
 SOCIAL   = ["Jupiter", "Saturn"]
 OUTER    = ["Uranus", "Neptune", "Pluto"]
 ANGLES   = ["Ascendant", "Medium_Coeli", "Descendant", "Imum_Coeli"]
+NODES    = ["North_Node", "South_Node"]
 CORE     = PERSONAL + SOCIAL + OUTER
 
 HARD = {"conjunction", "opposition", "square"}
@@ -377,7 +378,7 @@ def build_dossier(subject, positions: dict, house_cusps: dict,
 
     # ---- placements ---------------------------------------------------------
     placements: dict[str, Any] = {}
-    for name in CORE + ANGLES:
+    for name in CORE + ANGLES + NODES:
         data = pos.get(name)
         if not data:
             continue
