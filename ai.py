@@ -129,26 +129,100 @@ def _build_chart_kerykeion(birth_date, birth_time, birth_place):
     return positions, house_cusps, local_dt, lat, lng, subject
 
 
-def _crop_svg_to_wheel(svg_string):
-    """Crop Kerykeion SVG to only the chart wheel by trimming the info panel below."""
+_PURPLE_THEME_CSS = """
+<style>
+:root, svg {
+  /* Backgrounds */
+  --kerykeion-chart-color-paper-0: #0d0d1a;
+  --kerykeion-chart-color-paper-1: #151528;
+
+  /* 12 zodiac sign backgrounds — purple shades darkest→lightest */
+  --kerykeion-chart-color-zodiac-bg-0:  #1a0d26;
+  --kerykeion-chart-color-zodiac-bg-1:  #231333;
+  --kerykeion-chart-color-zodiac-bg-2:  #2e1a42;
+  --kerykeion-chart-color-zodiac-bg-3:  #3a2252;
+  --kerykeion-chart-color-zodiac-bg-4:  #472a63;
+  --kerykeion-chart-color-zodiac-bg-5:  #543375;
+  --kerykeion-chart-color-zodiac-bg-6:  #623c87;
+  --kerykeion-chart-color-zodiac-bg-7:  #70469a;
+  --kerykeion-chart-color-zodiac-bg-8:  #7f50ad;
+  --kerykeion-chart-color-zodiac-bg-9:  #8e5bc0;
+  --kerykeion-chart-color-zodiac-bg-10: #9e67d3;
+  --kerykeion-chart-color-zodiac-bg-11: #ae73e6;
+
+  /* Zodiac sign icons — light purple so they read against dark segments */
+  --kerykeion-chart-color-zodiac-icon-0:  #e8d5f5;
+  --kerykeion-chart-color-zodiac-icon-1:  #e8d5f5;
+  --kerykeion-chart-color-zodiac-icon-2:  #e8d5f5;
+  --kerykeion-chart-color-zodiac-icon-3:  #e8d5f5;
+  --kerykeion-chart-color-zodiac-icon-4:  #e8d5f5;
+  --kerykeion-chart-color-zodiac-icon-5:  #e8d5f5;
+  --kerykeion-chart-color-zodiac-icon-6:  #e8d5f5;
+  --kerykeion-chart-color-zodiac-icon-7:  #e8d5f5;
+  --kerykeion-chart-color-zodiac-icon-8:  #e8d5f5;
+  --kerykeion-chart-color-zodiac-icon-9:  #e8d5f5;
+  --kerykeion-chart-color-zodiac-icon-10: #e8d5f5;
+  --kerykeion-chart-color-zodiac-icon-11: #e8d5f5;
+
+  /* Ring borders */
+  --kerykeion-chart-color-zodiac-radix-ring-0: #9b59b6;
+  --kerykeion-chart-color-zodiac-radix-ring-1: #7d3c98;
+  --kerykeion-chart-color-zodiac-radix-ring-2: #5b2c6f;
+
+  /* House division lines — black, continuous */
+  --kerykeion-chart-color-houses-radix-line: #000000;
+
+  /* Planets — purple gradient light→dark */
+  --kerykeion-chart-color-sun:      #f0e8ff;
+  --kerykeion-chart-color-moon:     #e4d0ff;
+  --kerykeion-chart-color-mercury:  #d8b8ff;
+  --kerykeion-chart-color-venus:    #cca0ff;
+  --kerykeion-chart-color-mars:     #c088ff;
+  --kerykeion-chart-color-jupiter:  #b470ff;
+  --kerykeion-chart-color-saturn:   #a858e8;
+  --kerykeion-chart-color-uranus:   #9c40d0;
+  --kerykeion-chart-color-neptune:  #9034c0;
+  --kerykeion-chart-color-pluto:    #8028b0;
+
+  /* Angles (ASC, MC, DC, IC) — white to stand out */
+  --kerykeion-chart-color-first-house:   #ffffff;
+  --kerykeion-chart-color-tenth-house:   #ffffff;
+  --kerykeion-chart-color-seventh-house: #ffffff;
+  --kerykeion-chart-color-fourth-house:  #ffffff;
+
+  /* Aspects — purple tones */
+  --kerykeion-chart-color-aspect-conjunction: #e0c8ff;
+  --kerykeion-chart-color-aspect-opposition:  #c8a8f0;
+  --kerykeion-chart-color-aspect-trine:       #b090e0;
+  --kerykeion-chart-color-aspect-square:      #9878d0;
+  --kerykeion-chart-color-aspect-sextile:     #8060c0;
+}
+
+/* Ensure house lines have no dash pattern */
+line { stroke-dasharray: none; }
+</style>
+"""
+
+
+def _apply_purple_theme(svg_string):
     import re
+    # Inject style block right after the opening <svg ...> tag
+    return re.sub(r'(<svg\b[^>]*>)', r'\1' + _PURPLE_THEME_CSS, svg_string, count=1)
 
-    # Kerykeion SVG width == the chart wheel diameter; info panel adds extra height.
-    # Setting height = width and adjusting viewBox crops to a square = just the wheel.
-    m = re.search(r'<svg\b[^>]+\bwidth=["\'](\d+(?:\.\d+)?)["\']', svg_string)
-    if not m:
-        return svg_string
-    width = m.group(1)
 
-    svg_string = re.sub(r'(<svg\b[^>]*\bheight=)["\'][\d. ]+["\']',
-                        rf'\g<1>"{width}"', svg_string)
-    svg_string = re.sub(r'(<svg\b[^>]*\bviewBox=)["\'][\d. ]+["\']',
-                        rf'\g<1>"0 0 {width} {width}"', svg_string)
-    return svg_string
+def _scale_planet_glyphs(svg_string, factor=0.75):
+    """Scale down planet glyphs inside ChartPoint groups."""
+    import re
+    # Kerykeion renders natal chart planets at scale(1.0). Reduce to factor.
+    def _shrink(m):
+        tag = m.group(0)
+        tag = re.sub(r'scale\(1(?:\.0)?(?:,\s*1(?:\.0)?)?\)', f'scale({factor},{factor})', tag)
+        return tag
+    return re.sub(r'<use\b[^/]*/>', _shrink, svg_string)
 
 
 def _generate_chart_svg(subject):
-    """Generate SVG natal chart using Kerykeion. Returns wheel-only SVG string."""
+    """Generate styled SVG natal chart using Kerykeion."""
     import tempfile
     import os as _os
     from kerykeion import KerykeionChartSVG
@@ -171,7 +245,8 @@ def _generate_chart_svg(subject):
             log.warning('KerykeionChartSVG.makeTemplate() failed: %s', e)
 
     if svg_string:
-        svg_string = _crop_svg_to_wheel(svg_string)
+        svg_string = _apply_purple_theme(svg_string)
+        svg_string = _scale_planet_glyphs(svg_string)
 
     return svg_string
 
