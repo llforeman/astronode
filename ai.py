@@ -61,7 +61,7 @@ def _get_client():
     return _client
 
 
-def _ask(messages: list[dict], *, model: str, max_tokens: int = 4000,
+def _ask(messages: list[dict], *, model: str, max_tokens: int = None,
          temperature: float = 0.8, json_mode: bool = False,
          retries: int = 3) -> str:
     """Send a chat request. messages is a list of {role, content} dicts."""
@@ -69,9 +69,10 @@ def _ask(messages: list[dict], *, model: str, max_tokens: int = 4000,
     kwargs: dict[str, Any] = dict(
         model=model,
         messages=messages,
-        max_tokens=max_tokens,
         temperature=temperature,
     )
+    if max_tokens is not None:
+        kwargs['max_tokens'] = max_tokens
     if json_mode:
         kwargs['response_format'] = {'type': 'json_object'}
 
@@ -466,13 +467,13 @@ def _call_section(sec: dict, pos_es: dict, aspects: list,
                     f"Casa {p['casa']}{dig}{retro}")
         msg = P.PROMPT_PERSONALIDAD.format(data='\n'.join(data_lines))
         raw = _ask([{'role': 'user', 'content': msg}],
-                   model=_MODEL_PROSE, max_tokens=2000, temperature=0.85)
+                   model=_MODEL_PROSE, temperature=0.85)
     else:
         overall   = _build_overall_text(pos_es, house_cusps)
         breakdown = _build_house_breakdown_single(casa, pos_es, aspects)
         msg = P.PROMPT_CASA.format(n=casa, overall=overall, breakdown=breakdown)
         raw = _ask([{'role': 'user', 'content': msg}],
-                   model=_MODEL_PROSE, max_tokens=1500, temperature=0.85)
+                   model=_MODEL_PROSE, temperature=0.85)
     return n, raw
 
 
