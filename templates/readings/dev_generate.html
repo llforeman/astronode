@@ -25,6 +25,7 @@
   </div>
 
   <form method="POST" onsubmit="this.querySelector('button').disabled=true; this.querySelector('button').textContent='Generating… (may take 5–10 min)';">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <button type="submit" class="btn btn-primary" style="width:100%; padding:.85rem; font-size:1rem;">
       Generate my reading →
     </button>
