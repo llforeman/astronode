@@ -80,7 +80,16 @@ def _ask(messages: list[dict], *, model: str, max_tokens: int = None,
         try:
             response = client.chat.completions.create(**kwargs)
             if response.choices:
-                text = response.choices[0].message.content
+                choice = response.choices[0]
+                finish = choice.finish_reason
+                text   = choice.message.content
+                usage  = getattr(response, 'usage', None)
+                log.info('finish_reason=%s | tokens: prompt=%s completion=%s',
+                         finish,
+                         getattr(usage, 'prompt_tokens', '?'),
+                         getattr(usage, 'completion_tokens', '?'))
+                if finish == 'length':
+                    log.warning('Output was TRUNCATED by token limit (finish_reason=length)')
                 if text and text.strip():
                     return text.strip()
             log.warning('Empty AI response on attempt %d', attempt + 1)
