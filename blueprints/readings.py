@@ -107,17 +107,24 @@ def dev_generate():
         with app.app_context():
             from ai import generate_horoscope
             from models import Reading, User
-            r = Reading.query.get(rid)
             u = User.query.get(uid)
             try:
                 result = generate_horoscope(u, rt)
+                status = 'completed'
+            except Exception as e:
+                result = None
+                status = 'failed'
+                print(f'[dev-generate] generation failed: {e}')
+
+            # Release the stale connection held during LLM generation,
+            # then re-fetch the reading with a fresh connection to commit.
+            db.session.remove()
+            r = Reading.query.get(rid)
+            r.status = status
+            if result:
                 r.content      = result['text']
                 r.chart_image  = result.get('chart_image')
-                r.status       = 'completed'
                 r.completed_at = datetime.utcnow()
-            except Exception as e:
-                r.status = 'failed'
-                print(f'[dev-generate] generation failed: {e}')
             db.session.commit()
 
     import threading
