@@ -419,26 +419,55 @@ def _plan(dossier: dict) -> dict:
 
 
 def _write_chapter(spec: dict, plan_cap: dict, dossier: dict,
-                   enlace_anterior: str) -> tuple[int, str]:
+                   enlace_anterior: str, genero: str) -> tuple[int, str]:
     import prompts as P
     sel    = P.seleccionar_material(dossier, spec)
-    prompt = P.construir_prompt_escritura(spec, plan_cap, sel, enlace_anterior)
-    txt = _ask(
+    prompt = P.construir_prompt_escritura(spec, plan_cap, sel, enlace_anterior, genero)
+    raw = _ask(
         [{'role': 'system', 'content': P.SYSTEM},
          {'role': 'user',   'content': prompt}],
         model=_MODEL_PROSE,
-        max_tokens=int(spec['palabras'] * 2.2),
+        max_tokens=P.max_tokens_para(spec),
         temperature=0.85)
-    return spec['n'], txt
+    return spec['n'], raw
 
 
-def _write_all_chapters(dossier: dict, plan: dict) -> dict[int, str]:
-    """All 9 chapters in parallel — enlaces come from the plan, not from written text."""
+def _extract_tells(n: int, text: str) -> tuple[int, list[str]]:
+    import prompts as P
+    try:
+        raw = _ask(
+            [{'role': 'user', 'content': P.COMPROBAR_PROMPT.format(chapter=text)}],
+            model=_MODEL_CHEAP, max_tokens=400, temperature=0.3, json_mode=True)
+        got = _json_parse(raw)
+        return n, got.get('senales', [])
+    except Exception:
+        return n, []
+
+
+def _build_index(plan: dict) -> str:
+    import prompts as P
+    try:
+        msg = P.construir_prompt_indice(plan)
+        raw = _ask(
+            [{'role': 'user', 'content': msg}],
+            model=_MODEL_CHEAP, max_tokens=600, temperature=0.3, json_mode=True)
+        got = _json_parse(raw)
+        lines = []
+        for entry in got.get('indice', []):
+            caps = ', '.join(str(c) for c in entry.get('capitulos', []))
+            lines.append(f"**{entry['area']}** (cap. {caps}): {entry['frase']}")
+        return '\n'.join(lines)
+    except Exception:
+        return ''
+
+
+def _write_all_chapters(dossier: dict, plan: dict,
+                        genero: str) -> tuple[dict[int, str], dict[int, list[str]]]:
+    """All 9 chapters in parallel — enlaces come from the plan, not written text."""
     import prompts as P
     by_n      = {c['n']: c for c in P.CAPITULOS}
     plan_by_n = {c['n']: c for c in plan.get('capitulos', [])}
 
-    # Pre-compute enlace_anterior for each chapter from the plan beats
     enlace_map: dict[int, str] = {}
     for cap in plan.get('capitulos', []):
         enlace_beat = next(
@@ -451,22 +480,40 @@ def _write_all_chapters(dossier: dict, plan: dict) -> dict[int, str]:
     def _write(spec):
         plan_cap        = plan_by_n.get(spec['n'], {})
         enlace_anterior = enlace_map.get(spec['n'], '')
-        return _write_chapter(spec, plan_cap, dossier, enlace_anterior)
+        return _write_chapter(spec, plan_cap, dossier, enlace_anterior, genero)
 
     with ThreadPoolExecutor(max_workers=len(P.CAPITULOS)) as ex:
         results = list(ex.map(_write, [by_n[n] for n in sorted(by_n)]))
 
-    return {n: txt for n, txt in results}
+    written = {n: txt for n, txt in results}
+
+    # Extract tells in parallel (cheap calls on already-written text)
+    with ThreadPoolExecutor(max_workers=len(written)) as ex:
+        tells_results = list(ex.map(lambda kv: _extract_tells(*kv), written.items()))
+    tells_by_n = dict(tells_results)
+
+    return written, tells_by_n
 
 
-def _assemble(written: dict[int, str]) -> str:
+def _assemble(written: dict[int, str], tells_by_n: dict[int, list[str]],
+              index_text: str) -> str:
     import prompts as P
     parts = []
     for spec in P.CAPITULOS:
         n = spec['n']
-        if n in written:
-            parts.append(f"## {n:02d}. {spec['titulo']}\n\n{written[n]}")
-    return '\n\n'.join(parts)
+        if n not in written:
+            continue
+        block = f"## {n:02d}. {spec['titulo']}\n\n{written[n]}"
+        tells = tells_by_n.get(n, [])
+        if tells:
+            tells_fmt = '\n'.join(f'· {t}' for t in tells)
+            block += f"\n\n---\n*Lo que puedes notar en ti:*\n{tells_fmt}"
+        parts.append(block)
+
+    doc = '\n\n'.join(parts)
+    if index_text:
+        doc += f"\n\n---\n## Por dónde volver\n\n{index_text}"
+    return doc
 
 
 # ── Main entry point ───────────────────────────────────────────────────────────
@@ -498,12 +545,18 @@ def generate_horoscope(user, reading_type) -> dict:
     plan = _plan(dossier)
     log.info('Plan complete: %s', plan.get('tesis_global', '')[:80])
 
-    # Chapters — 9 parallel writing calls, each executing pre-decided beats
-    written = _write_all_chapters(dossier, plan)
+    # Gender for grammatical agreement (neutral fallback if not set)
+    genero = getattr(user, 'gender', None) or 'desconocido'
+
+    # Chapters — 9 parallel writing calls + parallel tell extraction
+    written, tells_by_n = _write_all_chapters(dossier, plan, genero)
     log.info('Chapters written: %d', len(written))
 
-    # Concatenate
-    documento = _assemble(written)
+    # Area index (cheap call, uses plan theses)
+    index_text = _build_index(plan)
+
+    # Concatenate with tells after each chapter and index at end
+    documento = _assemble(written, tells_by_n, index_text)
     log.info('Document assembled: ~%d words', len(documento.split()))
 
     return {

@@ -5,8 +5,9 @@ Storytelling layer. Two stages:
   1. PLANNER  — one call, whole document, no prose. Produces theses + beats.
   2. CHAPTERS — 9 parallel writing calls, each executing pre-decided beats.
 
-No ledger, no QA/repair. The planner prevents repetition upstream;
-seleccionar_material caps what each writer can see.
+After writing:
+  3. TELLS    — cheap call per chapter, extracts 3 observable signals.
+  4. INDEX    — cheap call builds area-to-chapter index from plan theses.
 """
 
 from __future__ import annotations
@@ -107,11 +108,6 @@ cuando la conversación ya ha pasado de largo.»
 # ==========================================================================
 # 2. NINE CHAPTERS — three acts, not a topic list
 # ==========================================================================
-# Chapters are questions about the reader's life. Planets are evidence
-# marshalled to answer them, never the subject of the chapter.
-#
-# 'escena' assigned deterministically — the model cannot reuse scenes.
-# 'max_factores' hard cap. Selection is what makes writing feel authored.
 
 CAPITULOS = [
     dict(
@@ -197,7 +193,10 @@ CAPITULOS = [
         max_factores=1,
         fuente=[],
         nota="Síntesis, no resumen. No introduzcas ni un dato nuevo de la "
-             "carta. El último tercio es honesto sobre los límites.",
+             "carta. El último tercio es honesto sobre los límites. "
+             "PROHIBIDO el giro de cuarta pared ('no has leído para sentirte "
+             "descrito'): si el lector no se identifica, el final invalida todo "
+             "lo anterior. Cierra sobre la carta, no sobre el acto de leerla.",
     ),
 ]
 
@@ -226,9 +225,9 @@ def seleccionar_material(dossier: dict, spec: dict) -> dict:
              if k in dossier and k not in posiciones}
 
     return {
-        "posiciones":       posiciones,
-        "aspectos":         elegidos,
-        "extra":            extra,
+        "posiciones":        posiciones,
+        "aspectos":          elegidos,
+        "extra":             extra,
         "descartados_count": len(descartados),
     }
 
@@ -280,6 +279,10 @@ No lo resuelvas."}},
         {{"tipo": "coste", "contenido": "Qué rompe esto. Quién paga."}},
         {{"tipo": "escena", "contenido": "Qué ocurre exactamente en la escena \
 asignada"}},
+        {{"tipo": "senal", "contenido": "El momento observable en que esta \
+persona puede pillarse a sí misma haciéndolo. NO es un consejo. No digas qué \
+debería hacer: di qué va a notar. Tiene que ser algo que ocurra en menos de \
+un segundo y que se pueda comprobar."}},
         {{"tipo": "enlace", "contenido": "La pregunta que queda abierta para \
 el capítulo siguiente"}}
       ]
@@ -340,6 +343,15 @@ def validar_plan(plan: dict) -> list[str]:
 # 6. WRITING CALL — executes beats, decides nothing
 # ==========================================================================
 
+# Spanish runs ~2.5-3.0 tokens per word. At 2.2 every long chapter truncates
+# mid-sentence. 3.4 leaves headroom; finish_reason=length is logged as warning.
+TOKENS_POR_PALABRA = 3.4
+
+
+def max_tokens_para(spec: dict) -> int:
+    return int(spec["palabras"] * TOKENS_POR_PALABRA)
+
+
 ESCRIBIR_PROMPT = """\
 {exemplars}
 
@@ -378,6 +390,20 @@ con amigos.
 5. Sin párrafo de resumen. Nada de «en resumen» ni «en conclusión». El último \
 párrafo es el enlace: deja la pregunta abierta.
 
+PROHIBIDO DAR CONSEJOS
+No escribas nunca qué debería hacer esta persona. Nada de «aprende a», \
+«intenta», «es importante que», «te conviene», «trabaja tu», «busca el \
+equilibrio». En cuanto aconsejas, dejas de describir a alguien concreto y \
+empiezas a decir lo que vale para cualquiera.
+Lo que sí haces es el beat de señal: nombrar el momento observable en que \
+esta persona se puede pillar. «Sabrás que está ocurriendo cuando…». Un \
+segundo, comprobable, imposible de escribir para otra carta.
+
+GÉNERO GRAMATICAL
+Esta persona es: {genero}. Mantén ese género en todos los adjetivos y \
+participios del capítulo. Si es desconocido, escribe en español neutro: evita \
+adjetivos con marca de género referidos al lector.
+
 EXTENSIÓN
 Unas {palabras} palabras. Si el material no da, escribe menos. Rellenar es \
 peor que quedarse corto.
@@ -413,7 +439,8 @@ def formatear_material(sel: dict) -> str:
 
 
 def construir_prompt_escritura(spec: dict, plan_cap: dict, sel: dict,
-                               enlace_anterior: str) -> str:
+                               enlace_anterior: str,
+                               genero: str = "desconocido") -> str:
     return ESCRIBIR_PROMPT.format(
         exemplars=EXEMPLARS,
         n=spec["n"], titulo=spec["titulo"], pregunta=spec["pregunta"],
@@ -422,5 +449,75 @@ def construir_prompt_escritura(spec: dict, plan_cap: dict, sel: dict,
         material=formatear_material(sel),
         escena=spec.get("escena") or "(este capítulo no lleva escena)",
         enlace_anterior=enlace_anterior or "(es el primer capítulo)",
+        genero=genero,
         palabras=spec["palabras"],
     )
+
+
+# ==========================================================================
+# 7. TELLS — observable signals, not advice (cheap call per chapter)
+# ==========================================================================
+
+COMPROBAR_PROMPT = """\
+Este es un capítulo de un documento astrológico:
+
+{chapter}
+
+Extrae TRES señales observables: momentos concretos en los que esta persona \
+puede pillarse a sí misma haciendo lo que el capítulo describe.
+
+REGLAS
+- No son consejos. Prohibido «deberías», «intenta», «aprende a».
+- Cada una ocurre en menos de un segundo y se puede comprobar.
+- Cada una sale de este capítulo concreto, no de la astrología en general.
+- Máximo 20 palabras cada una.
+- Empieza cada una por un verbo o por «Cuando».
+
+Ejemplos del registro correcto:
+  «Cuando reduces una cifra dos veces antes de decirla en voz alta.»
+  «Cuando dices que sí antes de haber mirado el calendario.»
+
+Devuelve JSON: {{"senales": ["...", "...", "..."]}}
+"""
+
+
+# ==========================================================================
+# 8. AREA INDEX — findability without restructuring the arc
+# ==========================================================================
+
+AREAS = {
+    "Amor y pareja":    [2, 4, 8],
+    "Amistad y grupo":  [1, 6, 8],
+    "Trabajo y dinero": [3, 6, 7],
+    "Conflicto":        [3, 5],
+    "Soledad":          [2, 7, 9],
+}
+
+INDICE_PROMPT = """\
+Aquí están las tesis de los nueve capítulos de un documento astrológico:
+
+{tesis}
+
+Escribe el índice por áreas de la vida que cierra el documento. Para cada \
+área, una sola frase que diga qué dice este documento concreto sobre ella y \
+en qué capítulos está.
+
+Áreas y capítulos donde aparece cada una:
+{areas}
+
+REGLAS
+- Una frase por área. Sin astrología, sin nombres de planetas.
+- No resumas los capítulos: di qué encontrará el lector si vuelve ahí.
+- Segunda persona.
+
+Devuelve JSON: {{"indice": [{{"area": "...", "frase": "...", \
+"capitulos": [1,2]}}]}}
+"""
+
+
+def construir_prompt_indice(plan: dict) -> str:
+    tesis = "\n".join(f"  {c['n']}. {c.get('tesis', '')}"
+                      for c in plan.get("capitulos", []))
+    areas = "\n".join(f"  {k}: capítulos {', '.join(map(str, v))}"
+                      for k, v in AREAS.items())
+    return INDICE_PROMPT.format(tesis=tesis, areas=areas)

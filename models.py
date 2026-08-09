@@ -19,6 +19,7 @@ class User(UserMixin, db.Model):
     birth_date    = db.Column(db.Date, nullable=True)
     birth_time    = db.Column(db.Time, nullable=True)
     birth_place   = db.Column(db.String(255), nullable=True)
+    gender        = db.Column(db.String(20), nullable=True)  # masculino | femenino | None→desconocido
 
     # Stripe
     stripe_customer_id = db.Column(db.String(255), nullable=True, index=True)
