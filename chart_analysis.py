@@ -39,6 +39,7 @@ PLANET_ES = {
     "Pluto": "Plutón", "Ascendant": "el Ascendente",
     "Medium_Coeli": "el Medio Cielo", "MC": "el Medio Cielo",
     "Descendant": "el Descendente", "Imum_Coeli": "el Fondo del Cielo",
+    "North_Node": "el Nodo Norte", "South_Node": "el Nodo Sur",
 }
 
 ASPECT_ES = {
@@ -143,7 +144,7 @@ def _moon_phase_name(deg: float) -> str:
 
 def _compute_graded_aspects(pos: dict) -> list[dict]:
     """Compute aspects between all planet+angle pairs, graded by orb."""
-    bodies = CORE + ["Ascendant"]
+    bodies = CORE + ["Ascendant", "North_Node", "South_Node"]
     available = [(n, pos[n]["longitude"]) for n in bodies if n in pos]
 
     graded = []
@@ -152,6 +153,9 @@ def _compute_graded_aspects(pos: dict) -> list[dict]:
             if j <= i:
                 continue
             if n1 in ANGLES and n2 in ANGLES:
+                continue
+            # Nodes are always exactly opposite — skip their mutual aspect
+            if {n1, n2} == {"North_Node", "South_Node"}:
                 continue
 
             diff = abs(lon1 - lon2) % 360

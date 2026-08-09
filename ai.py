@@ -192,6 +192,30 @@ def _build_chart_kerykeion(birth_date, birth_time, birth_place,
     positions['Descendant']  = {'longitude': dc.abs_pos,  'sign': dc.sign,  'house': 7,  'retrograde': False}
     positions['Imum_Coeli']  = {'longitude': ic.abs_pos,  'sign': ic.sign,  'house': 4,  'retrograde': False}
 
+    # Lunar nodes (mean)
+    try:
+        nn = getattr(subject, 'mean_node')
+        _SIGN_ABBR = ['Ari', 'Tau', 'Gem', 'Can', 'Leo', 'Vir',
+                      'Lib', 'Sco', 'Sag', 'Cap', 'Aqu', 'Pis']
+        nn_lon   = nn.abs_pos
+        sn_lon   = (nn_lon + 180) % 360
+        nn_house = _house_num(nn.house)
+        sn_house = ((nn_house - 1 + 6) % 12) + 1
+        positions['North_Node'] = {
+            'longitude': nn_lon,
+            'sign':      nn.sign,
+            'house':     nn_house,
+            'retrograde': True,
+        }
+        positions['South_Node'] = {
+            'longitude': sn_lon,
+            'sign':      _SIGN_ABBR[int(sn_lon // 30) % 12],
+            'house':     sn_house,
+            'retrograde': True,
+        }
+    except Exception as e:
+        log.warning('Could not get lunar nodes: %s', e)
+
     # House cusps
     house_cusps = {}
     for i, attr in enumerate(_HOUSE_ATTRS, 1):
@@ -405,6 +429,7 @@ def _build_overall_text(pos_es: dict, house_cusps: dict) -> str:
     """Full planet list + house cusps — included in every house-group call for context."""
     ORDER = ['Sun', 'Moon', 'Mercury', 'Venus', 'Mars',
              'Jupiter', 'Saturn', 'Uranus', 'Neptune', 'Pluto',
+             'North_Node', 'South_Node',
              'Ascendant', 'Medium_Coeli', 'Descendant', 'Imum_Coeli']
     lines = ['Posiciones planetarias:']
     for name in ORDER:
