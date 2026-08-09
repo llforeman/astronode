@@ -144,7 +144,7 @@ def _moon_phase_name(deg: float) -> str:
 
 def _compute_graded_aspects(pos: dict) -> list[dict]:
     """Compute aspects between all planet+angle pairs, graded by orb."""
-    bodies = CORE + ["Ascendant", "North_Node", "South_Node"]
+    bodies = CORE + ["Ascendant", "Medium_Coeli", "North_Node", "South_Node"]
     available = [(n, pos[n]["longitude"]) for n in bodies if n in pos]
 
     graded = []
