@@ -12,12 +12,10 @@ from __future__ import annotations
 # Section definitions
 # ==========================================================================
 
-SECCIONES = [
-    {"n": 1, "titulo": "Quién eres",        "casas": []},        # Sun / Moon / ASC
-    {"n": 2, "titulo": "Tu mundo propio",   "casas": [1, 2, 3]},
-    {"n": 3, "titulo": "Raíces y creación", "casas": [4, 5, 6]},
-    {"n": 4, "titulo": "Vínculos y fondo",  "casas": [7, 8, 9]},
-    {"n": 5, "titulo": "Misión y sombra",   "casas": [10, 11, 12]},
+# n=1  → personality snapshot (Sun / Moon / ASC)
+# n=2-13 → one call per house (casa = house number 1-12)
+SECCIONES = [{"n": 1, "titulo": "Quién eres", "casa": None}] + [
+    {"n": h + 1, "titulo": f"Casa {h}", "casa": h} for h in range(1, 13)
 ]
 
 CAPITULOS = SECCIONES  # backward-compat alias
@@ -35,17 +33,16 @@ Escribe en español de España, tuteando al lector. Prosa corrida, sin listas ni
 {data}
 """
 
-PROMPT_CASAS = """\
-Analiza las casas {start} a {end} de esta carta natal, casa por casa.
-Para cada casa, explica la significancia de los planetas presentes (o su ausencia) \
-y los aspectos intradomiciliarios e interdomiciliarios que la involucran.
-Usa las posiciones planetarias globales, el Ascendente y las cúspides como contexto.
-Explica las {num_casas} casas. Proporciona los retos de cada casa según la carta natal.
+PROMPT_CASA = """\
+Analiza la casa {n} de esta carta natal.
+Explica los planetas presentes (o su ausencia), los aspectos intradomiciliarios \
+e interdomiciliarios que la involucran, y los retos que indica esta casa según la carta.
+Usa las posiciones planetarias globales y las cúspides como contexto.
 Escribe en español de España, tuteando al lector. Prosa corrida, sin listas ni viñetas.
 
 POSICIONES PLANETARIAS GLOBALES Y CÚSPIDES
 {overall}
 
-DESGLOSE CASA POR CASA
+CASA {n}
 {breakdown}
 """

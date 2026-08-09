@@ -412,63 +412,48 @@ def _build_overall_text(pos_es: dict, house_cusps: dict) -> str:
     return '\n'.join(lines)
 
 
-def _build_house_breakdown(houses: list, pos_es: dict, aspects: list) -> str:
-    """House-by-house: planets in each house + intra-house + inter-house aspects."""
-    house_set = set(houses)
-    by_house: dict = {h: [] for h in houses}
-    intra:    dict = {h: [] for h in houses}
-    inter:    dict = {h: [] for h in houses}
-
+def _build_house_breakdown_single(house: int, pos_es: dict, aspects: list) -> str:
+    """Planets + intra-house + inter-house aspects for a single house."""
+    planets = []
     for name, p in pos_es.items():
-        h = p.get('casa')
-        if h in by_house:
+        if p.get('casa') == house:
             retro = ' (retrógrado)' if p.get('retrogrado') else ''
             dig   = f", {p['dignidad']}" if p.get('dignidad') else ''
-            by_house[h].append(
-                f"{p['planeta_es']}: {p['grado']} — {p['signo']}{dig}{retro}")
+            planets.append(f"  — {p['planeta_es']}: {p['grado']} — {p['signo']}{dig}{retro}")
 
+    intra, inter = [], []
     for asp in aspects:
         h1, h2 = asp.get('casa_a'), asp.get('casa_b')
         if h1 is None or h2 is None:
             continue
-        a1, a2 = h1 in house_set, h2 in house_set
-        if not (a1 or a2):
+        if h1 != house and h2 != house:
             continue
         s1  = pos_es.get(asp['a'], {}).get('signo', '')
         s2  = pos_es.get(asp['b'], {}).get('signo', '')
-        txt = (f"{asp['a_es']} ({s1}, Casa {h1}) {asp['aspecto']} "
+        txt = (f"  — {asp['a_es']} ({s1}, Casa {h1}) {asp['aspecto']} "
                f"{asp['b_es']} ({s2}, Casa {h2}), orbe {asp['orbe']:+.2f}°")
-        if a1 and a2:
-            intra[min(h1, h2)].append(txt)
-        elif a1:
-            inter[h1].append(txt)
+        if h1 == house and h2 == house:
+            intra.append(txt)
         else:
-            inter[h2].append(txt)
+            inter.append(txt)
 
     lines = []
-    for h in houses:
-        lines.append(f'Casa {h}:')
-        if by_house[h]:
-            lines.append('  Planetas:')
-            for p in by_house[h]:
-                lines.append(f'    — {p}')
-        else:
-            lines.append('  Sin planetas.')
-        lines.append('  Aspectos intradomiciliarios:')
-        for a in (intra.get(h) or ['(ninguno)']):
-            lines.append(f'    — {a}')
-        lines.append('  Aspectos interdomiciliarios:')
-        for a in (inter.get(h) or ['(ninguno)']):
-            lines.append(f'    — {a}')
-        lines.append('')
+    lines.append('Planetas:')
+    lines.extend(planets or ['  (ninguno)'])
+    lines.append('Aspectos intradomiciliarios:')
+    lines.extend(intra or ['  (ninguno)'])
+    lines.append('Aspectos interdomiciliarios:')
+    lines.extend(inter or ['  (ninguno)'])
     return '\n'.join(lines)
 
 
 def _call_section(sec: dict, pos_es: dict, aspects: list,
                   house_cusps: dict) -> tuple[int, str]:
     import prompts as P
-    n = sec['n']
-    if not sec['casas']:
+    n    = sec['n']
+    casa = sec['casa']
+
+    if casa is None:
         # Section 1: personality snapshot — Sun, Moon, Ascendant
         data_lines = []
         for name in ['Sun', 'Moon', 'Ascendant']:
@@ -484,13 +469,10 @@ def _call_section(sec: dict, pos_es: dict, aspects: list,
                    model=_MODEL_PROSE, max_tokens=2000, temperature=0.85)
     else:
         overall   = _build_overall_text(pos_es, house_cusps)
-        breakdown = _build_house_breakdown(sec['casas'], pos_es, aspects)
-        msg = P.PROMPT_CASAS.format(
-            start=sec['casas'][0], end=sec['casas'][-1],
-            num_casas=len(sec['casas']),
-            overall=overall, breakdown=breakdown)
+        breakdown = _build_house_breakdown_single(casa, pos_es, aspects)
+        msg = P.PROMPT_CASA.format(n=casa, overall=overall, breakdown=breakdown)
         raw = _ask([{'role': 'user', 'content': msg}],
-                   model=_MODEL_PROSE, max_tokens=3000, temperature=0.85)
+                   model=_MODEL_PROSE, max_tokens=1500, temperature=0.85)
     return n, raw
 
 
@@ -531,7 +513,7 @@ def generate_horoscope(user, reading_type) -> dict:
     aspects    = dossier['aspectos']     # graded, with casa_a / casa_b
     log.info('Dossier built, %d aspects', len(aspects))
 
-    with ThreadPoolExecutor(max_workers=len(P.SECCIONES)) as ex:
+    with ThreadPoolExecutor(max_workers=13) as ex:
         results = list(ex.map(
             lambda sec: _call_section(sec, pos_es, aspects, house_cusps),
             P.SECCIONES))
