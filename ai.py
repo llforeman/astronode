@@ -192,29 +192,39 @@ def _build_chart_kerykeion(birth_date, birth_time, birth_place,
     positions['Descendant']  = {'longitude': dc.abs_pos,  'sign': dc.sign,  'house': 7,  'retrograde': False}
     positions['Imum_Coeli']  = {'longitude': ic.abs_pos,  'sign': ic.sign,  'house': 4,  'retrograde': False}
 
-    # Lunar nodes (mean)
-    try:
-        nn = getattr(subject, 'mean_node')
-        _SIGN_ABBR = ['Ari', 'Tau', 'Gem', 'Can', 'Leo', 'Vir',
-                      'Lib', 'Sco', 'Sag', 'Cap', 'Aqu', 'Pis']
-        nn_lon   = nn.abs_pos
-        sn_lon   = (nn_lon + 180) % 360
-        nn_house = _house_num(nn.house)
-        sn_house = ((nn_house - 1 + 6) % 12) + 1
-        positions['North_Node'] = {
-            'longitude': nn_lon,
-            'sign':      nn.sign,
-            'house':     nn_house,
-            'retrograde': True,
-        }
-        positions['South_Node'] = {
-            'longitude': sn_lon,
-            'sign':      _SIGN_ABBR[int(sn_lon // 30) % 12],
-            'house':     sn_house,
-            'retrograde': True,
-        }
-    except Exception as e:
-        log.warning('Could not get lunar nodes: %s', e)
+    # Lunar nodes (mean) — try known attribute names across Kerykeion versions
+    _SIGN_ABBR = ['Ari', 'Tau', 'Gem', 'Can', 'Leo', 'Vir',
+                  'Lib', 'Sco', 'Sag', 'Cap', 'Aqu', 'Pis']
+    _node_attr = None
+    for _candidate in ('mean_node', 'true_node', 'mean_north_node', 'true_north_node'):
+        if hasattr(subject, _candidate):
+            _node_attr = _candidate
+            break
+    if _node_attr:
+        try:
+            nn       = getattr(subject, _node_attr)
+            nn_lon   = nn.abs_pos
+            sn_lon   = (nn_lon + 180) % 360
+            nn_house = _house_num(nn.house)
+            sn_house = ((nn_house - 1 + 6) % 12) + 1
+            positions['North_Node'] = {
+                'longitude':  nn_lon,
+                'sign':       nn.sign,
+                'house':      nn_house,
+                'retrograde': True,
+            }
+            positions['South_Node'] = {
+                'longitude':  sn_lon,
+                'sign':       _SIGN_ABBR[int(sn_lon // 30) % 12],
+                'house':      sn_house,
+                'retrograde': True,
+            }
+            log.info('Lunar nodes built via %s: NN Casa %d, SN Casa %d',
+                     _node_attr, nn_house, sn_house)
+        except Exception as e:
+            log.warning('Lunar node build failed (%s): %s', _node_attr, e)
+    else:
+        log.warning('Kerykeion has no known node attribute; nodes skipped')
 
     # House cusps
     house_cusps = {}
