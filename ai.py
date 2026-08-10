@@ -500,11 +500,20 @@ def _build_house_breakdown_single(house: int, pos_es: dict, aspects: list) -> st
     return '\n'.join(lines)
 
 
+def _gender_note(gender: str | None) -> str:
+    if gender == 'femenino':
+        return 'El lector es mujer. Usa concordancia gramatical en femenino en todo momento.'
+    if gender == 'masculino':
+        return 'El lector es hombre. Usa concordancia gramatical en masculino en todo momento.'
+    return ''
+
+
 def _call_section(sec: dict, pos_es: dict, aspects: list,
-                  house_cusps: dict) -> tuple[int, str]:
+                  house_cusps: dict, gender: str | None = None) -> tuple[int, str]:
     import prompts as P
     n    = sec['n']
     casa = sec['casa']
+    gnote = _gender_note(gender)
 
     if casa is None:
         # Section 1: personality snapshot — Sun, Moon, Ascendant
@@ -517,13 +526,13 @@ def _call_section(sec: dict, pos_es: dict, aspects: list,
                 data_lines.append(
                     f"  {p['planeta_es']}: {p['grado']} — {p['signo']} — "
                     f"Casa {p['casa']}{dig}{retro}")
-        msg = P.PROMPT_PERSONALIDAD.format(data='\n'.join(data_lines))
+        msg = P.PROMPT_PERSONALIDAD.format(data='\n'.join(data_lines), gender_note=gnote)
         raw = _ask([{'role': 'user', 'content': msg}],
                    model=_MODEL_PROSE, temperature=0.85)
     else:
         overall   = _build_overall_text(pos_es, house_cusps)
         breakdown = _build_house_breakdown_single(casa, pos_es, aspects)
-        msg = P.PROMPT_CASA.format(n=casa, overall=overall, breakdown=breakdown)
+        msg = P.PROMPT_CASA.format(n=casa, overall=overall, breakdown=breakdown, gender_note=gnote)
         raw = _ask([{'role': 'user', 'content': msg}],
                    model=_MODEL_PROSE, temperature=0.85)
     return n, raw
@@ -566,9 +575,10 @@ def generate_horoscope(user, reading_type) -> dict:
     aspects    = dossier['aspectos']     # graded, with casa_a / casa_b
     log.info('Dossier built, %d aspects', len(aspects))
 
+    gender = getattr(user, 'gender', None)
     with ThreadPoolExecutor(max_workers=13) as ex:
         results = list(ex.map(
-            lambda sec: _call_section(sec, pos_es, aspects, house_cusps),
+            lambda sec: _call_section(sec, pos_es, aspects, house_cusps, gender),
             P.SECCIONES))
     log.info('Sections written: %d', len(results))
 

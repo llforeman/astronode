@@ -29,6 +29,7 @@ Analiza la personalidad de esta persona basándote en su Sol, Luna y Ascendente.
 Para cada uno, explica su signo y casa, y lo que significa para esta persona concreta.
 Explica cómo trabajan juntos y dónde se contradicen.
 Escribe en español de España, tuteando al lector. Prosa corrida, sin listas ni viñetas.
+{gender_note}
 
 {data}
 """
@@ -39,6 +40,7 @@ Explica los planetas presentes (o su ausencia), los aspectos intradomiciliarios 
 e interdomiciliarios que la involucran, y los retos que indica esta casa según la carta.
 Usa las posiciones planetarias globales y las cúspides como contexto.
 Escribe en español de España, tuteando al lector. Prosa corrida, sin listas ni viñetas.
+{gender_note}
 
 POSICIONES PLANETARIAS GLOBALES Y CÚSPIDES
 {overall}
