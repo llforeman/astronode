@@ -192,45 +192,53 @@ def _build_chart_kerykeion(birth_date, birth_time, birth_place,
     positions['Descendant']  = {'longitude': dc.abs_pos,  'sign': dc.sign,  'house': 7,  'retrograde': False}
     positions['Imum_Coeli']  = {'longitude': ic.abs_pos,  'sign': ic.sign,  'house': 4,  'retrograde': False}
 
-    # Lunar nodes (mean) — try known attribute names across Kerykeion versions
-    _SIGN_ABBR = ['Ari', 'Tau', 'Gem', 'Can', 'Leo', 'Vir',
-                  'Lib', 'Sco', 'Sag', 'Cap', 'Aqu', 'Pis']
-    _node_attr = None
-    for _candidate in ('mean_node', 'true_node', 'mean_north_node', 'true_north_node'):
-        if hasattr(subject, _candidate):
-            _node_attr = _candidate
-            break
-    if _node_attr:
-        try:
-            nn       = getattr(subject, _node_attr)
-            nn_lon   = nn.abs_pos
-            sn_lon   = (nn_lon + 180) % 360
-            nn_house = _house_num(nn.house)
-            sn_house = ((nn_house - 1 + 6) % 12) + 1
-            positions['North_Node'] = {
-                'longitude':  nn_lon,
-                'sign':       nn.sign,
-                'house':      nn_house,
-                'retrograde': True,
-            }
-            positions['South_Node'] = {
-                'longitude':  sn_lon,
-                'sign':       _SIGN_ABBR[int(sn_lon // 30) % 12],
-                'house':      sn_house,
-                'retrograde': True,
-            }
-            log.info('Lunar nodes built via %s: NN Casa %d, SN Casa %d',
-                     _node_attr, nn_house, sn_house)
-        except Exception as e:
-            log.warning('Lunar node build failed (%s): %s', _node_attr, e)
-    else:
-        log.warning('Kerykeion has no known node attribute; nodes skipped')
-
     # House cusps
     house_cusps = {}
     for i, attr in enumerate(_HOUSE_ATTRS, 1):
         h = getattr(subject, attr)
         house_cusps[i] = h.abs_pos
+
+    # Lunar nodes via swisseph directly (Kerykeion's mean_node is None in some versions)
+    try:
+        import swisseph as swe
+        _SIGN_ABBR = ['Ari', 'Tau', 'Gem', 'Can', 'Leo', 'Vir',
+                      'Lib', 'Sco', 'Sag', 'Cap', 'Aqu', 'Pis']
+        utc_dt = local_dt.astimezone(pytz.utc)
+        jd     = swe.julday(utc_dt.year, utc_dt.month, utc_dt.day,
+                            utc_dt.hour + utc_dt.minute / 60.0)
+        nn_lon = swe.calc_ut(jd, swe.MEAN_NODE)[0][0]
+        sn_lon = (nn_lon + 180) % 360
+
+        def _lon_to_house(lon, cusps):
+            lon = lon % 360
+            for h in range(1, 13):
+                c1 = cusps[h] % 360
+                c2 = cusps[(h % 12) + 1] % 360
+                if c1 <= c2:
+                    if c1 <= lon < c2:
+                        return h
+                else:
+                    if lon >= c1 or lon < c2:
+                        return h
+            return 1
+
+        nn_house = _lon_to_house(nn_lon, house_cusps)
+        sn_house = _lon_to_house(sn_lon, house_cusps)
+        positions['North_Node'] = {
+            'longitude':  nn_lon,
+            'sign':       _SIGN_ABBR[int(nn_lon // 30) % 12],
+            'house':      nn_house,
+            'retrograde': True,
+        }
+        positions['South_Node'] = {
+            'longitude':  sn_lon,
+            'sign':       _SIGN_ABBR[int(sn_lon // 30) % 12],
+            'house':      sn_house,
+            'retrograde': True,
+        }
+        log.info('Lunar nodes via swisseph: NN Casa %d, SN Casa %d', nn_house, sn_house)
+    except Exception as e:
+        log.warning('Could not compute lunar nodes via swisseph: %s', e)
 
     return positions, house_cusps, local_dt, lat, lng, subject
 
