@@ -5,8 +5,11 @@
   <a href="{{ url_for('readings.index') }}" style="color:var(--text-muted); font-size:0.9rem;">← Back to readings</a>
   <h2 style="margin: 1rem 0 0.25rem; color: var(--accent-light)">{{ reading.reading_type.name }}</h2>
   <p style="color:var(--text-muted); font-size:0.85rem; margin-bottom: 2rem;">
+    {% if reading.profile %}
+      For <strong style="color:var(--text);">{{ reading.profile.name }}</strong>{% if reading.profile.is_self %} (you){% endif %} ·
+    {% endif %}
     {{ reading.created_at.strftime('%B %d, %Y') }}
-    {% if reading.sent_by_email %} · ✉ sent to your email{% endif %}
+    {% if reading.sent_by_email %} · sent to your email{% endif %}
   </p>
   {% if reading.status == 'completed' and reading.content %}
     {% if reading.chart_image %}

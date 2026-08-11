@@ -38,10 +38,10 @@ def generate_reading_task(reading_id):
 
     with app.app_context():
         from extensions import db
-        from models import Reading, User
+        from models import Reading, User, Profile
 
         # 1. Read what we need
-        reading      = Reading.query.get(reading_id)
+        reading = Reading.query.get(reading_id)
         if not reading:
             log.error("Reading %s not found", reading_id)
             return
@@ -49,7 +49,13 @@ def generate_reading_task(reading_id):
         user         = User.query.get(reading.user_id)
         reading_type = reading.reading_type
 
-        if not user or not user.birth_date:
+        # Use profile if set, fall back to user's self profile, then user itself
+        if reading.profile_id:
+            subject = Profile.query.get(reading.profile_id)
+        else:
+            subject = Profile.query.filter_by(user_id=reading.user_id, is_self=True).first() or user
+
+        if not subject or not subject.birth_date:
             reading.status = 'failed'
             db.session.commit()
             return
@@ -57,10 +63,10 @@ def generate_reading_task(reading_id):
         # 2. Close DB connection before the long AI call
         db.session.close()
 
-        # 3. Call the AI
+        # 3. Call the AI (Profile has same attrs as User: birth_date, birth_time, birth_place, gender)
         try:
             from ai import generate_horoscope
-            result = generate_horoscope(user, reading_type)
+            result = generate_horoscope(subject, reading_type)
         except Exception as e:
             log.error("AI generation failed for reading %s: %s", reading_id, e)
             reading = Reading.query.get(reading_id)

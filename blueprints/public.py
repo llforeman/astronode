@@ -1,5 +1,5 @@
 import datetime
-from flask import Blueprint, render_template, redirect, url_for, request, flash
+from flask import Blueprint, render_template, redirect, url_for, request, flash, session
 from flask_login import current_user
 from extensions import limiter
 
@@ -77,6 +77,15 @@ def chart():
                     result['birth_place'] = birth_place
                     result['birth_date']  = birth_date
                     result['birth_time']  = birth_time
+
+                    # Store in session so logged-in users can save it as a profile
+                    session['chart_prefill'] = {
+                        'birth_date':  birth_date_str,
+                        'birth_time':  birth_time_str,
+                        'birth_place': birth_place,
+                        'birth_lat':   birth_lat_str,
+                        'birth_lng':   birth_lng_str,
+                    }
                 except Exception as e:
                     error = f'Could not compute chart: {str(e)}'
 

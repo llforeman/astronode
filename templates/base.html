@@ -57,10 +57,22 @@
     .btn-primary:hover { background: var(--accent-light); color: #fff; text-decoration: none; }
     .btn-outline { background: transparent; color: var(--accent-light); border: 1px solid var(--accent); }
     .btn-outline:hover { background: var(--accent); color: #fff; text-decoration: none; }
+    .btn-sm { padding: 0.3rem 0.75rem; font-size: 0.82rem; }
+    .btn-danger { background: transparent; color: #e74c3c; border: 1px solid #e74c3c; }
+    .btn-danger:hover { background: #e74c3c; color: #fff; text-decoration: none; }
     .flash { padding: 0.75rem 1rem; border-radius: 6px; margin-bottom: 1rem; background: var(--border); color: var(--text); }
 
     /* Theme toggle */
     .theme-toggle { background: none; border: 1px solid var(--border); color: var(--text-muted); padding: 0.3rem 0.7rem; border-radius: 6px; cursor: pointer; }
+
+    /* Profile cards */
+    .profile-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+    .profile-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 1.25rem; display: flex; flex-direction: column; gap: 0.5rem; }
+    .profile-card.is-self { border-color: var(--accent); }
+    .profile-card .profile-name { font-weight: 700; font-size: 1rem; display: flex; align-items: center; gap: 0.4rem; }
+    .self-badge { background: var(--accent); color: #fff; font-size: 0.65rem; padding: 0.1rem 0.4rem; border-radius: 4px; font-weight: 600; letter-spacing: 0.5px; }
+    .profile-card .profile-meta { color: var(--text-muted); font-size: 0.82rem; }
+    .profile-card .profile-actions { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-top: 0.5rem; }
   </style>
   {% block extra_css %}{% endblock %}
 </head>
@@ -68,8 +80,8 @@
   <nav class="sidebar">
     <div class="logo">✦ ASTRONODE</div>
     <a href="{{ url_for('main.dashboard') }}">Dashboard</a>
-    <a href="{{ url_for('readings.index') }}">My Readings</a>
-    <a href="{{ url_for('main.profile') }}">Profile</a>
+    <a href="{{ url_for('main.profiles') }}">People</a>
+    <a href="{{ url_for('readings.index') }}">Readings</a>
     <a href="{{ url_for('billing.pricing') }}">Plans</a>
     {% if current_user.role == 'superadmin' %}
     <a href="{{ url_for('admin.index') }}">Admin</a>

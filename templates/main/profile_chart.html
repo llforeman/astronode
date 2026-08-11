@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% block title %}{{ p.name }}'s Chart — Astronode{% endblock %}
+
+{% block extra_css %}
+<style>
+  .chart-img-wrap { text-align: center; margin-bottom: 2rem; overflow-x: auto; }
+  .chart-img-wrap svg { max-width: 100%; height: auto; border-radius: 12px; }
+  table.planets { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+  table.planets th { color: var(--text-muted); text-align: left; padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--border); font-weight: 600; }
+  table.planets td { padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--border); }
+  table.planets tr:last-child td { border-bottom: none; }
+  .sign-pill { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.8rem; background: var(--border); color: var(--accent-light); }
+  .aspects-list { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+  .aspect-tag { background: var(--bg2); border: 1px solid var(--border); border-radius: 6px; padding: 0.3rem 0.6rem; font-size: 0.8rem; color: var(--text-muted); }
+  .aspect-tag strong { color: var(--accent-light); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="max-width: 860px;">
+  <a href="{{ url_for('main.profiles') }}" style="color:var(--text-muted); font-size:0.9rem;">← Back to people</a>
+  <div style="display:flex; justify-content:space-between; align-items:center; margin: 1rem 0 1.5rem;">
+    <h2 style="color: var(--accent-light);">
+      {{ p.name }}'s Chart
+      {% if p.is_self %}<span class="self-badge" style="font-size:0.7rem; vertical-align:middle;">YOU</span>{% endif %}
+    </h2>
+    <a href="{{ url_for('main.profile_edit', profile_id=p.id) }}" class="btn btn-outline btn-sm">Edit profile</a>
+  </div>
+
+  {% if error %}
+  <div class="card" style="border-color:#e74c3c;">
+    <p>{{ error }}</p>
+    <a href="{{ url_for('main.profile_edit', profile_id=p.id) }}" class="btn btn-primary" style="margin-top:0.75rem;">Complete birth data →</a>
+  </div>
+
+  {% elif result %}
+
+  {% if result.chart_image %}
+  <div class="chart-img-wrap card" style="padding:1rem;">
+    {{ result.chart_image | safe }}
+  </div>
+  {% endif %}
+
+  <div class="card">
+    <h3 style="margin-bottom:1rem; color:var(--accent-light); font-size:0.85rem; text-transform:uppercase; letter-spacing:1px;">Planet Positions</h3>
+    <table class="planets">
+      <thead>
+        <tr><th>Planet</th><th>Sign</th><th>Degree</th><th>House</th></tr>
+      </thead>
+      <tbody>
+        {% set planet_order = ['Sun','Moon','Mercury','Venus','Mars','Jupiter','Saturn','Uranus','Neptune','Pluto','Ascendant','MC'] %}
+        {% for name in planet_order %}
+          {% if name in result.positions %}
+          {% set p2 = result.positions[name] %}
+          <tr>
+            <td><strong>{{ name }}</strong></td>
+            <td><span class="sign-pill">{{ p2.sign }}</span></td>
+            <td>{{ "%.1f"|format(p2.longitude % 30) }}°</td>
+            <td>{% if p2.house and p2.house != 'Unknown' %}House {{ p2.house }}{% else %}—{% endif %}</td>
+          </tr>
+          {% endif %}
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-bottom:1rem; color:var(--accent-light); font-size:0.85rem; text-transform:uppercase; letter-spacing:1px;">House Cusps</h3>
+    <div style="display:flex; flex-wrap:wrap; gap:0.5rem;">
+      {% for i in range(1, 13) %}
+      {% if i in result.house_cusps %}
+      <div style="background:var(--bg2); border:1px solid var(--border); border-radius:6px; padding:0.4rem 0.8rem; font-size:0.85rem;">
+        <span style="color:var(--text-muted);">House {{ i }}</span>
+        <strong style="margin-left:0.5rem; color:var(--accent-light);">{{ "%.1f"|format(result.house_cusps[i]) }}°</strong>
+      </div>
+      {% endif %}
+      {% endfor %}
+    </div>
+  </div>
+
+  {% if result.aspects %}
+  <div class="card">
+    <h3 style="margin-bottom:1rem; color:var(--accent-light); font-size:0.85rem; text-transform:uppercase; letter-spacing:1px;">Main Aspects</h3>
+    <div class="aspects-list">
+      {% for asp in result.aspects %}
+      <div class="aspect-tag">
+        <strong>{{ asp.p1 }}</strong> {{ asp.aspect }} <strong>{{ asp.p2 }}</strong>
+        <span style="color:var(--text-muted); font-size:0.75rem;">(orb {{ asp.orb }}°)</span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="card" style="background: linear-gradient(135deg, var(--bg2), var(--card)); border-color: var(--accent);">
+    <h3 style="color:var(--accent-light); margin-bottom:0.75rem;">Get AI Reading for {{ p.name }}</h3>
+    <p style="color:var(--text-muted); margin-bottom:1rem; font-size:0.9rem;">
+      A full AI-powered interpretation of every planet, house, and aspect — written in depth.
+    </p>
+    {% if reading_types %}
+      {% set rt = reading_types[0] %}
+      <form method="POST" action="{{ url_for('readings.request_reading', reading_type_id=rt.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="profile_id" value="{{ p.id }}">
+        <button type="submit" class="btn btn-primary">Request AI Reading →</button>
+      </form>
+    {% else %}
+      <a href="{{ url_for('billing.pricing') }}" class="btn btn-primary">See plans →</a>
+    {% endif %}
+  </div>
+
+  {% endif %}
+</div>
+{% endblock %}

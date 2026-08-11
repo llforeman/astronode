@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% block title %}Edit {{ p.name }} — Astronode{% endblock %}
+
+{% block extra_css %}
+<style>
+  .place-autocomplete { position: relative; }
+  .autocomplete-dropdown {
+    display: none; position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+    background: var(--bg2); border: 1px solid var(--border); border-radius: 8px;
+    max-height: 200px; overflow-y: auto; z-index: 200; box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  }
+  .autocomplete-item { padding: 0.55rem 0.9rem; cursor: pointer; font-size: 0.88rem; color: var(--text); border-bottom: 1px solid var(--border); }
+  .autocomplete-item:last-child { border-bottom: none; }
+  .autocomplete-item:hover { background: var(--border); }
+  .form-group { margin-bottom: 1rem; }
+  .form-group label { display:block; font-size:0.82rem; color:var(--text-muted); margin-bottom:0.35rem; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; }
+  .form-group input, .form-group select {
+    width: 100%; padding: 0.65rem 0.85rem; border-radius: 6px;
+    border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 0.95rem;
+  }
+  .form-group input:focus, .form-group select:focus { outline: none; border-color: var(--accent); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="max-width: 520px;">
+  <a href="{{ url_for('main.profiles') }}" style="color:var(--text-muted); font-size:0.9rem;">← Back to people</a>
+  <h2 style="margin: 1rem 0 1.5rem; color: var(--accent-light);">
+    Edit {{ p.name }}
+    {% if p.is_self %}<span class="self-badge" style="font-size:0.7rem; vertical-align:middle;">YOU</span>{% endif %}
+  </h2>
+
+  <div class="card">
+    <form method="POST">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <div class="form-group">
+        <label>Name *</label>
+        <input type="text" name="name" required value="{{ p.name }}">
+      </div>
+
+      <div class="form-group">
+        <label>Birth date</label>
+        <input type="date" name="birth_date" value="{{ p.birth_date.isoformat() if p.birth_date else '' }}">
+      </div>
+
+      <div class="form-group">
+        <label>Birth time <span style="font-weight:400; text-transform:none;">(optional)</span></label>
+        <input type="time" name="birth_time" value="{{ p.birth_time.strftime('%H:%M') if p.birth_time else '' }}">
+      </div>
+
+      <div class="form-group place-autocomplete">
+        <label>Birth place</label>
+        <input type="text" id="place-display" autocomplete="off"
+               value="{{ p.birth_place or '' }}" placeholder="e.g. Barcelona, Spain">
+        <input type="hidden" name="birth_place" id="birth-place-hidden" value="{{ p.birth_place or '' }}">
+        <input type="hidden" name="birth_lat" id="birth-lat" value="{{ p.birth_lat or '' }}">
+        <input type="hidden" name="birth_lng" id="birth-lng" value="{{ p.birth_lng or '' }}">
+        <div id="place-dropdown" class="autocomplete-dropdown"></div>
+      </div>
+
+      <div class="form-group">
+        <label>Gender <span style="font-weight:400; text-transform:none;">(for reading grammar)</span></label>
+        <select name="gender">
+          <option value="" {% if not p.gender %}selected{% endif %}>Prefer not to say</option>
+          <option value="masculino" {% if p.gender == 'masculino' %}selected{% endif %}>Masculino</option>
+          <option value="femenino" {% if p.gender == 'femenino' %}selected{% endif %}>Femenino</option>
+        </select>
+      </div>
+
+      <div style="display:flex; gap:0.75rem; margin-top:1.5rem;">
+        <button type="submit" class="btn btn-primary">Save changes</button>
+        <a href="{{ url_for('main.profiles') }}" class="btn btn-outline">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  var display  = document.getElementById('place-display');
+  var hidden   = document.getElementById('birth-place-hidden');
+  var latInput = document.getElementById('birth-lat');
+  var lngInput = document.getElementById('birth-lng');
+  var dropdown = document.getElementById('place-dropdown');
+  if (!display) return;
+  var timer;
+
+  display.addEventListener('input', function () {
+    var q = this.value.trim();
+    hidden.value   = q;
+    latInput.value = '';
+    lngInput.value = '';
+    clearTimeout(timer);
+    if (q.length < 2) { dropdown.style.display = 'none'; return; }
+    timer = setTimeout(function () {
+      fetch('https://photon.komoot.io/api/?q=' + encodeURIComponent(q) + '&limit=6&lang=en')
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          dropdown.innerHTML = '';
+          if (!data.features || !data.features.length) { dropdown.style.display = 'none'; return; }
+          data.features.forEach(function (f) {
+            var p      = f.properties;
+            var coords = f.geometry.coordinates;
+            var parts  = [p.name, p.state, p.country].filter(Boolean);
+            var label  = parts.filter(function (v, i, a) { return a.indexOf(v) === i; }).join(', ');
+            var item = document.createElement('div');
+            item.className   = 'autocomplete-item';
+            item.textContent = label;
+            item.addEventListener('mousedown', function (e) {
+              e.preventDefault();
+              display.value  = label;
+              hidden.value   = label;
+              latInput.value = coords[1];
+              lngInput.value = coords[0];
+              dropdown.style.display = 'none';
+            });
+            dropdown.appendChild(item);
+          });
+          dropdown.style.display = 'block';
+        })
+        .catch(function () { dropdown.style.display = 'none'; });
+    }, 300);
+  });
+
+  display.addEventListener('blur', function () {
+    setTimeout(function () { dropdown.style.display = 'none'; }, 200);
+  });
+})();
+</script>
+{% endblock %}

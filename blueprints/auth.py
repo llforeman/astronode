@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, redirect, url_for, request, flash, current_app
+from flask import Blueprint, render_template, redirect, url_for, request, flash, session
 from flask_login import login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash
 from extensions import db, limiter
@@ -30,6 +30,12 @@ def register():
         db.session.add(user)
         db.session.commit()
         login_user(user)
+
+        # If user came from the free chart tool, send them to profiles to save it
+        if session.get('chart_prefill'):
+            flash('Welcome to Astronode! Save your chart as a profile below.')
+            return redirect(url_for('main.profiles'))
+
         flash('Welcome to Astronode!')
         return redirect(url_for('main.dashboard'))
     return render_template('auth/register.html')

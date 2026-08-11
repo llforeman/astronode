@@ -191,16 +191,28 @@
   {% endif %}
 
   <!-- CTA -->
+  {% if current_user.is_authenticated %}
   <div class="cta-banner">
-    <h2>✦ Descubre lo que los astros revelan sobre ti</h2>
-    <p>Tu carta natal muestra las posiciones, pero la interpretación completa con IA analiza cada planeta, casa y aspecto en profundidad — en español, personalizada para ti.</p>
+    <h2>✦ Guarda esta carta</h2>
+    <p>Guarda esta persona en tu cuenta y accede a su carta cuando quieras — hasta 25 personas.</p>
+    <div class="cta-actions">
+      <a href="{{ url_for('main.profiles') }}" class="btn btn-primary" style="font-size: 1.05rem; padding: 0.75rem 2rem;">
+        Guardar en mi cuenta →
+      </a>
+    </div>
+  </div>
+  {% else %}
+  <div class="cta-banner">
+    <h2>✦ Guarda esta y otras cartas para siempre</h2>
+    <p>Crea una cuenta gratis y guarda hasta 25 personas — tú, tu familia, tus amigos. Accede a sus cartas cuando quieras y obtén interpretaciones completas con IA.</p>
     <div class="cta-actions">
       <a href="{{ url_for('auth.register') }}" class="btn btn-primary" style="font-size: 1.05rem; padding: 0.75rem 2rem;">
-        Crear cuenta y obtener interpretación →
+        Crear cuenta gratis →
       </a>
       <a href="{{ url_for('public.pricing') }}" class="btn btn-outline">Ver precios</a>
     </div>
   </div>
+  {% endif %}
 
   {% endif %}
 </div>

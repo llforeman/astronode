@@ -1,56 +1,211 @@
-from flask import Blueprint, render_template, redirect, url_for, request, flash
+import datetime as dt
+
+from flask import Blueprint, render_template, redirect, url_for, request, flash, session
 from flask_login import login_required, current_user
 from extensions import db
-from models import User
 
 main_bp = Blueprint('main', __name__)
+
+MAX_PROFILES = 25
 
 
 @main_bp.route('/dashboard')
 @login_required
 def dashboard():
-    from models import Reading
+    from models import Reading, Profile
     readings = Reading.query.filter_by(user_id=current_user.id)\
                             .order_by(Reading.created_at.desc()).limit(5).all()
-    return render_template('main/dashboard.html', readings=readings)
+    profiles = Profile.query.filter_by(user_id=current_user.id)\
+                            .order_by(Profile.is_self.desc(), Profile.created_at.asc()).all()
+    return render_template('main/dashboard.html', readings=readings, profiles=profiles)
 
+
+# ── Profiles ──────────────────────────────────────────────────────────────────
+
+@main_bp.route('/profiles')
+@login_required
+def profiles():
+    from models import Profile, ReadingType
+    all_profiles  = Profile.query.filter_by(user_id=current_user.id)\
+                                 .order_by(Profile.is_self.desc(), Profile.created_at.asc()).all()
+    reading_types = ReadingType.query.filter_by(active=True).all()
+    prefill       = session.pop('chart_prefill', None)
+    return render_template('main/profiles.html',
+                           profiles=all_profiles,
+                           reading_types=reading_types,
+                           prefill=prefill,
+                           max_profiles=MAX_PROFILES)
+
+
+@main_bp.route('/profiles/add', methods=['POST'])
+@login_required
+def profile_add():
+    from models import Profile
+    count = Profile.query.filter_by(user_id=current_user.id).count()
+    if count >= MAX_PROFILES:
+        flash(f'You can have at most {MAX_PROFILES} profiles.')
+        return redirect(url_for('main.profiles'))
+
+    name        = request.form.get('name', '').strip()
+    birth_date  = request.form.get('birth_date', '').strip()
+    birth_time  = request.form.get('birth_time', '').strip()
+    birth_place = request.form.get('birth_place', '').strip()
+    birth_lat   = request.form.get('birth_lat', '').strip()
+    birth_lng   = request.form.get('birth_lng', '').strip()
+    gender      = request.form.get('gender', '').strip()
+    is_self_req = request.form.get('is_self') == '1'
+
+    if not name:
+        flash('Name is required.')
+        return redirect(url_for('main.profiles'))
+
+    # Only one is_self per user
+    if is_self_req:
+        existing_self = Profile.query.filter_by(user_id=current_user.id, is_self=True).first()
+        if existing_self:
+            flash('You already have a profile marked as yourself.')
+            return redirect(url_for('main.profiles'))
+
+    p = Profile(user_id=current_user.id, is_self=is_self_req)
+    p.name = name
+    if birth_date:
+        try:
+            p.birth_date = dt.date.fromisoformat(birth_date)
+        except ValueError:
+            flash('Invalid birth date.')
+            return redirect(url_for('main.profiles'))
+    if birth_time:
+        try:
+            h, m = birth_time.split(':')
+            p.birth_time = dt.time(int(h), int(m))
+        except (ValueError, AttributeError):
+            flash('Invalid birth time.')
+            return redirect(url_for('main.profiles'))
+    p.birth_place = birth_place or None
+    try:
+        p.birth_lat = float(birth_lat) if birth_lat else None
+        p.birth_lng = float(birth_lng) if birth_lng else None
+    except ValueError:
+        p.birth_lat = p.birth_lng = None
+    p.gender = gender if gender in ('masculino', 'femenino') else None
+
+    db.session.add(p)
+    db.session.commit()
+    flash(f'Profile "{p.name}" added.')
+    return redirect(url_for('main.profiles'))
+
+
+@main_bp.route('/profiles/<int:profile_id>/edit', methods=['GET', 'POST'])
+@login_required
+def profile_edit(profile_id):
+    from models import Profile
+    p = Profile.query.filter_by(id=profile_id, user_id=current_user.id).first_or_404()
+
+    if request.method == 'POST':
+        name        = request.form.get('name', '').strip()
+        birth_date  = request.form.get('birth_date', '').strip()
+        birth_time  = request.form.get('birth_time', '').strip()
+        birth_place = request.form.get('birth_place', '').strip()
+        birth_lat   = request.form.get('birth_lat', '').strip()
+        birth_lng   = request.form.get('birth_lng', '').strip()
+        gender      = request.form.get('gender', '').strip()
+
+        if not name:
+            flash('Name is required.')
+            return render_template('main/profile_edit.html', p=p)
+
+        p.name = name
+        if birth_date:
+            try:
+                p.birth_date = dt.date.fromisoformat(birth_date)
+            except ValueError:
+                flash('Invalid birth date.')
+                return render_template('main/profile_edit.html', p=p)
+        else:
+            p.birth_date = None
+        if birth_time:
+            try:
+                h, m = birth_time.split(':')
+                p.birth_time = dt.time(int(h), int(m))
+            except (ValueError, AttributeError):
+                flash('Invalid birth time.')
+                return render_template('main/profile_edit.html', p=p)
+        else:
+            p.birth_time = None
+        p.birth_place = birth_place or None
+        try:
+            p.birth_lat = float(birth_lat) if birth_lat else None
+            p.birth_lng = float(birth_lng) if birth_lng else None
+        except ValueError:
+            p.birth_lat = p.birth_lng = None
+        p.gender = gender if gender in ('masculino', 'femenino') else None
+
+        db.session.commit()
+        flash(f'"{p.name}" updated.')
+        return redirect(url_for('main.profiles'))
+
+    return render_template('main/profile_edit.html', p=p)
+
+
+@main_bp.route('/profiles/<int:profile_id>/delete', methods=['POST'])
+@login_required
+def profile_delete(profile_id):
+    from models import Profile
+    p = Profile.query.filter_by(id=profile_id, user_id=current_user.id).first_or_404()
+    name = p.name
+    db.session.delete(p)
+    db.session.commit()
+    flash(f'"{name}" deleted.')
+    return redirect(url_for('main.profiles'))
+
+
+@main_bp.route('/profiles/<int:profile_id>/chart')
+@login_required
+def profile_chart(profile_id):
+    from models import Profile
+    p = Profile.query.filter_by(id=profile_id, user_id=current_user.id).first_or_404()
+
+    result = None
+    error  = None
+    if p.birth_date and p.birth_place:
+        try:
+            from ai import compute_chart
+            result = compute_chart(
+                p.birth_date,
+                p.birth_time or dt.time(12, 0),
+                p.birth_place,
+                lat=p.birth_lat,
+                lng=p.birth_lng,
+            )
+            result['birth_place'] = p.birth_place
+            result['birth_date']  = p.birth_date
+            result['birth_time']  = p.birth_time
+        except Exception as e:
+            error = f'Could not compute chart: {str(e)}'
+    else:
+        error = 'This profile needs birth date and place to compute a chart.'
+
+    from models import ReadingType
+    reading_types = ReadingType.query.filter_by(active=True).all()
+    return render_template('main/profile_chart.html', p=p, result=result, error=error,
+                           reading_types=reading_types)
+
+
+# ── Legacy redirect ───────────────────────────────────────────────────────────
 
 @main_bp.route('/profile', methods=['GET', 'POST'])
 @login_required
 def profile():
-    if request.method == 'POST':
-        from datetime import date, time as dtime
-        birth_date  = request.form.get('birth_date')
-        birth_time  = request.form.get('birth_time')
-        birth_place = request.form.get('birth_place', '').strip()
-        if birth_date:
-            try:
-                current_user.birth_date = date.fromisoformat(birth_date)
-            except ValueError:
-                flash('Invalid birth date.')
-                return render_template('main/profile.html')
-        if birth_time:
-            try:
-                h, m = birth_time.split(':')
-                current_user.birth_time = dtime(int(h), int(m))
-            except (ValueError, AttributeError):
-                flash('Invalid birth time.')
-                return render_template('main/profile.html')
-        current_user.birth_place = birth_place or None
-        gender = request.form.get('gender', '').strip()
-        current_user.gender = gender if gender in ('masculino', 'femenino') else None
-        db.session.commit()
-        flash('Profile updated.')
-        return redirect(url_for('main.profile'))
-    return render_template('main/profile.html')
+    return redirect(url_for('main.profiles'))
 
+
+# ── Notifications ─────────────────────────────────────────────────────────────
 
 @main_bp.route('/notifications/mark-read', methods=['POST'])
 @login_required
 def mark_notifications_read():
     from models import Notification
-    from datetime import datetime
     Notification.query.filter_by(user_id=current_user.id, read_at=None)\
-                      .update({'read_at': datetime.utcnow()})
+                      .update({'read_at': dt.datetime.utcnow()})
     db.session.commit()
     return redirect(request.referrer or url_for('main.dashboard'))

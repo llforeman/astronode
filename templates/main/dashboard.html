@@ -3,11 +3,38 @@
 {% block content %}
 <h2 style="margin-bottom: 1.5rem; color: var(--accent-light)">Welcome back ✦</h2>
 
-{% if not current_user.birth_date or not current_user.birth_place %}
+{% if not profiles %}
 <div class="card" style="border-color: var(--accent); background: var(--bg2);">
-  <strong>Complete your profile</strong>
-  <p style="color: var(--text-muted); margin: 0.5rem 0;">Add your birth date and place to unlock personalized readings.</p>
-  <a href="{{ url_for('main.profile') }}" class="btn btn-primary" style="margin-top: 0.75rem;">Set birth data →</a>
+  <strong>Create your first profile</strong>
+  <p style="color: var(--text-muted); margin: 0.5rem 0;">Add your birth data to unlock personalized readings.</p>
+  <a href="{{ url_for('main.profiles') }}" class="btn btn-primary" style="margin-top: 0.75rem;">Add people →</a>
+</div>
+{% endif %}
+
+{% if profiles %}
+<div class="card">
+  <h3 style="margin-bottom: 1rem;">Your People</h3>
+  <div class="profile-grid">
+    {% for p in profiles %}
+    <div class="profile-card {% if p.is_self %}is-self{% endif %}">
+      <div class="profile-name">
+        {{ p.name }}
+        {% if p.is_self %}<span class="self-badge">YOU</span>{% endif %}
+      </div>
+      {% if p.sun_sign %}
+      <div class="profile-meta">☉ {{ p.sun_sign }}</div>
+      {% endif %}
+      {% if p.birth_place %}
+      <div class="profile-meta">{{ p.birth_place }}</div>
+      {% endif %}
+      <div class="profile-actions">
+        <a href="{{ url_for('main.profile_chart', profile_id=p.id) }}" class="btn btn-outline btn-sm">Chart</a>
+        <a href="{{ url_for('main.profiles') }}" class="btn btn-sm" style="color:var(--text-muted); border:1px solid var(--border);">Edit</a>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  <a href="{{ url_for('main.profiles') }}" style="font-size: 0.9rem;">Manage people →</a>
 </div>
 {% endif %}
 
@@ -26,6 +53,7 @@
     <div style="padding: 0.75rem 0; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
       <div>
         <strong>{{ r.reading_type.name }}</strong>
+        {% if r.profile %}<span style="color:var(--text-muted); font-size:0.8rem; margin-left:0.5rem;">for {{ r.profile.name }}</span>{% endif %}
         <div style="color: var(--text-muted); font-size: 0.85rem;">{{ r.created_at.strftime('%b %d, %Y') }} · {{ r.status }}</div>
       </div>
       {% if r.status == 'completed' %}
@@ -35,7 +63,7 @@
     {% endfor %}
     <a href="{{ url_for('readings.index') }}" style="font-size: 0.9rem; margin-top: 0.75rem; display: inline-block;">All readings →</a>
   {% else %}
-    <p style="color: var(--text-muted);">No readings yet. <a href="{{ url_for('billing.pricing') }}">Get your first one →</a></p>
+    <p style="color: var(--text-muted);">No readings yet. <a href="{{ url_for('main.profiles') }}">Generate one →</a></p>
   {% endif %}
 </div>
 {% endblock %}

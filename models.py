@@ -15,11 +15,11 @@ class User(UserMixin, db.Model):
     role          = db.Column(db.String(20), nullable=False, default='user')  # user | superadmin
     tier          = db.Column(db.String(20), nullable=False, default='free')  # free | basic | vip
 
-    # Birth data for horoscope generation
+    # Legacy birth data columns kept for backward compat (not used by new code)
     birth_date    = db.Column(db.Date, nullable=True)
     birth_time    = db.Column(db.Time, nullable=True)
     birth_place   = db.Column(db.String(255), nullable=True)
-    gender        = db.Column(db.String(20), nullable=True)  # masculino | femenino | None→desconocido
+    gender        = db.Column(db.String(20), nullable=True)
 
     # Stripe
     stripe_customer_id = db.Column(db.String(255), nullable=True, index=True)
@@ -27,8 +27,11 @@ class User(UserMixin, db.Model):
     active        = db.Column(db.Boolean, default=True)
     created_at    = db.Column(db.DateTime, default=datetime.utcnow)
 
-    readings      = db.relationship('Reading', backref='user', lazy='dynamic')
+    readings      = db.relationship('Reading', backref='user', lazy='dynamic',
+                                    foreign_keys='Reading.user_id')
     payments      = db.relationship('Payment', backref='user', lazy='dynamic')
+    profiles      = db.relationship('Profile', lazy='dynamic',
+                                    foreign_keys='Profile.user_id')
 
     def set_email(self, email):
         self.email      = email
@@ -42,6 +45,45 @@ class User(UserMixin, db.Model):
 
     def has_tier(self, *tiers):
         return self.tier in tiers
+
+    def self_profile(self):
+        return Profile.query.filter_by(user_id=self.id, is_self=True).first()
+
+
+class Profile(db.Model):
+    __tablename__ = 'profile'
+
+    id          = db.Column(db.Integer, primary_key=True)
+    user_id     = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    name        = db.Column(db.String(100), nullable=False, default='Me')
+    birth_date  = db.Column(db.Date, nullable=True)
+    birth_time  = db.Column(db.Time, nullable=True)
+    birth_place = db.Column(db.String(255), nullable=True)
+    birth_lat   = db.Column(db.Float, nullable=True)
+    birth_lng   = db.Column(db.Float, nullable=True)
+    gender      = db.Column(db.String(20), nullable=True)
+    is_self     = db.Column(db.Boolean, default=False, nullable=False)
+    created_at  = db.Column(db.DateTime, default=datetime.utcnow)
+
+    readings    = db.relationship('Reading', backref='profile', lazy='dynamic',
+                                  foreign_keys='Reading.profile_id')
+
+    @property
+    def sun_sign(self):
+        if not self.birth_date:
+            return None
+        m, d = self.birth_date.month, self.birth_date.day
+        signs = [
+            (1, 20, 'Capricorn'), (2, 19, 'Aquarius'), (3, 20, 'Pisces'),
+            (4, 20, 'Aries'), (5, 21, 'Taurus'), (6, 21, 'Gemini'),
+            (7, 22, 'Cancer'), (8, 23, 'Leo'), (9, 23, 'Virgo'),
+            (10, 23, 'Libra'), (11, 22, 'Scorpio'), (12, 22, 'Sagittarius'),
+            (12, 31, 'Capricorn'),
+        ]
+        for month, day, sign in signs:
+            if m < month or (m == month and d <= day):
+                return sign
+        return 'Capricorn'
 
 
 class ReadingType(db.Model):
@@ -62,6 +104,7 @@ class Reading(db.Model):
 
     id              = db.Column(db.Integer, primary_key=True)
     user_id         = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    profile_id      = db.Column(db.Integer, db.ForeignKey('profile.id'), nullable=True, index=True)
     reading_type_id = db.Column(db.Integer, db.ForeignKey('reading_type.id'), nullable=False)
     status          = db.Column(db.String(20), default='pending')  # pending | generating | completed | failed
     content         = db.Column(db.Text(16777215), nullable=True)  # generated horoscope text (MEDIUMTEXT)
@@ -70,6 +113,12 @@ class Reading(db.Model):
     job_id          = db.Column(db.String(255), nullable=True)
     created_at      = db.Column(db.DateTime, default=datetime.utcnow)
     completed_at    = db.Column(db.DateTime, nullable=True)
+
+    @property
+    def profile_name(self):
+        if self.profile:
+            return self.profile.name
+        return 'Unknown'
 
 
 class Payment(db.Model):

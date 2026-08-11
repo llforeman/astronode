@@ -30,25 +30,33 @@ def view(reading_id):
 @login_required
 @limiter.limit("5 per hour")
 def request_reading(reading_type_id):
+    from models import Profile
     rtype = ReadingType.query.filter_by(id=reading_type_id, active=True).first_or_404()
 
-    if not current_user.birth_date or not current_user.birth_place:
-        flash('Please complete your birth data in your profile first.')
-        return redirect(url_for('main.profile'))
+    # Resolve the profile to use
+    profile_id = request.form.get('profile_id', type=int)
+    if profile_id:
+        profile = Profile.query.filter_by(id=profile_id, user_id=current_user.id).first_or_404()
+    else:
+        profile = Profile.query.filter_by(user_id=current_user.id, is_self=True).first()
 
-    # Check if this type requires payment
+    if not profile or not profile.birth_date or not profile.birth_place:
+        flash('Please complete birth data for this profile first.')
+        return redirect(url_for('main.profiles'))
+
+    # Check payment / tier
     if not _DEV:
         if rtype.price_cents and rtype.min_tier == 'free':
             return redirect(url_for('billing.checkout_reading', reading_type_id=reading_type_id))
 
-        # Check tier access
-        tier_order = ['free', 'basic', 'vip']
+        tier_order    = ['free', 'basic', 'vip']
         user_tier_idx = tier_order.index(current_user.tier) if current_user.tier in tier_order else 0
         min_tier_idx  = tier_order.index(rtype.min_tier) if rtype.min_tier in tier_order else 0
         if user_tier_idx < min_tier_idx:
             return redirect(url_for('billing.pricing'))
 
-    reading = Reading(user_id=current_user.id, reading_type_id=rtype.id)
+    reading = Reading(user_id=current_user.id, reading_type_id=rtype.id,
+                      profile_id=profile.id)
     db.session.add(reading)
     db.session.commit()
 
@@ -73,19 +81,27 @@ def dev_generate():
     if not _DEV:
         abort(404)
 
-    if not current_user.birth_date or not current_user.birth_place:
-        flash('Complete your birth data in your profile first.')
-        return redirect(url_for('main.profile'))
+    from models import Profile
+    profiles = Profile.query.filter_by(user_id=current_user.id).all()
 
     if request.method == 'GET':
-        return render_template('readings/dev_generate.html')
+        return render_template('readings/dev_generate.html', profiles=profiles)
 
-    # Ensure a reading type exists
+    profile_id = request.form.get('profile_id', type=int)
+    if profile_id:
+        profile = Profile.query.filter_by(id=profile_id, user_id=current_user.id).first()
+    else:
+        profile = next((p for p in profiles if p.is_self), profiles[0] if profiles else None)
+
+    if not profile or not profile.birth_date or not profile.birth_place:
+        flash('Complete birth data for this profile first.')
+        return redirect(url_for('main.profiles'))
+
     rtype = ReadingType.query.filter_by(active=True).first()
     if not rtype:
         rtype = ReadingType(
             name='Carta Natal Completa',
-            description='Interpretación completa de tu carta natal con IA.',
+            description='Interpretacion completa de tu carta natal con IA.',
             price_cents=999,
             min_tier='free',
             active=True,
@@ -93,39 +109,34 @@ def dev_generate():
         db.session.add(rtype)
         db.session.commit()
 
-    # Create the reading record
     reading = Reading(user_id=current_user.id, reading_type_id=rtype.id,
-                      status='generating')
+                      profile_id=profile.id, status='generating')
     db.session.add(reading)
     db.session.commit()
 
-    # Run in a background thread so the browser isn't holding the connection open
     reading_id = reading.id
+    profile_id = profile.id
     user_id    = current_user.id
 
-    def _run(app, rid, uid, rtid):
+    def _run(app, rid, pid, uid, rtid):
         with app.app_context():
             from ai import generate_horoscope
-            from models import Reading, User, ReadingType
-            u  = User.query.get(uid)
+            from models import Reading, Profile, User, ReadingType
+            p  = Profile.query.get(pid)
             rt = ReadingType.query.get(rtid)
 
-            # Detach objects from the session and close the connection while it
-            # is still alive. This prevents "MySQL server has gone away" when the
-            # LLM pipeline runs for several minutes with no DB activity.
-            db.session.expunge(u)
+            db.session.expunge(p)
             db.session.expunge(rt)
             db.session.close()
 
             try:
-                result = generate_horoscope(u, rt)
+                result = generate_horoscope(p, rt)
                 status = 'completed'
             except Exception as e:
                 result = None
                 status = 'failed'
                 print(f'[dev-generate] generation failed: {e}')
 
-            # Fresh connection for the save.
             r = Reading.query.get(rid)
             r.status = status
             if result:
@@ -136,7 +147,11 @@ def dev_generate():
 
     import threading
     from flask import current_app
-    t = threading.Thread(target=_run, args=(current_app._get_current_object(), reading_id, user_id, rtype.id), daemon=True)
+    t = threading.Thread(
+        target=_run,
+        args=(current_app._get_current_object(), reading_id, profile_id, user_id, rtype.id),
+        daemon=True,
+    )
     t.start()
 
     return redirect(url_for('readings.view', reading_id=reading.id))
