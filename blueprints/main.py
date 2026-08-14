@@ -43,7 +43,7 @@ def profile_add():
     from models import Profile
     count = Profile.query.filter_by(user_id=current_user.id).count()
     if count >= MAX_PROFILES:
-        flash(f'You can have at most {MAX_PROFILES} profiles.')
+        flash(f'Puedes tener como máximo {MAX_PROFILES} perfiles.')
         return redirect(url_for('main.profiles'))
 
     name        = request.form.get('name', '').strip()
@@ -56,14 +56,14 @@ def profile_add():
     is_self_req = request.form.get('is_self') == '1'
 
     if not name:
-        flash('Name is required.')
+        flash('El nombre es obligatorio.')
         return redirect(url_for('main.profiles'))
 
     # Only one is_self per user
     if is_self_req:
         existing_self = Profile.query.filter_by(user_id=current_user.id, is_self=True).first()
         if existing_self:
-            flash('You already have a profile marked as yourself.')
+            flash('Ya tienes un perfil marcado como tú mismo.')
             return redirect(url_for('main.profiles'))
 
     p = Profile(user_id=current_user.id, is_self=is_self_req)
@@ -91,7 +91,7 @@ def profile_add():
 
     db.session.add(p)
     db.session.commit()
-    flash(f'Profile "{p.name}" added.')
+    flash(f'Perfil "{p.name}" añadido.')
     return redirect(url_for('main.profiles'))
 
 
@@ -111,7 +111,7 @@ def profile_edit(profile_id):
         gender      = request.form.get('gender', '').strip()
 
         if not name:
-            flash('Name is required.')
+            flash('El nombre es obligatorio.')
             return render_template('main/profile_edit.html', p=p)
 
         p.name = name
@@ -119,7 +119,7 @@ def profile_edit(profile_id):
             try:
                 p.birth_date = dt.date.fromisoformat(birth_date)
             except ValueError:
-                flash('Invalid birth date.')
+                flash('Fecha de nacimiento no válida.')
                 return render_template('main/profile_edit.html', p=p)
         else:
             p.birth_date = None
@@ -128,7 +128,7 @@ def profile_edit(profile_id):
                 h, m = birth_time.split(':')
                 p.birth_time = dt.time(int(h), int(m))
             except (ValueError, AttributeError):
-                flash('Invalid birth time.')
+                flash('Hora de nacimiento no válida.')
                 return render_template('main/profile_edit.html', p=p)
         else:
             p.birth_time = None
@@ -141,7 +141,7 @@ def profile_edit(profile_id):
         p.gender = gender if gender in ('masculino', 'femenino') else None
 
         db.session.commit()
-        flash(f'"{p.name}" updated.')
+        flash(f'"{p.name}" actualizado.')
         return redirect(url_for('main.profiles'))
 
     return render_template('main/profile_edit.html', p=p)
@@ -155,7 +155,7 @@ def profile_delete(profile_id):
     name = p.name
     db.session.delete(p)
     db.session.commit()
-    flash(f'"{name}" deleted.')
+    flash(f'"{name}" eliminado.')
     return redirect(url_for('main.profiles'))
 
 
@@ -181,9 +181,9 @@ def profile_chart(profile_id):
             result['birth_date']  = p.birth_date
             result['birth_time']  = p.birth_time
         except Exception as e:
-            error = f'Could not compute chart: {str(e)}'
+            error = f'No se pudo calcular la carta: {str(e)}'
     else:
-        error = 'This profile needs birth date and place to compute a chart.'
+        error = 'Este perfil necesita fecha y lugar de nacimiento para calcular la carta.'
 
     from models import ReadingType
     reading_types = ReadingType.query.filter_by(active=True).all()

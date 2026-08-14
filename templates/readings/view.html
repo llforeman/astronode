@@ -2,14 +2,14 @@
 {% block title %}{{ reading.reading_type.name }} — Astronode{% endblock %}
 {% block content %}
 <div style="max-width: 720px;">
-  <a href="{{ url_for('readings.index') }}" style="color:var(--text-muted); font-size:0.9rem;">← Back to readings</a>
+  <a href="{{ url_for('readings.index') }}" style="color:var(--text-muted); font-size:0.9rem;">← Volver a lecturas</a>
   <h2 style="margin: 1rem 0 0.25rem; color: var(--accent-light)">{{ reading.reading_type.name }}</h2>
   <p style="color:var(--text-muted); font-size:0.85rem; margin-bottom: 2rem;">
     {% if reading.profile %}
-      For <strong style="color:var(--text);">{{ reading.profile.name }}</strong>{% if reading.profile.is_self %} (you){% endif %} ·
+      Para <strong style="color:var(--text);">{{ reading.profile.name }}</strong>{% if reading.profile.is_self %} (tú){% endif %} ·
     {% endif %}
     {{ reading.created_at.strftime('%B %d, %Y') }}
-    {% if reading.sent_by_email %} · sent to your email{% endif %}
+    {% if reading.sent_by_email %} · enviada a tu email{% endif %}
   </p>
   {% if reading.status == 'completed' and reading.content %}
     {% if reading.chart_image %}
@@ -21,17 +21,17 @@
   {% elif reading.status == 'generating' %}
     <div class="card" style="text-align:center; padding: 3rem;">
       <div style="font-size: 2rem; margin-bottom: 1rem;">✦</div>
-      <p style="color:var(--text-muted)">Your reading is being generated. This page will update automatically.</p>
+      <p style="color:var(--text-muted)">Tu lectura se está generando. Esta página se actualizará automáticamente.</p>
     </div>
     <script>
       setTimeout(function(){ location.reload(); }, 8000);
     </script>
   {% elif reading.status == 'failed' %}
     <div class="card" style="border-color:#e74c3c;">
-      <p>Something went wrong generating your reading. Please contact support.</p>
+      <p>Algo fue mal al generar tu lectura. Por favor, contacta con soporte.</p>
     </div>
   {% else %}
-    <div class="card"><p style="color:var(--text-muted)">Reading is queued…</p></div>
+    <div class="card"><p style="color:var(--text-muted)">Lectura en cola…</p></div>
   {% endif %}
 </div>
 {% endblock %}

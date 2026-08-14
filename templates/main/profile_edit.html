@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Edit {{ p.name }} — Astronode{% endblock %}
+{% block title %}Editar {{ p.name }} — Astronode{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -24,10 +24,10 @@
 
 {% block content %}
 <div style="max-width: 520px;">
-  <a href="{{ url_for('main.profiles') }}" style="color:var(--text-muted); font-size:0.9rem;">← Back to people</a>
+  <a href="{{ url_for('main.profiles') }}" style="color:var(--text-muted); font-size:0.9rem;">← Volver a personas</a>
   <h2 style="margin: 1rem 0 1.5rem; color: var(--accent-light);">
-    Edit {{ p.name }}
-    {% if p.is_self %}<span class="self-badge" style="font-size:0.7rem; vertical-align:middle;">YOU</span>{% endif %}
+    Editar {{ p.name }}
+    {% if p.is_self %}<span class="self-badge" style="font-size:0.7rem; vertical-align:middle;">TÚ</span>{% endif %}
   </h2>
 
   <div class="card">
@@ -35,24 +35,24 @@
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
       <div class="form-group">
-        <label>Name *</label>
+        <label>Nombre *</label>
         <input type="text" name="name" required value="{{ p.name }}">
       </div>
 
       <div class="form-group">
-        <label>Birth date</label>
+        <label>Fecha de nacimiento</label>
         <input type="date" name="birth_date" value="{{ p.birth_date.isoformat() if p.birth_date else '' }}">
       </div>
 
       <div class="form-group">
-        <label>Birth time <span style="font-weight:400; text-transform:none;">(optional)</span></label>
+        <label>Hora de nacimiento <span style="font-weight:400; text-transform:none;">(opcional)</span></label>
         <input type="time" name="birth_time" value="{{ p.birth_time.strftime('%H:%M') if p.birth_time else '' }}">
       </div>
 
       <div class="form-group place-autocomplete">
-        <label>Birth place</label>
+        <label>Lugar de nacimiento</label>
         <input type="text" id="place-display" autocomplete="off"
-               value="{{ p.birth_place or '' }}" placeholder="e.g. Barcelona, Spain">
+               value="{{ p.birth_place or '' }}" placeholder="p.ej. Barcelona, España">
         <input type="hidden" name="birth_place" id="birth-place-hidden" value="{{ p.birth_place or '' }}">
         <input type="hidden" name="birth_lat" id="birth-lat" value="{{ p.birth_lat or '' }}">
         <input type="hidden" name="birth_lng" id="birth-lng" value="{{ p.birth_lng or '' }}">
@@ -60,17 +60,17 @@
       </div>
 
       <div class="form-group">
-        <label>Gender <span style="font-weight:400; text-transform:none;">(for reading grammar)</span></label>
+        <label>Género <span style="font-weight:400; text-transform:none;">(para gramática de la lectura)</span></label>
         <select name="gender">
-          <option value="" {% if not p.gender %}selected{% endif %}>Prefer not to say</option>
+          <option value="" {% if not p.gender %}selected{% endif %}>Prefiero no decir</option>
           <option value="masculino" {% if p.gender == 'masculino' %}selected{% endif %}>Masculino</option>
           <option value="femenino" {% if p.gender == 'femenino' %}selected{% endif %}>Femenino</option>
         </select>
       </div>
 
       <div style="display:flex; gap:0.75rem; margin-top:1.5rem;">
-        <button type="submit" class="btn btn-primary">Save changes</button>
-        <a href="{{ url_for('main.profiles') }}" class="btn btn-outline">Cancel</a>
+        <button type="submit" class="btn btn-primary">Guardar cambios</button>
+        <a href="{{ url_for('main.profiles') }}" class="btn btn-outline">Cancelar</a>
       </div>
     </form>
   </div>
@@ -96,7 +96,7 @@
     clearTimeout(timer);
     if (q.length < 2) { dropdown.style.display = 'none'; return; }
     timer = setTimeout(function () {
-      fetch('https://photon.komoot.io/api/?q=' + encodeURIComponent(q) + '&limit=6&lang=en')
+      fetch('https://photon.komoot.io/api/?q=' + encodeURIComponent(q) + '&limit=6&lang=es')
         .then(function (r) { return r.json(); })
         .then(function (data) {
           dropdown.innerHTML = '';

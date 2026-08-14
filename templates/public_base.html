@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="es" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{% block title %}Astronode — Your Personalized Horoscope{% endblock %}</title>
-  <meta name="description" content="{% block meta_desc %}Personalized AI-powered horoscope readings based on your birth chart.{% endblock %}">
+  <title>{% block title %}Astronode — Tu Horóscopo Personalizado{% endblock %}</title>
+  <meta name="description" content="{% block meta_desc %}Lecturas de horóscopo personalizadas con IA basadas en tu carta natal.{% endblock %}">
   <script>
     (function(){
       var t = localStorage.getItem('theme') || 'dark';
@@ -71,19 +71,19 @@
     <a href="{{ url_for('public.landing') }}" class="logo"><span class="star">✦</span> ASTRONODE</a>
     <div class="nav-links">
       {% if current_user.is_authenticated %}
-        <a href="#sample">A sample</a>
-        <a href="#contents">What's inside</a>
-        <a href="{{ url_for('main.dashboard') }}" class="btn btn-primary">Dashboard →</a>
+        <a href="#sample">Ejemplo</a>
+        <a href="#contents">Qué incluye</a>
+        <a href="{{ url_for('main.dashboard') }}" class="btn btn-primary">Panel →</a>
       {% else %}
-        <a href="#sample">A sample</a>
-        <a href="#contents">What's inside</a>
-        <a href="{{ url_for('auth.login') }}">Sign in</a>
-        <a href="{{ url_for('auth.register') }}" class="btn btn-primary">Draw my chart →</a>
+        <a href="#sample">Ejemplo</a>
+        <a href="#contents">Qué incluye</a>
+        <a href="{{ url_for('auth.login') }}">Iniciar sesión</a>
+        <a href="{{ url_for('auth.register') }}" class="btn btn-primary">Calcular mi carta →</a>
       {% endif %}
       <button class="theme-toggle" onclick="toggleTheme()">◐</button>
     </div>
     <div class="nav-mobile">
-      <a href="{{ url_for('auth.register') }}" class="btn btn-primary" style="font-size:0.85rem; padding:0.45rem 1rem;">Draw my chart →</a>
+      <a href="{{ url_for('auth.register') }}" class="btn btn-primary" style="font-size:0.85rem; padding:0.45rem 1rem;">Calcular mi carta →</a>
       <button class="theme-toggle" onclick="toggleTheme()">◐</button>
     </div>
   </nav>
@@ -103,22 +103,22 @@
     <div class="footer-inner">
       <div>
         <div class="footer-brand"><span>✦</span> ASTRONODE</div>
-        <p style="font-size:0.8rem; color:var(--text-muted); margin-top:0.5rem; max-width:220px;">AI-powered natal chart readings. Personalized, in-depth, in your language.</p>
-        <p class="footer-copy">© 2026 Astronode. All rights reserved.</p>
+        <p style="font-size:0.8rem; color:var(--text-muted); margin-top:0.5rem; max-width:220px;">Lecturas de carta natal con IA. Personalizadas, en profundidad, en tu idioma.</p>
+        <p class="footer-copy">© 2026 Astronode. Todos los derechos reservados.</p>
       </div>
       <div class="footer-links">
-        <strong style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px;">Product</strong>
-        <a href="#sample">A sample</a>
-        <a href="#contents">What's inside</a>
-        <a href="#how">How it works</a>
-        <a href="{{ url_for('public.chart') }}">Free chart</a>
-        <a href="{{ url_for('public.pricing') }}">Pricing</a>
+        <strong style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px;">Producto</strong>
+        <a href="#sample">Ejemplo</a>
+        <a href="#contents">Qué incluye</a>
+        <a href="#how">Cómo funciona</a>
+        <a href="{{ url_for('public.chart') }}">Carta gratuita</a>
+        <a href="{{ url_for('public.pricing') }}">Precios</a>
       </div>
       <div class="footer-legal">
         <strong style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px;">Legal</strong>
-        <a href="/privacy">Privacy</a>
-        <a href="/terms">Terms</a>
-        <a href="/refunds">Refunds</a>
+        <a href="/privacy">Privacidad</a>
+        <a href="/terms">Términos</a>
+        <a href="/refunds">Reembolsos</a>
       </div>
     </div>
   </footer>

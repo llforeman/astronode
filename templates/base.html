@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="es" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -79,21 +79,21 @@
 <body>
   <nav class="sidebar">
     <div class="logo">✦ ASTRONODE</div>
-    <a href="{{ url_for('main.dashboard') }}">Dashboard</a>
-    <a href="{{ url_for('main.profiles') }}">People</a>
-    <a href="{{ url_for('readings.index') }}">Readings</a>
-    <a href="{{ url_for('billing.pricing') }}">Plans</a>
+    <a href="{{ url_for('main.dashboard') }}">Inicio</a>
+    <a href="{{ url_for('main.profiles') }}">Personas</a>
+    <a href="{{ url_for('readings.index') }}">Lecturas</a>
+    <a href="{{ url_for('billing.pricing') }}">Planes</a>
     {% if current_user.role == 'superadmin' %}
     <a href="{{ url_for('admin.index') }}">Admin</a>
     {% endif %}
     <div style="flex:1"></div>
-    <a href="{{ url_for('auth.logout') }}" style="color:var(--text-muted)">Log out</a>
+    <a href="{{ url_for('auth.logout') }}" style="color:var(--text-muted)">Cerrar sesión</a>
   </nav>
   <div class="main-wrap">
     <div class="topbar">
-      <button class="theme-toggle" onclick="toggleTheme()">◐ Theme</button>
+      <button class="theme-toggle" onclick="toggleTheme()">◐ Tema</button>
       {% if unread_count %}
-      <a href="{{ url_for('main.mark_notifications_read') }}" class="notif-badge" title="{{ unread_count }} unread notifications">
+      <a href="{{ url_for('main.mark_notifications_read') }}" class="notif-badge" title="{{ unread_count }} notificaciones sin leer">
         🔔 <span class="badge">{{ unread_count }}</span>
       </a>
       {% else %}

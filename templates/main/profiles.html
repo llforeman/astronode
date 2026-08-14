@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}People — Astronode{% endblock %}
+{% block title %}Personas — Astronode{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -25,21 +25,21 @@
 
 {% block content %}
 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
-  <h2 style="color: var(--accent-light)">Your People</h2>
+  <h2 style="color: var(--accent-light)">Tus personas</h2>
   <span style="color:var(--text-muted); font-size:0.88rem;">{{ profiles|length }} / {{ max_profiles }}</span>
 </div>
 
 {% if prefill %}
 <div class="card" style="border-color: var(--accent); background: var(--bg2); margin-bottom: 1.5rem;">
-  <strong>✦ Your chart is ready to save</strong>
-  <p style="color: var(--text-muted); margin: 0.4rem 0 0;">Fill in a name below — your birth data is already pre-filled.</p>
+  <strong>✦ Tu carta está lista para guardar</strong>
+  <p style="color: var(--text-muted); margin: 0.4rem 0 0;">Introduce un nombre abajo — tus datos de nacimiento ya están pre-rellenados.</p>
 </div>
 {% endif %}
 
 {% if not profiles %}
 <div class="card" style="text-align:center; padding: 2.5rem; margin-bottom: 1.5rem;">
   <div style="font-size:2rem; margin-bottom:0.75rem;">✦</div>
-  <p style="color: var(--text-muted); margin-bottom: 1rem;">No profiles yet. Add yourself or anyone else you want charts for.</p>
+  <p style="color: var(--text-muted); margin-bottom: 1rem;">Sin perfiles aún. Añádete a ti mismo o a cualquier persona para la que quieras cartas.</p>
 </div>
 {% else %}
 <div class="profile-grid" style="margin-bottom: 1.5rem;">
@@ -47,7 +47,7 @@
   <div class="profile-card {% if p.is_self %}is-self{% endif %}">
     <div class="profile-name">
       {{ p.name }}
-      {% if p.is_self %}<span class="self-badge">YOU</span>{% endif %}
+      {% if p.is_self %}<span class="self-badge">TÚ</span>{% endif %}
     </div>
     {% if p.sun_sign %}
     <div class="profile-meta">☉ {{ p.sun_sign }}</div>
@@ -59,26 +59,26 @@
     <div class="profile-meta">{{ p.birth_place }}</div>
     {% endif %}
     {% if not p.birth_date or not p.birth_place %}
-    <div class="profile-meta" style="color:#e74c3c; font-size:0.78rem;">Incomplete — add birth data</div>
+    <div class="profile-meta" style="color:#e74c3c; font-size:0.78rem;">Incompleto — añade datos de nacimiento</div>
     {% endif %}
     <div class="profile-actions">
       {% if p.birth_date and p.birth_place %}
-      <a href="{{ url_for('main.profile_chart', profile_id=p.id) }}" class="btn btn-outline btn-sm">Chart</a>
+      <a href="{{ url_for('main.profile_chart', profile_id=p.id) }}" class="btn btn-outline btn-sm">Carta</a>
       {% if reading_types %}
         {% set rt = reading_types[0] %}
         <form method="POST" action="{{ url_for('readings.request_reading', reading_type_id=rt.id) }}" style="display:inline;">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <input type="hidden" name="profile_id" value="{{ p.id }}">
-          <button type="submit" class="btn btn-primary btn-sm">AI Reading</button>
+          <button type="submit" class="btn btn-primary btn-sm">Lectura IA</button>
         </form>
       {% endif %}
       {% endif %}
-      <a href="{{ url_for('main.profile_edit', profile_id=p.id) }}" class="btn btn-sm" style="color:var(--text-muted); border:1px solid var(--border);">Edit</a>
+      <a href="{{ url_for('main.profile_edit', profile_id=p.id) }}" class="btn btn-sm" style="color:var(--text-muted); border:1px solid var(--border);">Editar</a>
       {% if not p.is_self %}
       <form method="POST" action="{{ url_for('main.profile_delete', profile_id=p.id) }}" style="display:inline;"
-            onsubmit="return confirm('Delete {{ p.name }}?');">
+            onsubmit="return confirm('¿Eliminar a {{ p.name }}?');">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+        <button type="submit" class="btn btn-danger btn-sm">Eliminar</button>
       </form>
       {% endif %}
     </div>
@@ -89,22 +89,22 @@
 
 {% if profiles|length < max_profiles %}
 <div class="card">
-  <h3 style="margin-bottom: 1.25rem;">Add a person</h3>
+  <h3 style="margin-bottom: 1.25rem;">Añadir persona</h3>
   <form method="POST" action="{{ url_for('main.profile_add') }}" id="add-form">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
     <div class="form-row" style="margin-bottom:1rem;">
       <div class="form-group" style="flex:1; min-width:160px;">
-        <label>Name *</label>
-        <input type="text" name="name" required placeholder="e.g. Mum, John, Me"
+        <label>Nombre *</label>
+        <input type="text" name="name" required placeholder="p.ej. Mamá, Juan, Yo"
                value="{{ prefill and '' or '' }}">
       </div>
       <div class="form-group" style="flex:0 0 auto;">
-        <label>This is me</label>
+        <label>Soy yo</label>
         <select name="is_self" style="padding:0.6rem 0.8rem; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text);">
           <option value="0">No</option>
           {% if not profiles|selectattr('is_self')|list %}
-          <option value="1">Yes — this is me</option>
+          <option value="1">Sí — soy yo</option>
           {% endif %}
         </select>
       </div>
@@ -112,21 +112,21 @@
 
     <div class="form-row" style="margin-bottom:1rem;">
       <div class="form-group">
-        <label>Birth date</label>
+        <label>Fecha de nacimiento</label>
         <input type="date" name="birth_date" value="{{ prefill.birth_date if prefill else '' }}">
       </div>
       <div class="form-group">
-        <label>Birth time <span style="font-weight:400; text-transform:none;">(optional)</span></label>
+        <label>Hora de nacimiento <span style="font-weight:400; text-transform:none;">(opcional)</span></label>
         <input type="time" name="birth_time" value="{{ prefill.birth_time if prefill else '' }}">
       </div>
     </div>
 
     <div class="form-row" style="margin-bottom:1.25rem;">
       <div class="form-group place-autocomplete" style="flex:2;">
-        <label>Birth place</label>
+        <label>Lugar de nacimiento</label>
         <input type="text" id="place-display" autocomplete="off"
                value="{{ prefill.birth_place if prefill else '' }}"
-               placeholder="e.g. Barcelona, Spain">
+               placeholder="p.ej. Barcelona, España">
         <input type="hidden" name="birth_place" id="birth-place-hidden"
                value="{{ prefill.birth_place if prefill else '' }}">
         <input type="hidden" name="birth_lat" id="birth-lat"
@@ -136,21 +136,21 @@
         <div id="place-dropdown" class="autocomplete-dropdown"></div>
       </div>
       <div class="form-group">
-        <label>Gender <span style="font-weight:400; text-transform:none;">(for reading grammar)</span></label>
+        <label>Género <span style="font-weight:400; text-transform:none;">(para gramática de la lectura)</span></label>
         <select name="gender" style="padding:0.6rem 0.8rem; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text);">
-          <option value="">Prefer not to say</option>
+          <option value="">Prefiero no decir</option>
           <option value="masculino">Masculino</option>
           <option value="femenino">Femenino</option>
         </select>
       </div>
     </div>
 
-    <button type="submit" class="btn btn-primary">Save profile</button>
+    <button type="submit" class="btn btn-primary">Guardar perfil</button>
   </form>
 </div>
 {% else %}
 <div class="card" style="text-align:center; color:var(--text-muted);">
-  You've reached the limit of {{ max_profiles }} profiles.
+  Has alcanzado el límite de {{ max_profiles }} perfiles.
 </div>
 {% endif %}
 
@@ -175,7 +175,7 @@
     clearTimeout(timer);
     if (q.length < 2) { dropdown.style.display = 'none'; return; }
     timer = setTimeout(function () {
-      fetch('https://photon.komoot.io/api/?q=' + encodeURIComponent(q) + '&limit=6&lang=en')
+      fetch('https://photon.komoot.io/api/?q=' + encodeURIComponent(q) + '&limit=6&lang=es')
         .then(function (r) { return r.json(); })
         .then(function (data) {
           dropdown.innerHTML = '';

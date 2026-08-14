@@ -1,25 +1,25 @@
 {% extends "base.html" %}
 {% block title %}Dashboard — Astronode{% endblock %}
 {% block content %}
-<h2 style="margin-bottom: 1.5rem; color: var(--accent-light)">Welcome back ✦</h2>
+<h2 style="margin-bottom: 1.5rem; color: var(--accent-light)">Hola de nuevo ✦</h2>
 
 {% if not profiles %}
 <div class="card" style="border-color: var(--accent); background: var(--bg2);">
-  <strong>Create your first profile</strong>
-  <p style="color: var(--text-muted); margin: 0.5rem 0;">Add your birth data to unlock personalized readings.</p>
-  <a href="{{ url_for('main.profiles') }}" class="btn btn-primary" style="margin-top: 0.75rem;">Add people →</a>
+  <strong>Crea tu primer perfil</strong>
+  <p style="color: var(--text-muted); margin: 0.5rem 0;">Añade tus datos de nacimiento para desbloquear lecturas personalizadas.</p>
+  <a href="{{ url_for('main.profiles') }}" class="btn btn-primary" style="margin-top: 0.75rem;">Añadir personas →</a>
 </div>
 {% endif %}
 
 {% if profiles %}
 <div class="card">
-  <h3 style="margin-bottom: 1rem;">Your People</h3>
+  <h3 style="margin-bottom: 1rem;">Tus personas</h3>
   <div class="profile-grid">
     {% for p in profiles %}
     <div class="profile-card {% if p.is_self %}is-self{% endif %}">
       <div class="profile-name">
         {{ p.name }}
-        {% if p.is_self %}<span class="self-badge">YOU</span>{% endif %}
+        {% if p.is_self %}<span class="self-badge">TÚ</span>{% endif %}
       </div>
       {% if p.sun_sign %}
       <div class="profile-meta">☉ {{ p.sun_sign }}</div>
@@ -28,42 +28,42 @@
       <div class="profile-meta">{{ p.birth_place }}</div>
       {% endif %}
       <div class="profile-actions">
-        <a href="{{ url_for('main.profile_chart', profile_id=p.id) }}" class="btn btn-outline btn-sm">Chart</a>
-        <a href="{{ url_for('main.profiles') }}" class="btn btn-sm" style="color:var(--text-muted); border:1px solid var(--border);">Edit</a>
+        <a href="{{ url_for('main.profile_chart', profile_id=p.id) }}" class="btn btn-outline btn-sm">Carta</a>
+        <a href="{{ url_for('main.profiles') }}" class="btn btn-sm" style="color:var(--text-muted); border:1px solid var(--border);">Editar</a>
       </div>
     </div>
     {% endfor %}
   </div>
-  <a href="{{ url_for('main.profiles') }}" style="font-size: 0.9rem;">Manage people →</a>
+  <a href="{{ url_for('main.profiles') }}" style="font-size: 0.9rem;">Gestionar personas →</a>
 </div>
 {% endif %}
 
 <div class="card">
-  <h3 style="margin-bottom: 1rem;">Your Plan: <span style="color: var(--accent-light); text-transform: uppercase;">{{ current_user.tier }}</span></h3>
+  <h3 style="margin-bottom: 1rem;">Tu plan: <span style="color: var(--accent-light); text-transform: uppercase;">{{ current_user.tier }}</span></h3>
   {% if current_user.tier == 'free' %}
-  <p style="color: var(--text-muted); margin-bottom: 1rem;">Upgrade to get monthly readings and full access.</p>
-  <a href="{{ url_for('billing.pricing') }}" class="btn btn-primary">See plans</a>
+  <p style="color: var(--text-muted); margin-bottom: 1rem;">Mejora tu plan para obtener lecturas mensuales y acceso completo.</p>
+  <a href="{{ url_for('billing.pricing') }}" class="btn btn-primary">Ver planes</a>
   {% endif %}
 </div>
 
 <div class="card">
-  <h3 style="margin-bottom: 1rem;">Recent Readings</h3>
+  <h3 style="margin-bottom: 1rem;">Lecturas recientes</h3>
   {% if readings %}
     {% for r in readings %}
     <div style="padding: 0.75rem 0; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
       <div>
         <strong>{{ r.reading_type.name }}</strong>
-        {% if r.profile %}<span style="color:var(--text-muted); font-size:0.8rem; margin-left:0.5rem;">for {{ r.profile.name }}</span>{% endif %}
-        <div style="color: var(--text-muted); font-size: 0.85rem;">{{ r.created_at.strftime('%b %d, %Y') }} · {{ r.status }}</div>
+        {% if r.profile %}<span style="color:var(--text-muted); font-size:0.8rem; margin-left:0.5rem;">para {{ r.profile.name }}</span>{% endif %}
+        <div style="color: var(--text-muted); font-size: 0.85rem;">{{ r.created_at.strftime('%d/%m/%Y') }} · {{ r.status }}</div>
       </div>
       {% if r.status == 'completed' %}
-      <a href="{{ url_for('readings.view', reading_id=r.id) }}" class="btn btn-outline" style="padding: 0.3rem 0.8rem; font-size: 0.85rem;">View</a>
+      <a href="{{ url_for('readings.view', reading_id=r.id) }}" class="btn btn-outline" style="padding: 0.3rem 0.8rem; font-size: 0.85rem;">Ver</a>
       {% endif %}
     </div>
     {% endfor %}
-    <a href="{{ url_for('readings.index') }}" style="font-size: 0.9rem; margin-top: 0.75rem; display: inline-block;">All readings →</a>
+    <a href="{{ url_for('readings.index') }}" style="font-size: 0.9rem; margin-top: 0.75rem; display: inline-block;">Todas las lecturas →</a>
   {% else %}
-    <p style="color: var(--text-muted);">No readings yet. <a href="{{ url_for('main.profiles') }}">Generate one →</a></p>
+    <p style="color: var(--text-muted);">Sin lecturas aún. <a href="{{ url_for('main.profiles') }}">Genera una →</a></p>
   {% endif %}
 </div>
 {% endblock %}

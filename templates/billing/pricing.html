@@ -1,52 +1,52 @@
 {% extends "base.html" %}
-{% block title %}Plans — Astronode{% endblock %}
+{% block title %}Planes — Astronode{% endblock %}
 {% block content %}
-<h2 style="margin-bottom: 0.5rem; color: var(--accent-light)">Plans & Pricing</h2>
-<p style="color: var(--text-muted); margin-bottom: 2rem;">Your current plan: <strong style="color:var(--accent-light); text-transform:uppercase">{{ current_user.tier }}</strong></p>
+<h2 style="margin-bottom: 0.5rem; color: var(--accent-light)">Planes y Precios</h2>
+<p style="color: var(--text-muted); margin-bottom: 2rem;">Tu plan actual: <strong style="color:var(--accent-light); text-transform:uppercase">{{ current_user.tier }}</strong></p>
 
 <div style="display: flex; gap: 1.5rem; flex-wrap: wrap;">
   <!-- Single reading -->
   <div class="card" style="width: 240px;">
-    <h3 style="margin-bottom: 0.5rem;">Single Reading</h3>
+    <h3 style="margin-bottom: 0.5rem;">Lectura Individual</h3>
     <div style="font-size: 1.8rem; font-weight: 700; color: var(--accent-light); margin: 0.75rem 0;">€9.99</div>
-    <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.25rem;">One complete natal chart reading delivered to your email.</p>
+    <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.25rem;">Una lectura completa de carta natal enviada a tu email.</p>
     {% if current_user.birth_date and current_user.birth_place %}
     <form method="POST" action="{{ url_for('billing.checkout_reading', reading_type_id=1) }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <button type="submit" class="btn btn-outline" style="width:100%;">Buy reading</button>
+      <button type="submit" class="btn btn-outline" style="width:100%;">Comprar lectura</button>
     </form>
     {% else %}
-    <a href="{{ url_for('main.profile') }}" class="btn btn-outline" style="width:100%; text-align:center;">Set birth data first</a>
+    <a href="{{ url_for('main.profile') }}" class="btn btn-outline" style="width:100%; text-align:center;">Primero añade tus datos de nacimiento</a>
     {% endif %}
   </div>
 
   <!-- Basic -->
   <div class="card" style="width: 240px; border-color: var(--accent);">
-    <h3 style="margin-bottom: 0.5rem;">Basic</h3>
-    <div style="font-size: 1.8rem; font-weight: 700; color: var(--accent-light); margin: 0.75rem 0;">€4.99<span style="font-size: 1rem; color: var(--text-muted)">/mo</span></div>
-    <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.25rem;">Monthly readings + dashboard access.</p>
+    <h3 style="margin-bottom: 0.5rem;">Básico</h3>
+    <div style="font-size: 1.8rem; font-weight: 700; color: var(--accent-light); margin: 0.75rem 0;">€4.99<span style="font-size: 1rem; color: var(--text-muted)">/mes</span></div>
+    <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.25rem;">Lecturas mensuales + acceso al panel.</p>
     {% if current_user.tier != 'basic' and current_user.tier != 'vip' %}
     <form method="POST" action="{{ url_for('billing.checkout_subscribe', tier='basic') }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <button type="submit" class="btn btn-primary" style="width:100%;">Subscribe</button>
+      <button type="submit" class="btn btn-primary" style="width:100%;">Suscribirse</button>
     </form>
     {% else %}
-    <span style="color: var(--text-muted); font-size: 0.9rem;">Current plan</span>
+    <span style="color: var(--text-muted); font-size: 0.9rem;">Plan actual</span>
     {% endif %}
   </div>
 
   <!-- VIP -->
   <div class="card" style="width: 240px;">
     <h3 style="margin-bottom: 0.5rem;">VIP ✦</h3>
-    <div style="font-size: 1.8rem; font-weight: 700; color: var(--accent-light); margin: 0.75rem 0;">€9.99<span style="font-size: 1rem; color: var(--text-muted)">/mo</span></div>
-    <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.25rem;">Weekly readings, compatibility reports, and all future features.</p>
+    <div style="font-size: 1.8rem; font-weight: 700; color: var(--accent-light); margin: 0.75rem 0;">€9.99<span style="font-size: 1rem; color: var(--text-muted)">/mes</span></div>
+    <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.25rem;">Lecturas semanales, informes de compatibilidad y todas las funciones futuras.</p>
     {% if current_user.tier != 'vip' %}
     <form method="POST" action="{{ url_for('billing.checkout_subscribe', tier='vip') }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <button type="submit" class="btn btn-outline" style="width:100%;">Go VIP</button>
+      <button type="submit" class="btn btn-outline" style="width:100%;">Hacerse VIP</button>
     </form>
     {% else %}
-    <span style="color: var(--text-muted); font-size: 0.9rem;">Current plan</span>
+    <span style="color: var(--text-muted); font-size: 0.9rem;">Plan actual</span>
     {% endif %}
   </div>
 </div>

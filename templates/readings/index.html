@@ -1,7 +1,7 @@
 {% extends "base.html" %}
-{% block title %}Readings — Astronode{% endblock %}
+{% block title %}Lecturas — Astronode{% endblock %}
 {% block content %}
-<h2 style="margin-bottom: 1.5rem; color: var(--accent-light)">Readings</h2>
+<h2 style="margin-bottom: 1.5rem; color: var(--accent-light)">Lecturas</h2>
 {% if readings %}
   {% for r in readings %}
   <div class="card" style="display:flex; justify-content:space-between; align-items:center;">
@@ -9,7 +9,7 @@
       <strong>{{ r.reading_type.name }}</strong>
       {% if r.profile %}
       <span style="color:var(--text-muted); font-size:0.82rem; margin-left:0.5rem;">
-        — {{ r.profile.name }}{% if r.profile.is_self %} (you){% endif %}
+        — {{ r.profile.name }}{% if r.profile.is_self %} (tú){% endif %}
       </span>
       {% endif %}
       <div style="color:var(--text-muted); font-size:0.85rem; margin-top:0.2rem;">
@@ -17,19 +17,19 @@
         <span style="color: {% if r.status == 'completed' %}var(--accent-light){% elif r.status == 'failed' %}#e74c3c{% else %}var(--text-muted){% endif %}">
           {{ r.status }}
         </span>
-        {% if r.sent_by_email %} · sent by email{% endif %}
+        {% if r.sent_by_email %} · enviada por email{% endif %}
       </div>
     </div>
     {% if r.status == 'completed' %}
-    <a href="{{ url_for('readings.view', reading_id=r.id) }}" class="btn btn-outline">View</a>
+    <a href="{{ url_for('readings.view', reading_id=r.id) }}" class="btn btn-outline">Ver</a>
     {% elif r.status == 'generating' %}
-    <span style="color:var(--text-muted); font-size:0.9rem;">Generating…</span>
+    <span style="color:var(--text-muted); font-size:0.9rem;">Generando…</span>
     {% endif %}
   </div>
   {% endfor %}
 {% else %}
   <div class="card">
-    <p style="color:var(--text-muted)">No readings yet. <a href="{{ url_for('main.profiles') }}">Generate one from your people →</a></p>
+    <p style="color:var(--text-muted)">Sin lecturas aún. <a href="{{ url_for('main.profiles') }}">Genera una desde tus personas →</a></p>
   </div>
 {% endif %}
 {% endblock %}

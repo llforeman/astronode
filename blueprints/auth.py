@@ -19,10 +19,10 @@ def register():
         email    = request.form.get('email', '').strip().lower()
         password = request.form.get('password', '')
         if not email or not password:
-            flash('Email and password are required.')
+            flash('El email y la contraseña son obligatorios.')
             return render_template('auth/register.html')
         if User.query.filter_by(email_hash=blind_index(email)).first():
-            flash('An account with that email already exists.')
+            flash('Ya existe una cuenta con ese email.')
             return render_template('auth/register.html')
         user = User()
         user.set_email(email)
@@ -33,10 +33,10 @@ def register():
 
         # If user came from the free chart tool, send them to profiles to save it
         if session.get('chart_prefill'):
-            flash('Welcome to Astronode! Save your chart as a profile below.')
+            flash('¡Bienvenido/a a Astronode! Guarda tu carta como perfil abajo.')
             return redirect(url_for('main.profiles'))
 
-        flash('Welcome to Astronode!')
+        flash('¡Bienvenido/a a Astronode!')
         return redirect(url_for('main.dashboard'))
     return render_template('auth/register.html')
 
@@ -60,7 +60,7 @@ def login():
             login_user(user, remember=True)
             next_page = request.args.get('next')
             return redirect(next_page or url_for('main.dashboard'))
-        flash('Invalid email or password.')
+        flash('Email o contraseña incorrectos.')
     return render_template('auth/login.html')
 
 
@@ -80,7 +80,7 @@ def forgot_password():
         if user:
             from emails import queue_password_reset
             queue_password_reset(user)
-        flash('If that address has an account, a reset link is on its way.')
+        flash('Si esa dirección tiene cuenta, te enviamos un enlace de restablecimiento.')
         return redirect(url_for('auth.login'))
     return render_template('auth/forgot_password.html')
 
@@ -90,15 +90,15 @@ def reset_password(token):
     from emails import read_token
     user = read_token(token, salt='reset')
     if not user:
-        flash('This reset link is invalid or has expired.')
+        flash('Este enlace de restablecimiento no es válido o ha caducado.')
         return redirect(url_for('auth.forgot_password'))
     if request.method == 'POST':
         password = request.form.get('password', '')
         if len(password) < 8:
-            flash('Password must be at least 8 characters.')
+            flash('La contraseña debe tener al menos 8 caracteres.')
             return render_template('auth/reset_password.html', token=token)
         user.set_password(password)
         db.session.commit()
-        flash('Password updated. Please log in.')
+        flash('Contraseña actualizada. Por favor, inicia sesión.')
         return redirect(url_for('auth.login'))
     return render_template('auth/reset_password.html', token=token)

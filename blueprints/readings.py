@@ -41,7 +41,7 @@ def request_reading(reading_type_id):
         profile = Profile.query.filter_by(user_id=current_user.id, is_self=True).first()
 
     if not profile or not profile.birth_date or not profile.birth_place:
-        flash('Please complete birth data for this profile first.')
+        flash('Por favor, completa los datos de nacimiento de este perfil primero.')
         return redirect(url_for('main.profiles'))
 
     # Check payment / tier
@@ -63,7 +63,7 @@ def request_reading(reading_type_id):
     from worker import enqueue_reading
     enqueue_reading(reading.id)
 
-    flash('Your reading is being generated. We\'ll email you when it\'s ready.')
+    flash('Tu lectura se está generando. Te enviaremos un email cuando esté lista.')
     return redirect(url_for('readings.view', reading_id=reading.id))
 
 
@@ -94,7 +94,7 @@ def dev_generate():
         profile = next((p for p in profiles if p.is_self), profiles[0] if profiles else None)
 
     if not profile or not profile.birth_date or not profile.birth_place:
-        flash('Complete birth data for this profile first.')
+        flash('Completa los datos de nacimiento de este perfil primero.')
         return redirect(url_for('main.profiles'))
 
     rtype = ReadingType.query.filter_by(active=True).first()

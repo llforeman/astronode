@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="es" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Create account — Astronode</title>
+  <title>Crear cuenta — Astronode</title>
   <script>(function(){ document.documentElement.setAttribute('data-theme', localStorage.getItem('theme')||'dark'); })();</script>
   <style>
     :root[data-theme="dark"] { --bg:#0d0d1a;--text:#e8e0f0;--text-muted:#8a7fa0;--accent:#9b59b6;--border:#2a2a45;--card:#1a1a30; }
@@ -31,13 +31,13 @@
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <label>Email</label>
       <input type="email" name="email" required autofocus>
-      <label>Password</label>
+      <label>Contraseña</label>
       <input type="password" name="password" required minlength="8">
-      <small>At least 8 characters</small>
+      <small>Mínimo 8 caracteres</small>
       <br><br>
-      <button type="submit" class="btn">Create account</button>
+      <button type="submit" class="btn">Crear cuenta</button>
     </form>
-    <div class="links">Already have an account? <a href="{{ url_for('auth.login') }}">Log in</a></div>
+    <div class="links">¿Ya tienes cuenta? <a href="{{ url_for('auth.login') }}">Iniciar sesión</a></div>
   </div>
 </body>
 </html>
