@@ -48,7 +48,7 @@
         <tr><th>Planet</th><th>Sign</th><th>Degree</th><th>House</th></tr>
       </thead>
       <tbody>
-        {% set planet_order = ['Sun','Moon','Mercury','Venus','Mars','Jupiter','Saturn','Uranus','Neptune','Pluto','Ascendant','MC'] %}
+        {% set planet_order = ['Sun','Moon','Mercury','Venus','Mars','Jupiter','Saturn','Uranus','Neptune','Pluto','Chiron','Ascendant','MC'] %}
         {% for name in planet_order %}
           {% if name in result.positions %}
           {% set p2 = result.positions[name] %}

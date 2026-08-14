@@ -138,11 +138,12 @@
         </tr>
       </thead>
       <tbody>
-        {% set planet_order = ['Sun','Moon','Mercury','Venus','Mars','Jupiter','Saturn','Uranus','Neptune','Pluto','Ascendant','MC'] %}
+        {% set planet_order = ['Sun','Moon','Mercury','Venus','Mars','Jupiter','Saturn','Uranus','Neptune','Pluto','Chiron','Ascendant','MC'] %}
         {% set planet_names_es = {
           'Sun': '☉ Sol', 'Moon': '☽ Luna', 'Mercury': '☿ Mercurio', 'Venus': '♀ Venus',
           'Mars': '♂ Marte', 'Jupiter': '♃ Júpiter', 'Saturn': '♄ Saturno',
           'Uranus': '♅ Urano', 'Neptune': '♆ Neptuno', 'Pluto': '♇ Plutón',
+          'Chiron': '⚷ Quirón',
           'Ascendant': 'AC Ascendente', 'MC': 'MC Medio Cielo'
         } %}
         {% for name in planet_order %}

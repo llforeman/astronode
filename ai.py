@@ -237,6 +237,19 @@ def _build_chart_kerykeion(birth_date, birth_time, birth_place,
             'retrograde': True,
         }
         log.info('Lunar nodes via swisseph: NN Casa %d, SN Casa %d', nn_house, sn_house)
+
+        # Chiron
+        ch_res  = swe.calc_ut(jd, swe.CHIRON)
+        ch_lon  = ch_res[0][0]
+        ch_spd  = ch_res[0][3]   # daily motion; negative = retrograde
+        ch_house = _lon_to_house(ch_lon, house_cusps)
+        positions['Chiron'] = {
+            'longitude':  ch_lon,
+            'sign':       _SIGN_ABBR[int(ch_lon // 30) % 12],
+            'house':      ch_house,
+            'retrograde': ch_spd < 0,
+        }
+        log.info('Chiron via swisseph: %.2f° Casa %d', ch_lon, ch_house)
     except Exception as e:
         log.warning('Could not compute lunar nodes via swisseph: %s', e)
 
@@ -300,7 +313,7 @@ _PURPLE_THEME_CSS = """
   --kerykeion-chart-color-mean-node: #f8f9fa;
   --kerykeion-chart-color-true-node: #f8f9fa;
 
-  --kerykeion-chart-color-chiron:      transparent;
+  --kerykeion-chart-color-chiron:      #c8a0e0;
   --kerykeion-chart-color-mean-lilith: transparent;
   --kerykeion-chart-color-true-lilith: transparent;
 
@@ -447,7 +460,7 @@ def _build_overall_text(pos_es: dict, house_cusps: dict) -> str:
     """Full planet list + house cusps — included in every house-group call for context."""
     ORDER = ['Sun', 'Moon', 'Mercury', 'Venus', 'Mars',
              'Jupiter', 'Saturn', 'Uranus', 'Neptune', 'Pluto',
-             'North_Node', 'South_Node',
+             'Chiron', 'North_Node', 'South_Node',
              'Ascendant', 'Medium_Coeli', 'Descendant', 'Imum_Coeli']
     lines = ['Posiciones planetarias:']
     for name in ORDER:

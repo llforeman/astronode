@@ -40,6 +40,7 @@ PLANET_ES = {
     "Medium_Coeli": "el Medio Cielo", "MC": "el Medio Cielo",
     "Descendant": "el Descendente", "Imum_Coeli": "el Fondo del Cielo",
     "North_Node": "el Nodo Norte", "South_Node": "el Nodo Sur",
+    "Chiron": "Quirón",
 }
 
 ASPECT_ES = {
@@ -62,12 +63,13 @@ EXALTATION = {
 ELEMENT_OF = {s: e for s, e in zip(SIGNS, ["Fire", "Earth", "Air", "Water"] * 3)}
 MODE_OF    = {s: m for s, m in zip(SIGNS, ["Cardinal", "Fixed", "Mutable"] * 4)}
 
-PERSONAL = ["Sun", "Moon", "Mercury", "Venus", "Mars"]
-SOCIAL   = ["Jupiter", "Saturn"]
-OUTER    = ["Uranus", "Neptune", "Pluto"]
-ANGLES   = ["Ascendant", "Medium_Coeli", "Descendant", "Imum_Coeli"]
-NODES    = ["North_Node", "South_Node"]
-CORE     = PERSONAL + SOCIAL + OUTER
+PERSONAL   = ["Sun", "Moon", "Mercury", "Venus", "Mars"]
+SOCIAL     = ["Jupiter", "Saturn"]
+OUTER      = ["Uranus", "Neptune", "Pluto"]
+ASTEROIDS  = ["Chiron"]
+ANGLES     = ["Ascendant", "Medium_Coeli", "Descendant", "Imum_Coeli"]
+NODES      = ["North_Node", "South_Node"]
+CORE       = PERSONAL + SOCIAL + OUTER
 
 HARD = {"conjunction", "opposition", "square"}
 SOFT = {"trine", "sextile"}
@@ -145,7 +147,7 @@ def _moon_phase_name(deg: float) -> str:
 
 def _compute_graded_aspects(pos: dict) -> list[dict]:
     """Compute aspects between all planet+angle pairs, graded by orb."""
-    bodies = CORE + ["Ascendant", "Medium_Coeli", "North_Node", "South_Node"]
+    bodies = CORE + ASTEROIDS + ["Ascendant", "Medium_Coeli", "North_Node", "South_Node"]
     available = [(n, pos[n]["longitude"]) for n in bodies if n in pos]
 
     graded = []
@@ -378,7 +380,7 @@ def build_dossier(subject, positions: dict, house_cusps: dict,
 
     # ---- placements ---------------------------------------------------------
     placements: dict[str, Any] = {}
-    for name in CORE + ANGLES + NODES:
+    for name in CORE + ASTEROIDS + ANGLES + NODES:
         data = pos.get(name)
         if not data:
             continue
