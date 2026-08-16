@@ -77,9 +77,21 @@ def download(reading_id):
     if reading.status != 'completed' or not reading.content:
         abort(404)
 
-    # Helvetica is Latin-1 only — sanitise every string before passing to fpdf
+    # Helvetica is Latin-1 only — map common Unicode chars then sanitise
+    _UNICODE_MAP = str.maketrans({
+        '\u2019': "'",  '\u2018': "'",   # curly apostrophes
+        '\u201c': '"',  '\u201d': '"',   # curly double quotes
+        '\u2032': "'",  '\u2033': '"',   # prime / double-prime (arcminutes/seconds)
+        '\u2014': '-',  '\u2013': '-',   # em/en dash
+        '\u2026': '...',                 # ellipsis
+        '\u2022': '-',  '\u00b7': '.',   # bullet, middle dot
+        '\u2605': '*',  '\u2606': '*',   # stars
+        '\u2726': '*',  '\u2727': '*',
+        '\u00d7': 'x',                   # multiplication sign
+    })
+
     def _s(text):
-        return text.encode('latin-1', errors='replace').decode('latin-1')
+        return text.translate(_UNICODE_MAP).encode('latin-1', errors='replace').decode('latin-1')
 
     # ── colours ──────────────────────────────────────────────────
     C_BG      = (248, 244, 255)
