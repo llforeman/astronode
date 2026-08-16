@@ -30,11 +30,13 @@ def profiles():
                                  .order_by(Profile.is_self.desc(), Profile.created_at.asc()).all()
     reading_types = ReadingType.query.filter_by(active=True).all()
     prefill       = session.pop('chart_prefill', None)
+    import datetime as _dt
     return render_template('main/profiles.html',
                            profiles=all_profiles,
                            reading_types=reading_types,
                            prefill=prefill,
-                           max_profiles=MAX_PROFILES)
+                           max_profiles=MAX_PROFILES,
+                           now=_dt.date.today())
 
 
 @main_bp.route('/profiles/add', methods=['POST'])

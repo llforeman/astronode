@@ -562,6 +562,495 @@ def _assemble(results: list) -> str:
     return '\n\n'.join(parts)
 
 
+# ── Inter-aspects (synastry) ───────────────────────────────────────────────────
+
+def _compute_inter_aspects(pos_a: dict, pos_b: dict) -> list[dict]:
+    """Aspects between planet set A and planet set B (no intra-set pairs)."""
+    from chart_analysis import CORE, ASTEROIDS, ANGLES, NODES, ASPECT_ES, PLANET_ES
+    bodies = CORE + ASTEROIDS + ANGLES[:2] + NODES  # ASC + MC only
+
+    inter = []
+    _TYPES = [('conjunción', 0, 8), ('oposición', 180, 7),
+              ('cuadratura', 90, 6), ('trígono', 120, 6), ('sextil', 60, 4)]
+
+    for n1 in bodies:
+        if n1 not in pos_a:
+            continue
+        lon1 = pos_a[n1]['longitude']
+        for n2 in bodies:
+            if n2 not in pos_b:
+                continue
+            lon2 = pos_b[n2]['longitude']
+            diff = abs(lon1 - lon2) % 360
+            if diff > 180:
+                diff = 360 - diff
+            for asp, angle, orb in _TYPES:
+                if abs(diff - angle) <= orb:
+                    inter.append({
+                        'a': n1, 'b': n2,
+                        'a_es': PLANET_ES.get(n1, n1),
+                        'b_es': PLANET_ES.get(n2, n2),
+                        'aspecto': asp,
+                        'orbe': round(abs(diff - angle), 2),
+                        'casa_a': pos_a[n1].get('house'),
+                        'casa_b': pos_b[n2].get('house'),
+                    })
+                    break
+    inter.sort(key=lambda x: x['orbe'])
+    return inter
+
+
+def _inter_aspects_text(inter: list, name_a: str, name_b: str) -> str:
+    from chart_analysis import PLANET_ES
+    lines = []
+    for asp in inter[:40]:  # cap to avoid huge prompts
+        lines.append(
+            f"  {name_a}/{asp['a_es']} {asp['aspecto']} {name_b}/{asp['b_es']} "
+            f"(orbe {asp['orbe']}°, casa {asp['casa_a']} — casa {asp['casa_b']})"
+        )
+    return '\n'.join(lines) if lines else '  (ninguno encontrado)'
+
+
+def _positions_summary(pos_es: dict) -> str:
+    """Compact text of all placements for prompt context."""
+    lines = []
+    for name, p in pos_es.items():
+        retro = ' R' if p.get('retrogrado') else ''
+        lines.append(f"  {p['planeta_es']}: {p['grado']} Casa {p['casa']}{retro}")
+    return '\n'.join(lines)
+
+
+# ── Carta Kármica ──────────────────────────────────────────────────────────────
+
+def generate_karmic(profile, reading_type) -> dict:
+    import prompts as P
+    birth_date  = profile.birth_date
+    birth_time  = profile.birth_time
+    birth_place = profile.birth_place or 'unknown'
+
+    positions, house_cusps, local_dt, lat, lng, subject = \
+        _build_chart_kerykeion(birth_date, birth_time, birth_place,
+                               lat=getattr(profile, 'birth_lat', None),
+                               lng=getattr(profile, 'birth_lng', None))
+
+    chart_image = None
+    try:
+        chart_image = _generate_chart_svg(subject)
+    except Exception as e:
+        log.warning('Chart SVG failed: %s', e)
+
+    from chart_analysis import build_dossier
+    dossier = build_dossier(subject, positions, house_cusps,
+                            known_birth_time=birth_time is not None)
+    pos_es  = dossier['posiciones']
+    aspects = dossier['aspectos']
+    gender  = getattr(profile, 'gender', None)
+    gnote   = _gender_note(gender)
+
+    def _karmic_data(*keys):
+        lines = []
+        for k in keys:
+            p = pos_es.get(k)
+            if p:
+                retro = ' (retrógrado)' if p.get('retrogrado') else ''
+                lines.append(f"  {p['planeta_es']}: {p['grado']} — {p['signo']} — Casa {p['casa']}{retro}")
+        # add aspects involving these planets
+        for asp in aspects:
+            if asp['a'] in keys or asp['b'] in keys:
+                lines.append(f"  Aspecto: {asp['a_es']} {asp['aspecto']} {asp['b_es']} orbe {asp['orbe']}°")
+        return '\n'.join(lines)
+
+    retrogrades = [n for n, p in pos_es.items() if p.get('retrogrado')]
+    retro_text  = ', '.join(pos_es[n]['planeta_es'] for n in retrogrades if n in pos_es) or 'ninguno'
+
+    casa12_planets = [p['planeta_es'] for p in pos_es.values() if p.get('casa') == 12]
+    casa12_text    = ', '.join(casa12_planets) or 'ninguno'
+
+    calls = [
+        (1, P.PROMPT_KARMICA_KARMA_PASADO.format(
+            gender_note=gnote,
+            data=_karmic_data('South_Node') + f"\n  Casa 12: {casa12_text}")),
+        (2, P.PROMPT_KARMICA_NODO_NORTE.format(
+            gender_note=gnote,
+            data=_karmic_data('North_Node'))),
+        (3, P.PROMPT_KARMICA_SATURNO.format(
+            gender_note=gnote,
+            data=_karmic_data('Saturn'))),
+        (4, P.PROMPT_KARMICA_CHIRON.format(
+            gender_note=gnote,
+            data=_karmic_data('Chiron'))),
+        (5, P.PROMPT_KARMICA_PATRONES.format(
+            gender_note=gnote,
+            data=f"  Retrógrados: {retro_text}\n  Casa 12: {casa12_text}")),
+        (6, P.PROMPT_KARMICA_SINTESIS.format(
+            gender_note=gnote,
+            data=_build_overall_text(pos_es, house_cusps))),
+    ]
+
+    from concurrent.futures import ThreadPoolExecutor
+    def _call(item):
+        n, msg = item
+        return n, _ask([{'role': 'user', 'content': msg}],
+                       model=_MODEL_PROSE, temperature=0.85)
+
+    with ThreadPoolExecutor(max_workers=6) as ex:
+        results = list(ex.map(_call, calls))
+
+    by_n = dict(results)
+    parts = [f"## {sec['titulo']}\n\n{by_n[sec['n']]}"
+             for sec in P.SECCIONES_KARMICA if sec['n'] in by_n]
+    return {'text': '\n\n'.join(parts), 'chart_image': chart_image}
+
+
+# ── Sinastría ─────────────────────────────────────────────────────────────────
+
+def generate_synastry(profile_a, profile_b, reading_type) -> dict:
+    import prompts as P
+    import datetime as _dt
+
+    def _chart(p):
+        bd = p.birth_date
+        bt = p.birth_time or _dt.time(12, 0)
+        bp = p.birth_place or 'unknown'
+        pos, cusps, ldt, lat, lng, subj = _build_chart_kerykeion(
+            bd, bt, bp,
+            lat=getattr(p, 'birth_lat', None),
+            lng=getattr(p, 'birth_lng', None))
+        from chart_analysis import build_dossier
+        dossier = build_dossier(subj, pos, cusps, known_birth_time=p.birth_time is not None)
+        return pos, dossier['posiciones']
+
+    pos_a, es_a = _chart(profile_a)
+    pos_b, es_b = _chart(profile_b)
+
+    inter = _compute_inter_aspects(pos_a, pos_b)
+    inter_txt = _inter_aspects_text(inter, profile_a.name, profile_b.name)
+    carta_a = _positions_summary(es_a)
+    carta_b = _positions_summary(es_b)
+
+    calls = []
+    for sec in P.SECCIONES_SINASTRIA:
+        n = sec['n']
+        msg = P.PROMPT_SINASTRIA_BASE.format(
+            nombre_a=profile_a.name,
+            nombre_b=profile_b.name,
+            instruccion=P.INSTRUCCION_SINASTRIA[n],
+            carta_a=carta_a,
+            carta_b=carta_b,
+            interaspectos=inter_txt,
+        )
+        calls.append((n, msg))
+
+    from concurrent.futures import ThreadPoolExecutor
+    def _call(item):
+        n, msg = item
+        return n, _ask([{'role': 'user', 'content': msg}],
+                       model=_MODEL_PROSE, temperature=0.85)
+
+    with ThreadPoolExecutor(max_workers=7) as ex:
+        results = list(ex.map(_call, calls))
+
+    by_n = dict(results)
+    parts = [f"## {sec['titulo']}\n\n{by_n[sec['n']]}"
+             for sec in P.SECCIONES_SINASTRIA if sec['n'] in by_n]
+    return {'text': '\n\n'.join(parts), 'chart_image': None}
+
+
+# ── Carta Davison ─────────────────────────────────────────────────────────────
+
+def generate_davison(profile_a, profile_b, reading_type) -> dict:
+    import prompts as P
+    import datetime as _dt
+    import pytz
+    from timezonefinder import TimezoneFinder
+
+    def _jd(p):
+        import swisseph as swe
+        bt = p.birth_time or _dt.time(12, 0)
+        return swe.julday(p.birth_date.year, p.birth_date.month, p.birth_date.day,
+                          bt.hour + bt.minute / 60.0)
+
+    jd_a  = _jd(profile_a)
+    jd_b  = _jd(profile_b)
+    jd_mid = (jd_a + jd_b) / 2.0
+
+    lat_a = getattr(profile_a, 'birth_lat', None) or _geocode(profile_a.birth_place or 'Madrid')[0]
+    lng_a = getattr(profile_a, 'birth_lng', None) or _geocode(profile_a.birth_place or 'Madrid')[1]
+    lat_b = getattr(profile_b, 'birth_lat', None) or _geocode(profile_b.birth_place or 'Madrid')[0]
+    lng_b = getattr(profile_b, 'birth_lng', None) or _geocode(profile_b.birth_place or 'Madrid')[1]
+    lat_mid = (lat_a + lat_b) / 2.0
+    lng_mid = (lng_a + lng_b) / 2.0
+
+    # Convert midpoint JD back to a datetime for Kerykeion
+    import swisseph as swe
+    jd_parts = swe.revjul(jd_mid)
+    year, month, day = int(jd_parts[0]), int(jd_parts[1]), int(jd_parts[2])
+    hour_frac = jd_parts[3]
+    hour, minute = int(hour_frac), int((hour_frac % 1) * 60)
+    mid_date = _dt.date(year, month, day)
+    mid_time = _dt.time(hour, minute)
+
+    tf = TimezoneFinder()
+    tz_str = tf.timezone_at(lng=lng_mid, lat=lat_mid) or 'UTC'
+
+    positions, house_cusps, local_dt, _lat, _lng, subject = \
+        _build_chart_kerykeion(mid_date, mid_time, f'{lat_mid:.4f},{lng_mid:.4f}',
+                               lat=lat_mid, lng=lng_mid)
+
+    chart_image = None
+    try:
+        chart_image = _generate_chart_svg(subject)
+    except Exception as e:
+        log.warning('Davison SVG failed: %s', e)
+
+    from chart_analysis import build_dossier
+    dossier = build_dossier(subject, positions, house_cusps, known_birth_time=True)
+    pos_es  = dossier['posiciones']
+    carta_d = _positions_summary(pos_es)
+
+    calls = []
+    for sec in P.SECCIONES_DAVISON:
+        n = sec['n']
+        msg = P.PROMPT_DAVISON_BASE.format(
+            nombre_a=profile_a.name,
+            nombre_b=profile_b.name,
+            instruccion=P.INSTRUCCION_DAVISON[n],
+            carta_davison=carta_d,
+        )
+        calls.append((n, msg))
+
+    from concurrent.futures import ThreadPoolExecutor
+    def _call(item):
+        n, msg = item
+        return n, _ask([{'role': 'user', 'content': msg}],
+                       model=_MODEL_PROSE, temperature=0.85)
+
+    with ThreadPoolExecutor(max_workers=7) as ex:
+        results = list(ex.map(_call, calls))
+
+    by_n = dict(results)
+    parts = [f"## {sec['titulo']}\n\n{by_n[sec['n']]}"
+             for sec in P.SECCIONES_DAVISON if sec['n'] in by_n]
+    return {'text': '\n\n'.join(parts), 'chart_image': chart_image}
+
+
+# ── Solar / Lunar Return helpers ───────────────────────────────────────────────
+
+def _find_return(natal_lon: float, body_id: int, start_jd: float,
+                 period_days: float) -> float:
+    """Binary-search for the JD when body reaches natal_lon after start_jd."""
+    import swisseph as swe
+    jd = start_jd
+    for _ in range(50):
+        lon = swe.calc_ut(jd, body_id)[0][0]
+        diff = (natal_lon - lon) % 360
+        if diff > 180:
+            diff -= 360
+        if abs(diff) < 0.0001:
+            break
+        jd += diff / (360 / period_days)
+    return jd
+
+
+def _jd_for_profile(profile) -> float:
+    import swisseph as swe
+    import datetime as _dt
+    bt = profile.birth_time or _dt.time(12, 0)
+    return swe.julday(profile.birth_date.year, profile.birth_date.month,
+                      profile.birth_date.day, bt.hour + bt.minute / 60.0)
+
+
+def _chart_summary(pos_es: dict, house_cusps: dict) -> str:
+    return _build_overall_text(pos_es, house_cusps)
+
+
+# ── Revolución Solar ──────────────────────────────────────────────────────────
+
+def generate_solar_return(profile, params: dict, reading_type) -> dict:
+    import prompts as P
+    import swisseph as swe
+    import datetime as _dt
+
+    target_year = int(params.get('year', profile.birth_date.year + 1))
+    sr_place    = params.get('place') or profile.birth_place or 'unknown'
+    sr_lat      = params.get('lat') or getattr(profile, 'birth_lat', None)
+    sr_lng      = params.get('lng') or getattr(profile, 'birth_lng', None)
+
+    # Natal chart
+    positions_n, cusps_n, _, _lat_n, _lng_n, subj_n = _build_chart_kerykeion(
+        profile.birth_date, profile.birth_time or _dt.time(12, 0),
+        profile.birth_place or 'unknown',
+        lat=getattr(profile, 'birth_lat', None),
+        lng=getattr(profile, 'birth_lng', None))
+
+    natal_sun_lon = positions_n['Sun']['longitude']
+
+    # Start search a bit before birthday in target year
+    start_jd = swe.julday(target_year, profile.birth_date.month,
+                           max(1, profile.birth_date.day - 5), 12.0)
+    sr_jd = _find_return(natal_sun_lon, swe.SUN, start_jd, 365.25)
+
+    # Build SR chart at the return location
+    jd_parts = swe.revjul(sr_jd)
+    sr_date = _dt.date(int(jd_parts[0]), int(jd_parts[1]), int(jd_parts[2]))
+    hf = jd_parts[3]
+    sr_time = _dt.time(int(hf), int((hf % 1) * 60))
+
+    positions_sr, cusps_sr, _, _lat_sr, _lng_sr, subj_sr = _build_chart_kerykeion(
+        sr_date, sr_time, sr_place, lat=sr_lat, lng=sr_lng)
+
+    chart_image = None
+    try:
+        chart_image = _generate_chart_svg(subj_sr)
+    except Exception as e:
+        log.warning('SR SVG failed: %s', e)
+
+    from chart_analysis import build_dossier
+    dossier_n  = build_dossier(subj_n,  positions_n,  cusps_n,  known_birth_time=profile.birth_time is not None)
+    dossier_sr = build_dossier(subj_sr, positions_sr, cusps_sr, known_birth_time=True)
+
+    gender  = getattr(profile, 'gender', None)
+    gnote   = _gender_note(gender)
+    carta_n  = _chart_summary(dossier_n['posiciones'],  cusps_n)
+    carta_sr = _chart_summary(dossier_sr['posiciones'], cusps_sr)
+    fecha_rs = sr_date.strftime('%d/%m/%Y')
+
+    calls = []
+    for sec in P.SECCIONES_SOLAR:
+        n = sec['n']
+        msg = P.PROMPT_SOLAR_BASE.format(
+            nombre=profile.name,
+            fecha_rs=fecha_rs,
+            instruccion=P.INSTRUCCION_SOLAR[n],
+            gender_note=gnote,
+            carta_natal=carta_n,
+            carta_rs=carta_sr,
+        )
+        calls.append((n, msg))
+
+    from concurrent.futures import ThreadPoolExecutor
+    def _call(item):
+        n, msg = item
+        return n, _ask([{'role': 'user', 'content': msg}],
+                       model=_MODEL_PROSE, temperature=0.85)
+
+    with ThreadPoolExecutor(max_workers=5) as ex:
+        results = list(ex.map(_call, calls))
+
+    by_n = dict(results)
+    header = f"Revolución Solar {target_year} — {sr_place}\nFecha exacta del retorno: {fecha_rs}\n\n"
+    parts = [f"## {sec['titulo']}\n\n{by_n[sec['n']]}"
+             for sec in P.SECCIONES_SOLAR if sec['n'] in by_n]
+    return {'text': header + '\n\n'.join(parts), 'chart_image': chart_image}
+
+
+# ── Revolución Lunar ──────────────────────────────────────────────────────────
+
+def generate_lunar_return(profile, params: dict, reading_type) -> dict:
+    import prompts as P
+    import swisseph as swe
+    import datetime as _dt
+
+    target_year  = int(params.get('year',  _dt.date.today().year))
+    target_month = int(params.get('month', _dt.date.today().month))
+    lr_place = params.get('place') or profile.birth_place or 'unknown'
+    lr_lat   = params.get('lat') or getattr(profile, 'birth_lat', None)
+    lr_lng   = params.get('lng') or getattr(profile, 'birth_lng', None)
+
+    # Natal chart
+    positions_n, cusps_n, _, _lat_n, _lng_n, subj_n = _build_chart_kerykeion(
+        profile.birth_date, profile.birth_time or _dt.time(12, 0),
+        profile.birth_place or 'unknown',
+        lat=getattr(profile, 'birth_lat', None),
+        lng=getattr(profile, 'birth_lng', None))
+
+    natal_moon_lon = positions_n['Moon']['longitude']
+
+    # Start search at first day of target month
+    start_jd = swe.julday(target_year, target_month, 1, 0.0)
+    lr_jd = _find_return(natal_moon_lon, swe.MOON, start_jd, 27.3)
+
+    jd_parts = swe.revjul(lr_jd)
+    lr_date  = _dt.date(int(jd_parts[0]), int(jd_parts[1]), int(jd_parts[2]))
+    hf = jd_parts[3]
+    lr_time  = _dt.time(int(hf), int((hf % 1) * 60))
+
+    positions_lr, cusps_lr, _, _lat_lr, _lng_lr, subj_lr = _build_chart_kerykeion(
+        lr_date, lr_time, lr_place, lat=lr_lat, lng=lr_lng)
+
+    chart_image = None
+    try:
+        chart_image = _generate_chart_svg(subj_lr)
+    except Exception as e:
+        log.warning('LR SVG failed: %s', e)
+
+    from chart_analysis import build_dossier
+    dossier_n  = build_dossier(subj_n,  positions_n,  cusps_n,  known_birth_time=profile.birth_time is not None)
+    dossier_lr = build_dossier(subj_lr, positions_lr, cusps_lr, known_birth_time=True)
+
+    gender  = getattr(profile, 'gender', None)
+    gnote   = _gender_note(gender)
+    carta_n  = _chart_summary(dossier_n['posiciones'],  cusps_n)
+    carta_lr = _chart_summary(dossier_lr['posiciones'], cusps_lr)
+    fecha_rl = lr_date.strftime('%d/%m/%Y')
+
+    calls = []
+    for sec in P.SECCIONES_LUNAR:
+        n = sec['n']
+        msg = P.PROMPT_LUNAR_BASE.format(
+            nombre=profile.name,
+            fecha_rl=fecha_rl,
+            instruccion=P.INSTRUCCION_LUNAR[n],
+            gender_note=gnote,
+            carta_natal=carta_n,
+            carta_rl=carta_lr,
+        )
+        calls.append((n, msg))
+
+    from concurrent.futures import ThreadPoolExecutor
+    def _call(item):
+        n, msg = item
+        return n, _ask([{'role': 'user', 'content': msg}],
+                       model=_MODEL_PROSE, temperature=0.85)
+
+    with ThreadPoolExecutor(max_workers=3) as ex:
+        results = list(ex.map(_call, calls))
+
+    by_n = dict(results)
+    import calendar
+    month_name = calendar.month_name[target_month]
+    header = f"Revolución Lunar — {month_name} {target_year} — {lr_place}\nFecha exacta del retorno: {fecha_rl}\n\n"
+    parts = [f"## {sec['titulo']}\n\n{by_n[sec['n']]}"
+             for sec in P.SECCIONES_LUNAR if sec['n'] in by_n]
+    return {'text': header + '\n\n'.join(parts), 'chart_image': chart_image}
+
+
+# ── Reading router ────────────────────────────────────────────────────────────
+
+def generate_reading(profile, reading_type, params: dict = None,
+                     profile_b=None) -> dict:
+    """Route to the correct generator based on reading_type.slug."""
+    params = params or {}
+    slug   = getattr(reading_type, 'slug', None) or 'natal'
+
+    if slug == 'karmic':
+        return generate_karmic(profile, reading_type)
+    if slug == 'synastry':
+        if not profile_b:
+            raise ValueError('synastry requires profile_b')
+        return generate_synastry(profile, profile_b, reading_type)
+    if slug == 'davison':
+        if not profile_b:
+            raise ValueError('davison requires profile_b')
+        return generate_davison(profile, profile_b, reading_type)
+    if slug == 'solar_return':
+        return generate_solar_return(profile, params, reading_type)
+    if slug == 'lunar_return':
+        return generate_lunar_return(profile, params, reading_type)
+    # default: natal
+    return generate_horoscope(profile, reading_type)
+
+
 # ── Main entry point ───────────────────────────────────────────────────────────
 
 def generate_horoscope(user, reading_type) -> dict:

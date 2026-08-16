@@ -33,7 +33,9 @@ def request_reading(reading_type_id):
     from models import Profile
     rtype = ReadingType.query.filter_by(id=reading_type_id, active=True).first_or_404()
 
-    # Resolve the profile to use
+    slug = getattr(rtype, 'slug', None) or 'natal'
+
+    # Resolve primary profile
     profile_id = request.form.get('profile_id', type=int)
     if profile_id:
         profile = Profile.query.filter_by(id=profile_id, user_id=current_user.id).first_or_404()
@@ -43,6 +45,42 @@ def request_reading(reading_type_id):
     if not profile or not profile.birth_date or not profile.birth_place:
         flash('Por favor, completa los datos de nacimiento de este perfil primero.')
         return redirect(url_for('main.profiles'))
+
+    # Build params dict
+    params = {}
+
+    if slug in ('synastry', 'davison'):
+        profile_id_b = request.form.get('profile_id_b', type=int)
+        if not profile_id_b:
+            flash('Selecciona dos perfiles para este tipo de lectura.')
+            return redirect(url_for('main.profiles'))
+        pb = Profile.query.filter_by(id=profile_id_b, user_id=current_user.id).first_or_404()
+        if not pb.birth_date or not pb.birth_place:
+            flash('El segundo perfil necesita fecha y lugar de nacimiento.')
+            return redirect(url_for('main.profiles'))
+        params['profile_id_b'] = profile_id_b
+
+    if slug == 'solar_return':
+        year = request.form.get('year', type=int)
+        if not year:
+            flash('Indica el año de la revolución solar.')
+            return redirect(url_for('main.profiles'))
+        params['year']  = year
+        params['place'] = request.form.get('sr_place', '').strip() or profile.birth_place
+        params['lat']   = request.form.get('sr_lat', type=float)
+        params['lng']   = request.form.get('sr_lng', type=float)
+
+    if slug == 'lunar_return':
+        year  = request.form.get('year',  type=int)
+        month = request.form.get('month', type=int)
+        if not year or not month:
+            flash('Indica el año y mes de la revolución lunar.')
+            return redirect(url_for('main.profiles'))
+        params['year']  = year
+        params['month'] = month
+        params['place'] = request.form.get('lr_place', '').strip() or profile.birth_place
+        params['lat']   = request.form.get('lr_lat', type=float)
+        params['lng']   = request.form.get('lr_lng', type=float)
 
     # Check payment / tier
     if not _DEV:
@@ -56,7 +94,7 @@ def request_reading(reading_type_id):
             return redirect(url_for('billing.pricing'))
 
     reading = Reading(user_id=current_user.id, reading_type_id=rtype.id,
-                      profile_id=profile.id)
+                      profile_id=profile.id, params=params or None)
     db.session.add(reading)
     db.session.commit()
 

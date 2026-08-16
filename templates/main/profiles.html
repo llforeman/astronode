@@ -87,6 +87,133 @@
 </div>
 {% endif %}
 
+{% if profiles|length >= 2 and reading_types %}
+  {% set rt_syn = reading_types | selectattr('slug', 'equalto', 'synastry') | first %}
+  {% set rt_dav = reading_types | selectattr('slug', 'equalto', 'davison') | first %}
+  {% set rt_sol = reading_types | selectattr('slug', 'equalto', 'solar_return') | first %}
+  {% set rt_lun = reading_types | selectattr('slug', 'equalto', 'lunar_return') | first %}
+
+  {% if rt_syn or rt_dav %}
+  <div class="card" style="margin-bottom:1.5rem;">
+    <h3 style="margin-bottom:1.25rem; color:var(--accent-light);">Sinastría y Davison</h3>
+    <p style="color:var(--text-muted); font-size:0.88rem; margin-bottom:1.25rem;">Selecciona dos personas para calcular la compatibilidad.</p>
+
+    <div class="form-row" style="margin-bottom:1rem; align-items:flex-end; gap:1rem;">
+      <div class="form-group" style="flex:1;">
+        <label>Persona A</label>
+        <select id="syn-a" style="padding:0.6rem 0.8rem; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text);">
+          {% for p in profiles %}{% if p.birth_date and p.birth_place %}
+          <option value="{{ p.id }}">{{ p.name }}</option>
+          {% endif %}{% endfor %}
+        </select>
+      </div>
+      <div class="form-group" style="flex:1;">
+        <label>Persona B</label>
+        <select id="syn-b" style="padding:0.6rem 0.8rem; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text);">
+          {% for p in profiles %}{% if p.birth_date and p.birth_place %}
+          <option value="{{ p.id }}" {% if loop.index == 2 %}selected{% endif %}>{{ p.name }}</option>
+          {% endif %}{% endfor %}
+        </select>
+      </div>
+      <div style="display:flex; gap:0.75rem; flex-wrap:wrap;">
+        {% if rt_syn %}
+        <form method="POST" action="{{ url_for('readings.request_reading', reading_type_id=rt_syn.id) }}" id="syn-form">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="profile_id"   id="syn-pid-a">
+          <input type="hidden" name="profile_id_b" id="syn-pid-b">
+          <button type="submit" class="btn btn-primary">Sinastría</button>
+        </form>
+        {% endif %}
+        {% if rt_dav %}
+        <form method="POST" action="{{ url_for('readings.request_reading', reading_type_id=rt_dav.id) }}" id="dav-form">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="profile_id"   id="dav-pid-a">
+          <input type="hidden" name="profile_id_b" id="dav-pid-b">
+          <button type="submit" class="btn btn-outline">Davison</button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if rt_sol %}
+  <div class="card" style="margin-bottom:1.5rem;">
+    <h3 style="margin-bottom:1.25rem; color:var(--accent-light);">Revolución Solar</h3>
+    <form method="POST" action="{{ url_for('readings.request_reading', reading_type_id=rt_sol.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="form-row" style="margin-bottom:1rem; align-items:flex-end;">
+        <div class="form-group" style="flex:1;">
+          <label>Persona</label>
+          <select name="profile_id" style="padding:0.6rem 0.8rem; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text);">
+            {% for p in profiles %}{% if p.birth_date and p.birth_place %}
+            <option value="{{ p.id }}">{{ p.name }}</option>
+            {% endif %}{% endfor %}
+          </select>
+        </div>
+        <div class="form-group" style="flex:0 0 120px;">
+          <label>Año</label>
+          <input type="number" name="year" min="2000" max="2100" value="{{ now.year }}" style="padding:0.6rem 0.8rem; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text);">
+        </div>
+        <div class="form-group place-autocomplete" style="flex:2;">
+          <label>Ubicación el día del cumpleaños</label>
+          <input type="text" id="sr-place-display" autocomplete="off" placeholder="p.ej. Barcelona, España">
+          <input type="hidden" name="sr_place" id="sr-place-hidden">
+          <input type="hidden" name="sr_lat"   id="sr-lat">
+          <input type="hidden" name="sr_lng"   id="sr-lng">
+          <div id="sr-dropdown" class="autocomplete-dropdown"></div>
+        </div>
+        <div>
+          <button type="submit" class="btn btn-primary">Calcular RS</button>
+        </div>
+      </div>
+    </form>
+  </div>
+  {% endif %}
+
+  {% if rt_lun %}
+  <div class="card" style="margin-bottom:1.5rem;">
+    <h3 style="margin-bottom:1.25rem; color:var(--accent-light);">Revolución Lunar</h3>
+    <form method="POST" action="{{ url_for('readings.request_reading', reading_type_id=rt_lun.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="form-row" style="margin-bottom:1rem; align-items:flex-end;">
+        <div class="form-group" style="flex:1;">
+          <label>Persona</label>
+          <select name="profile_id" style="padding:0.6rem 0.8rem; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text);">
+            {% for p in profiles %}{% if p.birth_date and p.birth_place %}
+            <option value="{{ p.id }}">{{ p.name }}</option>
+            {% endif %}{% endfor %}
+          </select>
+        </div>
+        <div class="form-group" style="flex:0 0 120px;">
+          <label>Año</label>
+          <input type="number" name="year" min="2000" max="2100" value="{{ now.year }}" style="padding:0.6rem 0.8rem; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text);">
+        </div>
+        <div class="form-group" style="flex:0 0 140px;">
+          <label>Mes</label>
+          <select name="month" style="padding:0.6rem 0.8rem; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text);">
+            {% for m, name in [(1,'Enero'),(2,'Febrero'),(3,'Marzo'),(4,'Abril'),(5,'Mayo'),(6,'Junio'),(7,'Julio'),(8,'Agosto'),(9,'Septiembre'),(10,'Octubre'),(11,'Noviembre'),(12,'Diciembre')] %}
+            <option value="{{ m }}" {% if m == now.month %}selected{% endif %}>{{ name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group place-autocomplete" style="flex:2;">
+          <label>Ubicación ese mes</label>
+          <input type="text" id="lr-place-display" autocomplete="off" placeholder="p.ej. Barcelona, España">
+          <input type="hidden" name="lr_place" id="lr-place-hidden">
+          <input type="hidden" name="lr_lat"   id="lr-lat">
+          <input type="hidden" name="lr_lng"   id="lr-lng">
+          <div id="lr-dropdown" class="autocomplete-dropdown"></div>
+        </div>
+        <div>
+          <button type="submit" class="btn btn-primary">Calcular RL</button>
+        </div>
+      </div>
+    </form>
+  </div>
+  {% endif %}
+{% endif %}
+
 {% if profiles|length < max_profiles %}
 <div class="card">
   <h3 style="margin-bottom: 1.25rem;">Añadir persona</h3>
@@ -158,55 +285,73 @@
 
 {% block extra_js %}
 <script>
+// Synastry / Davison profile sync
 (function () {
-  var display  = document.getElementById('place-display');
-  var hidden   = document.getElementById('birth-place-hidden');
-  var latInput = document.getElementById('birth-lat');
-  var lngInput = document.getElementById('birth-lng');
-  var dropdown = document.getElementById('place-dropdown');
+  function sync() {
+    var a = document.getElementById('syn-a');
+    var b = document.getElementById('syn-b');
+    if (!a) return;
+    var va = a.value, vb = b.value;
+    ['syn-pid-a','dav-pid-a'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=va; });
+    ['syn-pid-b','dav-pid-b'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=vb; });
+  }
+  var a = document.getElementById('syn-a');
+  var b = document.getElementById('syn-b');
+  if (a) { a.addEventListener('change', sync); b.addEventListener('change', sync); sync(); }
+
+  // Prevent same profile on both sides
+  document.querySelectorAll('#syn-form, #dav-form').forEach(function(form){
+    form.addEventListener('submit', function(e){
+      var pa = document.getElementById('syn-a').value;
+      var pb = document.getElementById('syn-b').value;
+      if (pa === pb) { e.preventDefault(); alert('Selecciona dos personas distintas.'); }
+    });
+  });
+})();
+
+// Place autocomplete factory
+function makeAutocomplete(displayId, hiddenId, latId, lngId, dropdownId) {
+  var display  = document.getElementById(displayId);
+  var hidden   = document.getElementById(hiddenId);
+  var latInput = document.getElementById(latId);
+  var lngInput = document.getElementById(lngId);
+  var dropdown = document.getElementById(dropdownId);
   if (!display) return;
   var timer;
-
   display.addEventListener('input', function () {
     var q = this.value.trim();
-    hidden.value   = q;
-    latInput.value = '';
-    lngInput.value = '';
+    hidden.value = q; latInput.value = ''; lngInput.value = '';
     clearTimeout(timer);
     if (q.length < 2) { dropdown.style.display = 'none'; return; }
     timer = setTimeout(function () {
       fetch('https://photon.komoot.io/api/?q=' + encodeURIComponent(q) + '&limit=6&lang=es')
-        .then(function (r) { return r.json(); })
-        .then(function (data) {
+        .then(function(r){ return r.json(); })
+        .then(function(data){
           dropdown.innerHTML = '';
-          if (!data.features || !data.features.length) { dropdown.style.display = 'none'; return; }
-          data.features.forEach(function (f) {
-            var p      = f.properties;
-            var coords = f.geometry.coordinates;
-            var parts  = [p.name, p.state, p.country].filter(Boolean);
-            var label  = parts.filter(function (v, i, a) { return a.indexOf(v) === i; }).join(', ');
-            var item = document.createElement('div');
-            item.className   = 'autocomplete-item';
-            item.textContent = label;
-            item.addEventListener('mousedown', function (e) {
+          if (!data.features || !data.features.length) { dropdown.style.display='none'; return; }
+          data.features.forEach(function(f){
+            var p=f.properties, coords=f.geometry.coordinates;
+            var label=[p.name,p.state,p.country].filter(Boolean).filter(function(v,i,a){return a.indexOf(v)===i;}).join(', ');
+            var item=document.createElement('div');
+            item.className='autocomplete-item'; item.textContent=label;
+            item.addEventListener('mousedown',function(e){
               e.preventDefault();
-              display.value  = label;
-              hidden.value   = label;
-              latInput.value = coords[1];
-              lngInput.value = coords[0];
-              dropdown.style.display = 'none';
+              display.value=label; hidden.value=label;
+              latInput.value=coords[1]; lngInput.value=coords[0];
+              dropdown.style.display='none';
             });
             dropdown.appendChild(item);
           });
-          dropdown.style.display = 'block';
-        })
-        .catch(function () { dropdown.style.display = 'none'; });
+          dropdown.style.display='block';
+        }).catch(function(){ dropdown.style.display='none'; });
     }, 300);
   });
+  display.addEventListener('blur', function(){ setTimeout(function(){ dropdown.style.display='none'; },200); });
+}
 
-  display.addEventListener('blur', function () {
-    setTimeout(function () { dropdown.style.display = 'none'; }, 200);
-  });
-})();
+makeAutocomplete('sr-place-display','sr-place-hidden','sr-lat','sr-lng','sr-dropdown');
+makeAutocomplete('lr-place-display','lr-place-hidden','lr-lat','lr-lng','lr-dropdown');
+
+makeAutocomplete('place-display','birth-place-hidden','birth-lat','birth-lng','place-dropdown');
 </script>
 {% endblock %}

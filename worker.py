@@ -49,7 +49,7 @@ def generate_reading_task(reading_id):
         user         = User.query.get(reading.user_id)
         reading_type = reading.reading_type
 
-        # Use profile if set, fall back to user's self profile, then user itself
+        # Use profile if set, fall back to user's self profile
         if reading.profile_id:
             subject = Profile.query.get(reading.profile_id)
         else:
@@ -60,13 +60,20 @@ def generate_reading_task(reading_id):
             db.session.commit()
             return
 
+        # Load second profile for synastry / davison
+        params    = reading.params or {}
+        profile_b = None
+        if params.get('profile_id_b'):
+            profile_b = Profile.query.get(params['profile_id_b'])
+
         # 2. Close DB connection before the long AI call
         db.session.close()
 
-        # 3. Call the AI (Profile has same attrs as User: birth_date, birth_time, birth_place, gender)
+        # 3. Route to the correct generator
         try:
-            from ai import generate_horoscope
-            result = generate_horoscope(subject, reading_type)
+            from ai import generate_reading
+            result = generate_reading(subject, reading_type,
+                                      params=params, profile_b=profile_b)
         except Exception as e:
             log.error("AI generation failed for reading %s: %s", reading_id, e)
             reading = Reading.query.get(reading_id)
