@@ -71,13 +71,98 @@ def request_reading(reading_type_id):
 @login_required
 def download(reading_id):
     from flask import Response
+    from fpdf import FPDF
+
     reading = Reading.query.filter_by(id=reading_id, user_id=current_user.id).first_or_404()
     if reading.status != 'completed' or not reading.content:
         abort(404)
-    filename = f"lectura-{reading.reading_type.name.lower().replace(' ', '-')}-{reading.id}.txt"
+
+    # ── colours ──────────────────────────────────────────────────
+    C_BG      = (248, 244, 255)   # very light lavender page
+    C_HEADER  = (255, 255, 255)   # white header band
+    C_ACCENT  = (124, 82, 149)    # purple
+    C_GOLD    = (180, 140, 40)    # gold (darker for print)
+    C_TEXT    = (26, 10, 46)      # near-black
+    C_MUTED   = (107, 91, 128)    # muted purple
+
+    pdf = FPDF(orientation='P', unit='mm', format='A4')
+    pdf.set_auto_page_break(auto=True, margin=20)
+    pdf.add_page()
+
+    # ── header band ──────────────────────────────────────────────
+    pdf.set_fill_color(*C_HEADER)
+    pdf.rect(0, 0, 210, 38, 'F')
+
+    # Logo text
+    pdf.set_xy(14, 8)
+    pdf.set_font('Helvetica', 'B', 18)
+    pdf.set_text_color(*C_GOLD)
+    pdf.cell(8, 10, '\u2726', ln=0)   # ✦  star glyph
+    pdf.set_text_color(*C_ACCENT)
+    pdf.cell(0, 10, ' ASTRONODE', ln=1)
+
+    # Reading type subtitle
+    pdf.set_xy(14, 20)
+    pdf.set_font('Helvetica', '', 11)
+    pdf.set_text_color(*C_MUTED)
+    pdf.cell(0, 7, reading.reading_type.name, ln=1)
+
+    # Thin gold rule under header
+    pdf.set_draw_color(*C_GOLD)
+    pdf.set_line_width(0.6)
+    pdf.line(14, 38, 196, 38)
+
+    # ── meta line (profile · date) ────────────────────────────────
+    pdf.set_fill_color(*C_BG)
+    pdf.rect(0, 38, 210, 262, 'F')   # fill rest of page
+
+    pdf.set_xy(14, 43)
+    pdf.set_font('Helvetica', '', 9)
+    pdf.set_text_color(*C_MUTED)
+    meta_parts = []
+    if reading.profile:
+        label = reading.profile.name
+        if reading.profile.is_self:
+            label += ' (tú)'
+        meta_parts.append(label)
+    meta_parts.append(reading.created_at.strftime('%d/%m/%Y'))
+    pdf.cell(0, 6, '  ·  '.join(meta_parts), ln=1)
+
+    pdf.ln(4)
+
+    # ── body text ────────────────────────────────────────────────
+    pdf.set_left_margin(14)
+    pdf.set_right_margin(14)
+    pdf.set_font('Helvetica', '', 10.5)
+    pdf.set_text_color(*C_TEXT)
+
+    for line in reading.content.split('\n'):
+        stripped = line.strip()
+        # Detect section headings: lines in ALL-CAPS or starting with ★/✦/•
+        if stripped and (stripped.isupper() or stripped.startswith(('★', '✦', '•', '—'))):
+            pdf.ln(3)
+            pdf.set_font('Helvetica', 'B', 11)
+            pdf.set_text_color(*C_ACCENT)
+            pdf.multi_cell(0, 6, stripped)
+            pdf.set_font('Helvetica', '', 10.5)
+            pdf.set_text_color(*C_TEXT)
+        elif stripped == '':
+            pdf.ln(3)
+        else:
+            pdf.multi_cell(0, 6, line)
+
+    # ── footer on each page ──────────────────────────────────────
+    pdf.set_y(-14)
+    pdf.set_font('Helvetica', '', 8)
+    pdf.set_text_color(*C_MUTED)
+    pdf.cell(0, 5, f'astronode.com  ·  {reading.created_at.strftime("%d/%m/%Y")}', align='C')
+
+    pdf_bytes = pdf.output()
+    safe_name = reading.reading_type.name.lower().replace(' ', '-')
+    filename  = f"lectura-{safe_name}-{reading.id}.pdf"
     return Response(
-        reading.content,
-        mimetype='text/plain; charset=utf-8',
+        bytes(pdf_bytes),
+        mimetype='application/pdf',
         headers={'Content-Disposition': f'attachment; filename="{filename}"'},
     )
 
