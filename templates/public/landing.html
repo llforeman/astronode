@@ -1,6 +1,6 @@
 {% extends "public_base.html" %}
-{% block title %}Astronode — Your chart, free. Then forty pages on what it says about you.{% endblock %}
-{% block meta_desc %}Free natal chart + a 40-page AI interpretation in Spanish. Planets, houses, aspects — all explained, personally, in depth.{% endblock %}
+{% block title %}Astronode — Tu carta, gratis. Luego cuarenta páginas sobre lo que dice de ti.{% endblock %}
+{% block meta_desc %}Carta natal gratuita + interpretación IA de 40 páginas en español. Planetas, casas, aspectos — todo explicado, de forma personal y en profundidad.{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -196,21 +196,21 @@
 ════════════════════════════════════════ -->
 <section class="hero">
   <div class="hero-copy">
-    <p class="section-label" style="margin-bottom:0.5rem;">✦ FREE NATAL CHART</p>
-    <h1>Your chart, free.<br><em>Then forty pages on what it says about you.</em></h1>
+    <p class="section-label" style="margin-bottom:0.5rem;">✦ CARTA NATAL GRATUITA</p>
+    <h1>Tu carta, gratis.<br><em>Luego cuarenta páginas sobre lo que dice de ti.</em></h1>
     <p class="hero-sub">
-      We draw your natal chart instantly — no sign-up needed.
-      Then, for €9.99, a 40-page AI-written interpretation in Spanish,
-      specific to your planets, houses, and aspects.
-      No generic horoscopes. No filler.
+      Calculamos tu carta natal al instante — sin registro.
+      Luego, por €9.99, una interpretación IA de 40 páginas en español,
+      específica para tus planetas, casas y aspectos.
+      Sin horóscopos genéricos. Sin relleno.
     </p>
     <div class="hero-cta">
       <a href="{{ url_for('public.chart') }}" class="btn btn-primary" style="font-size:1rem; padding:0.75rem 2rem;">
-        Draw my chart — it's free →
+        Calcular mi carta — es gratis →
       </a>
-      <a href="#sample" class="btn btn-outline">Read a sample</a>
+      <a href="#sample" class="btn btn-outline">Leer un ejemplo</a>
     </div>
-    <p class="hero-footnote">No account needed for the chart. €9.99 one-time for the full reading.</p>
+    <p class="hero-footnote">Sin cuenta para la carta. €9.99 pago único por la lectura completa.</p>
   </div>
   <div class="hero-image">
     <div id="video-container" onclick="launchVideo()"
@@ -238,7 +238,7 @@
 ════════════════════════════════════════ -->
 <section id="sample">
   <div class="sample-inner">
-    <p class="section-label">Sample — Chapter 1 / 11</p>
+    <p class="section-label">Ejemplo — Capítulo 1 / 11</p>
     <div class="fade-mask">
       <div class="prose">
         <h3>El Ascendente en Capricornio: la armadura que también es tú</h3>
@@ -300,10 +300,10 @@
     </div>
     <div class="sample-cta">
       <p style="color:var(--text-muted); font-size:0.9rem; margin-bottom:1.25rem;">
-        This is the opening of Chapter 1. The full reading has 11 chapters — ~40 pages — written for your specific chart.
+        Este es el inicio del Capítulo 1. La lectura completa tiene 11 capítulos — ~40 páginas — escritos para tu carta específica.
       </p>
       <a href="{{ url_for('auth.register') }}" class="btn btn-primary" style="font-size:1rem; padding:0.75rem 2rem;">
-        Get your full reading — €9.99 →
+        Obtener tu lectura completa — €9.99 →
       </a>
     </div>
   </div>
@@ -316,89 +316,89 @@
 ════════════════════════════════════════ -->
 <section id="contents">
   <div class="section">
-    <p class="section-label">What you get</p>
-    <h2>Eleven chapters. Each one about a different layer of who you are.</h2>
+    <p class="section-label">Qué incluye</p>
+    <h2>Once capítulos. Cada uno sobre una capa diferente de quién eres.</h2>
     <p style="color:var(--text-muted); font-size:0.95rem; max-width:580px; line-height:1.7;">
-      Not a list of traits. An interpretation of how the planets in your chart
-      interact with the areas of your life — written in flowing prose, in Spanish,
-      as if a seasoned astrologer had your chart open in front of them.
+      No es una lista de rasgos. Es una interpretación de cómo los planetas de tu carta
+      interactúan con las áreas de tu vida — escrita en prosa fluida, en español,
+      como si un astrólogo experimentado tuviera tu carta delante.
     </p>
     <div class="chapters-grid">
       <div class="chapter-card">
         <span class="chapter-num">01</span>
         <div>
-          <div class="chapter-title">The face you show before you speak</div>
-          <div class="chapter-desc">Ascendant, first impressions, physical presence</div>
+          <div class="chapter-title">La cara que muestras antes de hablar</div>
+          <div class="chapter-desc">Ascendente, primeras impresiones, presencia física</div>
         </div>
       </div>
       <div class="chapter-card">
         <span class="chapter-num">02</span>
         <div>
-          <div class="chapter-title">The engine underneath</div>
-          <div class="chapter-desc">Sun sign, ego structure, core identity drive</div>
+          <div class="chapter-title">El motor interior</div>
+          <div class="chapter-desc">Signo solar, estructura del ego, impulso de identidad central</div>
         </div>
       </div>
       <div class="chapter-card">
         <span class="chapter-num">03</span>
         <div>
-          <div class="chapter-title">What you need to feel at home</div>
-          <div class="chapter-desc">Moon sign, emotional patterns, inner world</div>
+          <div class="chapter-title">Lo que necesitas para sentirte en casa</div>
+          <div class="chapter-desc">Signo lunar, patrones emocionales, mundo interior</div>
         </div>
       </div>
       <div class="chapter-card">
         <span class="chapter-num">04</span>
         <div>
-          <div class="chapter-title">How your mind works</div>
-          <div class="chapter-desc">Mercury, communication style, how you think and learn</div>
+          <div class="chapter-title">Cómo funciona tu mente</div>
+          <div class="chapter-desc">Mercurio, estilo de comunicación, cómo piensas y aprendes</div>
         </div>
       </div>
       <div class="chapter-card">
         <span class="chapter-num">05</span>
         <div>
-          <div class="chapter-title">Love, desire, and what you find beautiful</div>
-          <div class="chapter-desc">Venus, relationship style, aesthetics, self-worth</div>
+          <div class="chapter-title">Amor, deseo y lo que encuentras bello</div>
+          <div class="chapter-desc">Venus, estilo relacional, estética, autoestima</div>
         </div>
       </div>
       <div class="chapter-card">
         <span class="chapter-num">06</span>
         <div>
-          <div class="chapter-title">How you go after what you want</div>
-          <div class="chapter-desc">Mars, ambition, anger, drive and energy patterns</div>
+          <div class="chapter-title">Cómo persigues lo que quieres</div>
+          <div class="chapter-desc">Marte, ambición, ira, impulso y patrones de energía</div>
         </div>
       </div>
       <div class="chapter-card">
         <span class="chapter-num">07</span>
         <div>
-          <div class="chapter-title">Where your luck lives</div>
-          <div class="chapter-desc">Jupiter's house, expansion, opportunity, growth areas</div>
+          <div class="chapter-title">Dónde vive tu suerte</div>
+          <div class="chapter-desc">Casa de Júpiter, expansión, oportunidad, áreas de crecimiento</div>
         </div>
       </div>
       <div class="chapter-card">
         <span class="chapter-num">08</span>
         <div>
-          <div class="chapter-title">What you're here to master</div>
-          <div class="chapter-desc">Saturn's house, discipline, life lessons, long-term trajectory</div>
+          <div class="chapter-title">Lo que estás aquí para dominar</div>
+          <div class="chapter-desc">Casa de Saturno, disciplina, lecciones de vida, trayectoria a largo plazo</div>
         </div>
       </div>
       <div class="chapter-card">
         <span class="chapter-num">09</span>
         <div>
-          <div class="chapter-title">Where you break from tradition</div>
-          <div class="chapter-desc">Uranus, Neptune, Pluto — generational forces and your chart</div>
+          <div class="chapter-title">Donde rompes con la tradición</div>
+          <div class="chapter-desc">Urano, Neptuno, Plutón — fuerzas generacionales y tu carta</div>
         </div>
       </div>
       <div class="chapter-card">
         <span class="chapter-num">10</span>
         <div>
-          <div class="chapter-title">The tensions that make you grow</div>
-          <div class="chapter-desc">Key aspects — conjunctions, squares, oppositions, trines</div>
+          <div class="chapter-title">Las tensiones que te hacen crecer</div>
+          <div class="chapter-desc">Aspectos clave — conjunciones, cuadraturas, oposiciones, trígonos</div>
         </div>
       </div>
       <div class="chapter-card">
         <span class="chapter-num">11</span>
         <div>
-          <div class="chapter-title">The thread that runs through everything</div>
-          <div class="chapter-desc">Chart synthesis — dominant patterns, dominant themes</div>
+          <div class="chapter-title">El hilo que recorre todo</div>
+          <div class="chapter-desc">Síntesis de la carta — patrones dominantes, temas dominantes</div>
         </div>
       </div>
     </div>
@@ -412,41 +412,41 @@
 ════════════════════════════════════════ -->
 <section id="how">
   <div class="how-inner">
-    <p class="section-label">How it works</p>
-    <h2>Astronomy first. Language model second.</h2>
+    <p class="section-label">Cómo funciona</p>
+    <h2>Astronomía primero. Modelo de lenguaje después.</h2>
     <div class="how-cards">
       <div class="how-card">
         <div class="icon">⚙️</div>
-        <h4>Exact planetary positions</h4>
-        <p>We calculate every planet, house cusp, and aspect from your birth data using Swiss Ephemeris — the same engine professional astrologers use. No rounding, no approximations.</p>
+        <h4>Posiciones planetarias exactas</h4>
+        <p>Calculamos cada planeta, cúspide de casa y aspecto a partir de tus datos de nacimiento con Swiss Ephemeris — el mismo motor que usan los astrólogos profesionales. Sin redondeos, sin aproximaciones.</p>
       </div>
       <div class="how-card">
         <div class="icon">✍️</div>
-        <h4>Prompted per planet, per house</h4>
-        <p>The AI doesn't receive "your chart" as a blob. Each chapter is prompted with the specific planet, sign, house, and aspects that apply to you. The output is actually about you.</p>
+        <h4>Prompts por planeta y por casa</h4>
+        <p>La IA no recibe "tu carta" como un bloque. Cada capítulo se genera con el planeta, signo, casa y aspectos específicos que te aplican. El resultado habla realmente de ti.</p>
       </div>
       <div class="how-card">
         <div class="icon">🌐</div>
-        <h4>Written in Spanish, from scratch</h4>
-        <p>The model writes in Spanish directly — not translated. The result reads like a thoughtful essay, not a keyword list or a translation from English astrological templates.</p>
+        <h4>Escrito en español, desde cero</h4>
+        <p>El modelo escribe en español directamente — no traducido. El resultado se lee como un ensayo reflexivo, no como una lista de palabras clave ni una traducción de plantillas astrológicas en inglés.</p>
       </div>
     </div>
     <div class="price-block">
       <div class="price"><sup>€</sup>9.99</div>
-      <div class="price-label">One-time payment. No subscription. Instant delivery.</div>
+      <div class="price-label">Pago único. Sin suscripción. Entrega inmediata.</div>
       <ul class="price-includes">
-        <li>Free natal chart (SVG, no account needed)</li>
-        <li>40-page written interpretation</li>
-        <li>11 chapters covering every major placement</li>
-        <li>Sent to your email as PDF</li>
-        <li>In Spanish, tailored to your chart</li>
-        <li>Stored in your account to re-read anytime</li>
+        <li>Carta natal gratuita (SVG, sin cuenta necesaria)</li>
+        <li>Interpretación escrita de 40 páginas</li>
+        <li>11 capítulos que cubren cada posición principal</li>
+        <li>Enviada a tu email en PDF</li>
+        <li>En español, adaptada a tu carta</li>
+        <li>Guardada en tu cuenta para releer cuando quieras</li>
       </ul>
       <a href="{{ url_for('auth.register') }}" class="btn btn-primary" style="font-size:1rem; padding:0.8rem 2.5rem;">
-        Draw my chart and get the reading →
+        Calcular mi carta y obtener la lectura →
       </a>
       <p style="margin-top:1rem; font-size:0.8rem; color:var(--text-muted);">
-        Chart is free. Payment is for the 40-page written interpretation.
+        La carta es gratis. El pago es por la interpretación escrita de 40 páginas.
       </p>
     </div>
   </div>
@@ -459,37 +459,37 @@
 ════════════════════════════════════════ -->
 <section>
   <div class="section">
-    <p class="section-label">Questions</p>
-    <h2>What people ask before they order</h2>
+    <p class="section-label">Preguntas</p>
+    <h2>Lo que la gente pregunta antes de pedir</h2>
     <div class="faq-list">
       <details class="faq">
-        <summary>Do I need an exact birth time?</summary>
+        <summary>¿Necesito la hora exacta de nacimiento?</summary>
         <div class="faq-body">
-          The more precise the better. The Ascendant and house positions require the exact time — they change roughly every two hours. If you don't know your birth time, the reading will focus on the planets and signs (which change over days) and note where the house analysis is approximate. A reading without an exact time is still substantial. One with an exact time is complete.
+          Cuanto más precisa, mejor. El Ascendente y las posiciones de las casas requieren la hora exacta — cambian aproximadamente cada dos horas. Si no sabes tu hora de nacimiento, la lectura se centrará en los planetas y signos (que cambian en días) e indicará dónde el análisis de casas es aproximado. Una lectura sin hora exacta sigue siendo sustancial. Con hora exacta, es completa.
         </div>
       </details>
       <details class="faq">
-        <summary>Is this astrology or AI? What's actually generating the text?</summary>
+        <summary>¿Es esto astrología o IA? ¿Qué genera el texto realmente?</summary>
         <div class="faq-body">
-          Both. The planetary positions come from Swiss Ephemeris — the same astronomical calculation engine used in professional astrology software, accurate to the arcsecond. The written interpretation is generated by a large language model (via OpenRouter) prompted with the specific data from your chart. The astronomy is exact. The language is AI-written but prompted to be specific to your placements, not generic.
+          Ambas cosas. Las posiciones planetarias provienen de Swiss Ephemeris — el mismo motor de cálculo astronómico usado en software de astrología profesional, preciso al segundo de arco. La interpretación escrita la genera un modelo de lenguaje (vía OpenRouter) con los datos específicos de tu carta. La astronomía es exacta. El lenguaje es generado por IA pero dirigido a ser específico para tus posiciones, no genérico.
         </div>
       </details>
       <details class="faq">
-        <summary>Why €9.99 and not a subscription?</summary>
+        <summary>¿Por qué €9.99 y no una suscripción?</summary>
         <div class="faq-body">
-          Because your natal chart doesn't change. You don't need a new reading every month — you need one good one. We'd rather charge a fair one-time amount for something genuinely useful than lock you into a subscription for something that would go stale. If you want ongoing transit readings or synastry in the future, that'll be separate and optional.
+          Porque tu carta natal no cambia. No necesitas una lectura nueva cada mes — necesitas una buena. Preferimos cobrar una cantidad justa y única por algo genuinamente útil en lugar de atarte a una suscripción por algo que quedaría obsoleto. Si en el futuro quieres lecturas de tránsitos o sinastría, serán aparte y opcionales.
         </div>
       </details>
       <details class="faq">
-        <summary>Is the free chart the same one used for the paid reading?</summary>
+        <summary>¿Es la carta gratuita la misma que se usa para la lectura de pago?</summary>
         <div class="faq-body">
-          Yes. The free natal chart page calculates the same planetary positions and shows you your chart as an SVG. When you pay for the reading, we use those exact positions as the input for the interpretation. You can use the free chart to verify your placements before deciding whether to order.
+          Sí. La página de carta natal gratuita calcula las mismas posiciones planetarias y te muestra tu carta como SVG. Cuando pagas por la lectura, usamos esas posiciones exactas como input para la interpretación. Puedes usar la carta gratuita para verificar tus posiciones antes de decidir si pedir.
         </div>
       </details>
       <details class="faq">
-        <summary>How quickly do I receive it?</summary>
+        <summary>¿Cuánto tarda en llegar?</summary>
         <div class="faq-body">
-          Typically under five minutes after payment. The generation runs through our AI pipeline and is sent to your email as soon as it's complete. You'll also find it in your account dashboard. If something goes wrong (it rarely does), we'll notify you and regenerate it at no charge.
+          Normalmente menos de cinco minutos tras el pago. La generación pasa por nuestro pipeline de IA y se envía a tu email en cuanto está completa. También la encontrarás en el panel de tu cuenta. Si algo falla (raramente ocurre), te avisamos y la regeneramos sin coste adicional.
         </div>
       </details>
     </div>
@@ -501,10 +501,10 @@
 ════════════════════════════════════════ -->
 <hr class="divider">
 <div class="final-cta">
-  <h2>Start with the chart. It's free.</h2>
-  <p>Draw your natal chart in seconds — no account, no payment. Then decide if you want the forty pages.</p>
+  <h2>Empieza con la carta. Es gratis.</h2>
+  <p>Calcula tu carta natal en segundos — sin cuenta, sin pago. Luego decide si quieres las cuarenta páginas.</p>
   <a href="{{ url_for('public.chart') }}" class="btn btn-primary" style="font-size:1rem; padding:0.8rem 2.5rem;">
-    Draw my chart →
+    Calcular mi carta →
   </a>
 </div>
 
