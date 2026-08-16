@@ -63,15 +63,7 @@
     {% endif %}
     <div class="profile-actions">
       {% if p.birth_date and p.birth_place %}
-      <a href="{{ url_for('main.profile_chart', profile_id=p.id) }}" class="btn btn-outline btn-sm">Carta</a>
-      {% if reading_types %}
-        {% set rt = reading_types[0] %}
-        <form method="POST" action="{{ url_for('readings.request_reading', reading_type_id=rt.id) }}" style="display:inline;">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <input type="hidden" name="profile_id" value="{{ p.id }}">
-          <button type="submit" class="btn btn-primary btn-sm">Lectura IA</button>
-        </form>
-      {% endif %}
+      <a href="{{ url_for('main.profile_chart', profile_id=p.id) }}" class="btn btn-primary btn-sm">Carta y lecturas →</a>
       {% endif %}
       <a href="{{ url_for('main.profile_edit', profile_id=p.id) }}" class="btn btn-sm" style="color:var(--text-muted); border:1px solid var(--border);">Editar</a>
       {% if not p.is_self %}
@@ -87,13 +79,12 @@
 </div>
 {% endif %}
 
-{% if profiles|length >= 2 and reading_types %}
+{% if reading_types %}
   {% set rt_syn = reading_types | selectattr('slug', 'equalto', 'synastry') | first %}
   {% set rt_dav = reading_types | selectattr('slug', 'equalto', 'davison') | first %}
-  {% set rt_sol = reading_types | selectattr('slug', 'equalto', 'solar_return') | first %}
-  {% set rt_lun = reading_types | selectattr('slug', 'equalto', 'lunar_return') | first %}
 
-  {% if rt_syn or rt_dav %}
+  {% set complete_profiles = profiles | selectattr('birth_date') | selectattr('birth_place') | list %}
+  {% if (rt_syn or rt_dav) and complete_profiles | length >= 2 %}
   <div class="card" style="margin-bottom:1.5rem;">
     <h3 style="margin-bottom:1.25rem; color:var(--accent-light);">Sinastría y Davison</h3>
     <p style="color:var(--text-muted); font-size:0.88rem; margin-bottom:1.25rem;">Selecciona dos personas para calcular la compatibilidad.</p>
@@ -134,82 +125,6 @@
         {% endif %}
       </div>
     </div>
-  </div>
-  {% endif %}
-
-  {% if rt_sol %}
-  <div class="card" style="margin-bottom:1.5rem;">
-    <h3 style="margin-bottom:1.25rem; color:var(--accent-light);">Revolución Solar</h3>
-    <form method="POST" action="{{ url_for('readings.request_reading', reading_type_id=rt_sol.id) }}">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <div class="form-row" style="margin-bottom:1rem; align-items:flex-end;">
-        <div class="form-group" style="flex:1;">
-          <label>Persona</label>
-          <select name="profile_id" style="padding:0.6rem 0.8rem; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text);">
-            {% for p in profiles %}{% if p.birth_date and p.birth_place %}
-            <option value="{{ p.id }}">{{ p.name }}</option>
-            {% endif %}{% endfor %}
-          </select>
-        </div>
-        <div class="form-group" style="flex:0 0 120px;">
-          <label>Año</label>
-          <input type="number" name="year" min="2000" max="2100" value="{{ now.year }}" style="padding:0.6rem 0.8rem; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text);">
-        </div>
-        <div class="form-group place-autocomplete" style="flex:2;">
-          <label>Ubicación el día del cumpleaños</label>
-          <input type="text" id="sr-place-display" autocomplete="off" placeholder="p.ej. Barcelona, España">
-          <input type="hidden" name="sr_place" id="sr-place-hidden">
-          <input type="hidden" name="sr_lat"   id="sr-lat">
-          <input type="hidden" name="sr_lng"   id="sr-lng">
-          <div id="sr-dropdown" class="autocomplete-dropdown"></div>
-        </div>
-        <div>
-          <button type="submit" class="btn btn-primary">Calcular RS</button>
-        </div>
-      </div>
-    </form>
-  </div>
-  {% endif %}
-
-  {% if rt_lun %}
-  <div class="card" style="margin-bottom:1.5rem;">
-    <h3 style="margin-bottom:1.25rem; color:var(--accent-light);">Revolución Lunar</h3>
-    <form method="POST" action="{{ url_for('readings.request_reading', reading_type_id=rt_lun.id) }}">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <div class="form-row" style="margin-bottom:1rem; align-items:flex-end;">
-        <div class="form-group" style="flex:1;">
-          <label>Persona</label>
-          <select name="profile_id" style="padding:0.6rem 0.8rem; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text);">
-            {% for p in profiles %}{% if p.birth_date and p.birth_place %}
-            <option value="{{ p.id }}">{{ p.name }}</option>
-            {% endif %}{% endfor %}
-          </select>
-        </div>
-        <div class="form-group" style="flex:0 0 120px;">
-          <label>Año</label>
-          <input type="number" name="year" min="2000" max="2100" value="{{ now.year }}" style="padding:0.6rem 0.8rem; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text);">
-        </div>
-        <div class="form-group" style="flex:0 0 140px;">
-          <label>Mes</label>
-          <select name="month" style="padding:0.6rem 0.8rem; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text);">
-            {% for m, name in [(1,'Enero'),(2,'Febrero'),(3,'Marzo'),(4,'Abril'),(5,'Mayo'),(6,'Junio'),(7,'Julio'),(8,'Agosto'),(9,'Septiembre'),(10,'Octubre'),(11,'Noviembre'),(12,'Diciembre')] %}
-            <option value="{{ m }}" {% if m == now.month %}selected{% endif %}>{{ name }}</option>
-            {% endfor %}
-          </select>
-        </div>
-        <div class="form-group place-autocomplete" style="flex:2;">
-          <label>Ubicación ese mes</label>
-          <input type="text" id="lr-place-display" autocomplete="off" placeholder="p.ej. Barcelona, España">
-          <input type="hidden" name="lr_place" id="lr-place-hidden">
-          <input type="hidden" name="lr_lat"   id="lr-lat">
-          <input type="hidden" name="lr_lng"   id="lr-lng">
-          <div id="lr-dropdown" class="autocomplete-dropdown"></div>
-        </div>
-        <div>
-          <button type="submit" class="btn btn-primary">Calcular RL</button>
-        </div>
-      </div>
-    </form>
   </div>
   {% endif %}
 {% endif %}
@@ -349,8 +264,6 @@ function makeAutocomplete(displayId, hiddenId, latId, lngId, dropdownId) {
   display.addEventListener('blur', function(){ setTimeout(function(){ dropdown.style.display='none'; },200); });
 }
 
-makeAutocomplete('sr-place-display','sr-place-hidden','sr-lat','sr-lng','sr-dropdown');
-makeAutocomplete('lr-place-display','lr-place-hidden','lr-lat','lr-lng','lr-dropdown');
 
 makeAutocomplete('place-display','birth-place-hidden','birth-lat','birth-lng','place-dropdown');
 </script>

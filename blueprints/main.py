@@ -188,9 +188,10 @@ def profile_chart(profile_id):
         error = 'Este perfil necesita fecha y lugar de nacimiento para calcular la carta.'
 
     from models import ReadingType
+    import datetime as _dt
     reading_types = ReadingType.query.filter_by(active=True).all()
     return render_template('main/profile_chart.html', p=p, result=result, error=error,
-                           reading_types=reading_types)
+                           reading_types=reading_types, now=_dt.date.today())
 
 
 # ── Legacy redirect ───────────────────────────────────────────────────────────
