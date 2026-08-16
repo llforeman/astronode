@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block title %}Compatibilidad — Astronode{% endblock %}
+
+{% block extra_css %}
+<style>
+  .form-group { display:flex; flex-direction:column; gap:0.25rem; flex:1; }
+  .form-group label { font-size:0.75rem; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.5px; }
+  .form-group select { padding:0.6rem 0.8rem; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text); font-size:0.92rem; }
+  .form-group select:focus { outline:none; border-color:var(--accent); }
+</style>
+{% endblock %}
+
+{% block content %}
+<h2 style="color:var(--accent-light); margin-bottom:0.4rem;">Compatibilidad</h2>
+<p style="color:var(--text-muted); font-size:0.9rem; margin-bottom:2rem;">
+  Selecciona dos personas para calcular su sinastría o carta de relación de Davison.
+</p>
+
+{% set complete = profiles | selectattr('birth_date') | selectattr('birth_place') | list %}
+
+{% if complete | length < 2 %}
+<div class="card" style="text-align:center; padding:2.5rem;">
+  <div style="font-size:2rem; margin-bottom:0.75rem;">✦</div>
+  <p style="color:var(--text-muted); margin-bottom:1rem;">
+    Necesitas al menos dos personas con fecha y lugar de nacimiento completos.
+  </p>
+  <a href="{{ url_for('main.profiles') }}" class="btn btn-primary">Ir a Personas →</a>
+</div>
+
+{% else %}
+
+{% set rt_syn = reading_types | selectattr('slug','equalto','synastry') | first %}
+{% set rt_dav = reading_types | selectattr('slug','equalto','davison') | first %}
+
+<div class="card">
+  <div style="display:flex; gap:1rem; flex-wrap:wrap; margin-bottom:1.5rem;">
+    <div class="form-group">
+      <label>Persona A</label>
+      <select id="syn-a">
+        {% for p in complete %}
+        <option value="{{ p.id }}">{{ p.name }}{% if p.is_self %} (tú){% endif %}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Persona B</label>
+      <select id="syn-b">
+        {% for p in complete %}
+        <option value="{{ p.id }}" {% if loop.index == 2 %}selected{% endif %}>{{ p.name }}{% if p.is_self %} (tú){% endif %}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+
+  <div style="display:flex; gap:1rem; flex-wrap:wrap;">
+
+    {% if rt_syn %}
+    <div style="flex:1; min-width:240px; background:var(--bg2); border:1px solid var(--border); border-radius:10px; padding:1.25rem;">
+      <div style="font-weight:600; font-size:1rem; margin-bottom:0.3rem;">Sinastría</div>
+      <p style="color:var(--text-muted); font-size:0.83rem; margin-bottom:1rem; line-height:1.5;">
+        Analiza los interaspectos entre dos cartas natales: atracción, comunicación, tensiones y propósito conjunto.
+        7 secciones en profundidad.
+      </p>
+      <form method="POST" action="{{ url_for('readings.request_reading', reading_type_id=rt_syn.id) }}" id="syn-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="profile_id"   id="syn-pid-a">
+        <input type="hidden" name="profile_id_b" id="syn-pid-b">
+        <button type="submit" class="btn btn-primary" style="width:100%;">Calcular Sinastría →</button>
+      </form>
+    </div>
+    {% endif %}
+
+    {% if rt_dav %}
+    <div style="flex:1; min-width:240px; background:var(--bg2); border:1px solid var(--border); border-radius:10px; padding:1.25rem;">
+      <div style="font-weight:600; font-size:1rem; margin-bottom:0.3rem;">Carta Davison</div>
+      <p style="color:var(--text-muted); font-size:0.83rem; margin-bottom:1rem; line-height:1.5;">
+        Calcula el punto medio temporal y espacial entre dos personas — la relación como entidad propia,
+        con su propio Sol, Luna y Ascendente.
+      </p>
+      <form method="POST" action="{{ url_for('readings.request_reading', reading_type_id=rt_dav.id) }}" id="dav-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="profile_id"   id="dav-pid-a">
+        <input type="hidden" name="profile_id_b" id="dav-pid-b">
+        <button type="submit" class="btn btn-outline" style="width:100%;">Calcular Davison →</button>
+      </form>
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  function sync() {
+    var va = document.getElementById('syn-a').value;
+    var vb = document.getElementById('syn-b').value;
+    ['syn-pid-a','dav-pid-a'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=va; });
+    ['syn-pid-b','dav-pid-b'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=vb; });
+  }
+  var a = document.getElementById('syn-a');
+  if (!a) return;
+  a.addEventListener('change', sync);
+  document.getElementById('syn-b').addEventListener('change', sync);
+  sync();
+
+  ['syn-form','dav-form'].forEach(function(fid){
+    var form = document.getElementById(fid);
+    if (!form) return;
+    form.addEventListener('submit', function(e){
+      if (document.getElementById('syn-a').value === document.getElementById('syn-b').value) {
+        e.preventDefault();
+        alert('Selecciona dos personas distintas.');
+      }
+    });
+  });
+})();
+</script>
+{% endblock %}

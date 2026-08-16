@@ -79,56 +79,6 @@
 </div>
 {% endif %}
 
-{% if reading_types %}
-  {% set rt_syn = reading_types | selectattr('slug', 'equalto', 'synastry') | first %}
-  {% set rt_dav = reading_types | selectattr('slug', 'equalto', 'davison') | first %}
-
-  {% set complete_profiles = profiles | selectattr('birth_date') | selectattr('birth_place') | list %}
-  {% if (rt_syn or rt_dav) and complete_profiles | length >= 2 %}
-  <div class="card" style="margin-bottom:1.5rem;">
-    <h3 style="margin-bottom:1.25rem; color:var(--accent-light);">Sinastría y Davison</h3>
-    <p style="color:var(--text-muted); font-size:0.88rem; margin-bottom:1.25rem;">Selecciona dos personas para calcular la compatibilidad.</p>
-
-    <div class="form-row" style="margin-bottom:1rem; align-items:flex-end; gap:1rem;">
-      <div class="form-group" style="flex:1;">
-        <label>Persona A</label>
-        <select id="syn-a" style="padding:0.6rem 0.8rem; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text);">
-          {% for p in profiles %}{% if p.birth_date and p.birth_place %}
-          <option value="{{ p.id }}">{{ p.name }}</option>
-          {% endif %}{% endfor %}
-        </select>
-      </div>
-      <div class="form-group" style="flex:1;">
-        <label>Persona B</label>
-        <select id="syn-b" style="padding:0.6rem 0.8rem; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text);">
-          {% for p in profiles %}{% if p.birth_date and p.birth_place %}
-          <option value="{{ p.id }}" {% if loop.index == 2 %}selected{% endif %}>{{ p.name }}</option>
-          {% endif %}{% endfor %}
-        </select>
-      </div>
-      <div style="display:flex; gap:0.75rem; flex-wrap:wrap;">
-        {% if rt_syn %}
-        <form method="POST" action="{{ url_for('readings.request_reading', reading_type_id=rt_syn.id) }}" id="syn-form">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <input type="hidden" name="profile_id"   id="syn-pid-a">
-          <input type="hidden" name="profile_id_b" id="syn-pid-b">
-          <button type="submit" class="btn btn-primary">Sinastría</button>
-        </form>
-        {% endif %}
-        {% if rt_dav %}
-        <form method="POST" action="{{ url_for('readings.request_reading', reading_type_id=rt_dav.id) }}" id="dav-form">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <input type="hidden" name="profile_id"   id="dav-pid-a">
-          <input type="hidden" name="profile_id_b" id="dav-pid-b">
-          <button type="submit" class="btn btn-outline">Davison</button>
-        </form>
-        {% endif %}
-      </div>
-    </div>
-  </div>
-  {% endif %}
-{% endif %}
-
 {% if profiles|length < max_profiles %}
 <div class="card">
   <h3 style="margin-bottom: 1.25rem;">Añadir persona</h3>
@@ -200,30 +150,6 @@
 
 {% block extra_js %}
 <script>
-// Synastry / Davison profile sync
-(function () {
-  function sync() {
-    var a = document.getElementById('syn-a');
-    var b = document.getElementById('syn-b');
-    if (!a) return;
-    var va = a.value, vb = b.value;
-    ['syn-pid-a','dav-pid-a'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=va; });
-    ['syn-pid-b','dav-pid-b'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=vb; });
-  }
-  var a = document.getElementById('syn-a');
-  var b = document.getElementById('syn-b');
-  if (a) { a.addEventListener('change', sync); b.addEventListener('change', sync); sync(); }
-
-  // Prevent same profile on both sides
-  document.querySelectorAll('#syn-form, #dav-form').forEach(function(form){
-    form.addEventListener('submit', function(e){
-      var pa = document.getElementById('syn-a').value;
-      var pb = document.getElementById('syn-b').value;
-      if (pa === pb) { e.preventDefault(); alert('Selecciona dos personas distintas.'); }
-    });
-  });
-})();
-
 // Place autocomplete factory
 function makeAutocomplete(displayId, hiddenId, latId, lngId, dropdownId) {
   var display  = document.getElementById(displayId);

@@ -81,6 +81,7 @@
     <div class="logo">✦ ASTRONODE</div>
     <a href="{{ url_for('main.dashboard') }}">Inicio</a>
     <a href="{{ url_for('main.profiles') }}">Personas</a>
+    <a href="{{ url_for('main.compatibility') }}">Compatibilidad</a>
     <a href="{{ url_for('readings.index') }}">Lecturas</a>
     <a href="{{ url_for('billing.pricing') }}">Planes</a>
     {% if current_user.role == 'superadmin' %}

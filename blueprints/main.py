@@ -194,6 +194,23 @@ def profile_chart(profile_id):
                            reading_types=reading_types, now=_dt.date.today())
 
 
+# ── Compatibilidad ────────────────────────────────────────────────────────────
+
+@main_bp.route('/compatibilidad')
+@login_required
+def compatibility():
+    from models import Profile, ReadingType
+    profiles = Profile.query.filter_by(user_id=current_user.id)\
+                            .order_by(Profile.is_self.desc(), Profile.created_at.asc()).all()
+    reading_types = ReadingType.query.filter(
+        ReadingType.active == True,
+        ReadingType.slug.in_(['synastry', 'davison'])
+    ).all()
+    return render_template('main/compatibility.html',
+                           profiles=profiles,
+                           reading_types=reading_types)
+
+
 # ── Legacy redirect ───────────────────────────────────────────────────────────
 
 @main_bp.route('/profile', methods=['GET', 'POST'])
