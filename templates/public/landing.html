@@ -196,13 +196,11 @@
 ════════════════════════════════════════ -->
 <section class="hero">
   <div class="hero-copy">
-    <p class="section-label" style="margin-bottom:0.5rem;">✦ CARTA NATAL GRATUITA</p>
-    <h1>Tu carta, gratis.<br><em>Luego cuarenta páginas sobre lo que dice de ti.</em></h1>
+    <p class="section-label" style="margin-bottom:0.5rem;">✦ CARTA ASTRAL PERSONALIZADA</p>
+    <h1>Tu carta astral, detallada y personalizada como nunca antes, <em>en 2 minutos.</em></h1>
     <p class="hero-sub">
-      Calculamos tu carta natal al instante — sin registro.
-      Luego, por €9.99, una interpretación IA de 40 páginas en español,
-      específica para tus planetas, casas y aspectos.
-      Sin horóscopos genéricos. Sin relleno.
+      La inteligencia de la astrología se basa en todas las combinaciones secretas de tu carta.
+      Sin subscripción, sin complicaciones.
     </p>
     <div class="hero-cta">
       <a href="{{ url_for('public.chart') }}" class="btn btn-primary" style="font-size:1rem; padding:0.75rem 2rem;">
@@ -213,21 +211,9 @@
     <p class="hero-footnote">Sin cuenta para la carta. €9.99 pago único por la lectura completa.</p>
   </div>
   <div class="hero-image">
-    <div id="video-container" onclick="launchVideo()"
-         style="position:relative; padding-top:56.25%; border-radius:16px; overflow:hidden; cursor:pointer;
-                box-shadow: 0 0 60px rgba(212,175,55,0.18), 0 0 30px rgba(155,89,182,0.3);">
-      <img id="video-poster"
-           src="{{ url_for('static', filename='image.png') }}"
-           alt="Sample natal chart — Astronode"
-           style="position:absolute; top:0; left:0; width:100%; height:100%; object-fit:cover;">
-      <div id="play-btn"
-           style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
-                  width:64px; height:64px; background:rgba(155,89,182,0.85); border-radius:50%;
-                  display:flex; align-items:center; justify-content:center;
-                  transition:transform 0.2s, background 0.2s;">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="white"><polygon points="5,3 19,12 5,21"/></svg>
-      </div>
-    </div>
+    <img src="{{ url_for('static', filename='image.png') }}"
+         alt="Sample natal chart — Astronode"
+         style="width:100%; border-radius:16px; box-shadow: 0 0 60px rgba(212,175,55,0.18), 0 0 30px rgba(155,89,182,0.3);">
   </div>
 </section>
 
@@ -510,32 +496,4 @@
 
 {% endblock %}
 
-{% block extra_js %}
-<script>
-  (function() {
-    var btn = document.getElementById('play-btn');
-    btn.addEventListener('mouseenter', function() {
-      btn.style.background = 'rgba(155,89,182,1)';
-      btn.style.transform = 'translate(-50%,-50%) scale(1.1)';
-    });
-    btn.addEventListener('mouseleave', function() {
-      btn.style.background = 'rgba(155,89,182,0.85)';
-      btn.style.transform = 'translate(-50%,-50%) scale(1)';
-    });
-  })();
-
-  function launchVideo() {
-    var container = document.getElementById('video-container');
-    container.onclick = null;
-    document.getElementById('video-poster').remove();
-    document.getElementById('play-btn').remove();
-    var iframe = document.createElement('iframe');
-    iframe.src = 'https://iframe.mediadelivery.net/embed/725685/70ad64a8-e188-4c69-bbe2-470bee48c784?autoplay=true&controls=true';
-    iframe.allow = 'accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture';
-    iframe.allowFullscreen = true;
-    iframe.style.cssText = 'position:absolute; top:0; left:0; width:100%; height:100%; border:0;';
-    container.style.cursor = 'default';
-    container.appendChild(iframe);
-  }
-</script>
 {% endblock %}
