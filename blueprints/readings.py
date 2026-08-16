@@ -67,6 +67,21 @@ def request_reading(reading_type_id):
     return redirect(url_for('readings.view', reading_id=reading.id))
 
 
+@readings_bp.route('/download/<int:reading_id>')
+@login_required
+def download(reading_id):
+    from flask import Response
+    reading = Reading.query.filter_by(id=reading_id, user_id=current_user.id).first_or_404()
+    if reading.status != 'completed' or not reading.content:
+        abort(404)
+    filename = f"lectura-{reading.reading_type.name.lower().replace(' ', '-')}-{reading.id}.txt"
+    return Response(
+        reading.content,
+        mimetype='text/plain; charset=utf-8',
+        headers={'Content-Disposition': f'attachment; filename="{filename}"'},
+    )
+
+
 @readings_bp.route('/status/<int:reading_id>')
 @login_required
 def status(reading_id):
