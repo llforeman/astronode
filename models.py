@@ -91,6 +91,7 @@ class ReadingType(db.Model):
 
     id          = db.Column(db.Integer, primary_key=True)
     name        = db.Column(db.String(100), nullable=False)
+    slug        = db.Column(db.String(50), nullable=True)   # natal|karmic|synastry|davison|solar_return|lunar_return
     description = db.Column(db.Text, nullable=True)
     price_cents = db.Column(db.Integer, nullable=True)    # None = subscription-only
     min_tier    = db.Column(db.String(20), default='free')
@@ -109,6 +110,7 @@ class Reading(db.Model):
     status          = db.Column(db.String(20), default='pending')  # pending | generating | completed | failed
     content         = db.Column(db.Text(16777215), nullable=True)  # generated horoscope text (MEDIUMTEXT)
     chart_image     = db.Column(db.Text(16777215), nullable=True)  # base64 encoded PNG (MEDIUMTEXT)
+    params          = db.Column(db.JSON, nullable=True)             # extra data per reading type
     sent_by_email   = db.Column(db.Boolean, default=False)
     job_id          = db.Column(db.String(255), nullable=True)
     created_at      = db.Column(db.DateTime, default=datetime.utcnow)
