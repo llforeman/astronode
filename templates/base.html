@@ -33,24 +33,79 @@
       --card: #ffffff;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; min-height: 100vh; display: flex; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; min-height: 100vh; display: flex; overflow-x: hidden; }
     a { color: var(--accent-light); text-decoration: none; }
     a:hover { text-decoration: underline; }
 
-    /* Sidebar */
-    .sidebar { width: 220px; background: var(--bg2); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 1.5rem 1rem; gap: 0.5rem; flex-shrink: 0; }
-    .sidebar .logo { font-size: 1.3rem; font-weight: 700; color: var(--accent-light); margin-bottom: 1rem; letter-spacing: 2px; }
-    .sidebar a { color: var(--text-muted); padding: 0.5rem 0.75rem; border-radius: 6px; display: block; transition: all 0.2s; }
+    /* ── Sidebar ── */
+    .sidebar {
+      width: 220px;
+      flex-shrink: 0;
+      background: var(--bg2);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      padding: 1.5rem 1rem;
+      gap: 0.5rem;
+      transition: width 0.25s ease, padding 0.25s ease, opacity 0.25s ease;
+      overflow: hidden;
+      position: relative;
+      z-index: 10;
+    }
+    .sidebar.collapsed {
+      width: 0;
+      padding-left: 0;
+      padding-right: 0;
+      opacity: 0;
+      pointer-events: none;
+    }
+    .sidebar .logo { font-size: 1.3rem; font-weight: 700; color: var(--accent-light); margin-bottom: 1rem; letter-spacing: 2px; white-space: nowrap; }
+    .sidebar a { color: var(--text-muted); padding: 0.5rem 0.75rem; border-radius: 6px; display: block; transition: all 0.2s; white-space: nowrap; }
     .sidebar a:hover, .sidebar a.active { background: var(--border); color: var(--text); text-decoration: none; }
+    .sidebar .sidebar-spacer { flex: 1; }
 
-    /* Topbar */
+    /* ── Mobile overlay ── */
+    .sidebar-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.55);
+      z-index: 299;
+    }
+    .sidebar-overlay.visible { display: block; }
+
+    /* ── Topbar ── */
     .main-wrap { flex: 1; display: flex; flex-direction: column; min-width: 0; }
-    .topbar { background: var(--bg2); border-bottom: 1px solid var(--border); padding: 0.75rem 1.5rem; display: flex; align-items: center; justify-content: flex-end; gap: 1rem; }
+    .topbar {
+      background: var(--bg2);
+      border-bottom: 1px solid var(--border);
+      padding: 0.75rem 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    .topbar-left { display: flex; align-items: center; gap: 0.75rem; flex: 1; }
+    .topbar-right { display: flex; align-items: center; gap: 1rem; }
+    .hamburger {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      padding: 0.35rem 0.6rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 1.1rem;
+      line-height: 1;
+      flex-shrink: 0;
+      transition: color 0.2s, background 0.2s;
+    }
+    .hamburger:hover { color: var(--text); background: var(--border); }
     .topbar .notif-badge { position: relative; }
     .topbar .badge { background: var(--accent); color: #fff; border-radius: 50%; font-size: 0.7rem; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; position: absolute; top: -6px; right: -6px; }
 
-    /* Content */
-    .content { padding: 2rem; flex: 1; }
+    /* ── Content ── */
+    .content { padding: 2rem; flex: 1; min-width: 0; }
+    @media (max-width: 600px) { .content { padding: 1.25rem 1rem; } }
+
     .card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 1.5rem; margin-bottom: 1rem; }
     .btn { display: inline-block; padding: 0.5rem 1.25rem; border-radius: 6px; border: none; cursor: pointer; font-size: 0.95rem; transition: all 0.2s; text-decoration: none; }
     .btn-primary { background: var(--accent); color: #fff; }
@@ -62,22 +117,55 @@
     .btn-danger:hover { background: #e74c3c; color: #fff; text-decoration: none; }
     .flash { padding: 0.75rem 1rem; border-radius: 6px; margin-bottom: 1rem; background: var(--border); color: var(--text); }
 
-    /* Theme toggle */
-    .theme-toggle { background: none; border: 1px solid var(--border); color: var(--text-muted); padding: 0.3rem 0.7rem; border-radius: 6px; cursor: pointer; }
+    /* ── Theme toggle ── */
+    .theme-toggle { background: none; border: 1px solid var(--border); color: var(--text-muted); padding: 0.3rem 0.7rem; border-radius: 6px; cursor: pointer; white-space: nowrap; }
 
-    /* Profile cards */
-    .profile-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+    /* ── User email truncation ── */
+    .topbar-email { color: var(--text-muted); font-size: 0.88rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 180px; }
+
+    /* ── Profile cards ── */
+    .profile-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
     .profile-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 1.25rem; display: flex; flex-direction: column; gap: 0.5rem; }
     .profile-card.is-self { border-color: var(--accent); }
     .profile-card .profile-name { font-weight: 700; font-size: 1rem; display: flex; align-items: center; gap: 0.4rem; }
     .self-badge { background: var(--accent); color: #fff; font-size: 0.65rem; padding: 0.1rem 0.4rem; border-radius: 4px; font-weight: 600; letter-spacing: 0.5px; }
     .profile-card .profile-meta { color: var(--text-muted); font-size: 0.82rem; }
     .profile-card .profile-actions { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-top: 0.5rem; }
+
+    /* ── Mobile sidebar as drawer ── */
+    @media (max-width: 768px) {
+      .sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100vh;
+        width: 240px !important;
+        padding: 1.5rem 1rem !important;
+        opacity: 1 !important;
+        pointer-events: none;
+        transform: translateX(-100%);
+        transition: transform 0.25s ease;
+        z-index: 300;
+        overflow-y: auto;
+      }
+      .sidebar.mobile-open {
+        transform: translateX(0);
+        pointer-events: auto;
+      }
+      /* Hide desktop-collapse class on mobile — use mobile-open instead */
+      .sidebar.collapsed {
+        width: 240px !important;
+        padding: 1.5rem 1rem !important;
+        opacity: 1 !important;
+      }
+    }
   </style>
   {% block extra_css %}{% endblock %}
 </head>
 <body>
-  <nav class="sidebar">
+  <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+
+  <nav class="sidebar" id="sidebar">
     <div class="logo">✦ ASTRONODE</div>
     <a href="{{ url_for('main.dashboard') }}">Inicio</a>
     <a href="{{ url_for('main.profiles') }}">Personas</a>
@@ -87,20 +175,26 @@
     {% if current_user.role == 'superadmin' %}
     <a href="{{ url_for('admin.index') }}">Admin</a>
     {% endif %}
-    <div style="flex:1"></div>
+    <div class="sidebar-spacer"></div>
     <a href="{{ url_for('auth.logout') }}" style="color:var(--text-muted)">Cerrar sesión</a>
   </nav>
+
   <div class="main-wrap">
     <div class="topbar">
-      <button class="theme-toggle" onclick="toggleTheme()">◐ Tema</button>
-      {% if unread_count %}
-      <a href="{{ url_for('main.mark_notifications_read') }}" class="notif-badge" title="{{ unread_count }} notificaciones sin leer">
-        🔔 <span class="badge">{{ unread_count }}</span>
-      </a>
-      {% else %}
-      <span style="color:var(--text-muted)">🔔</span>
-      {% endif %}
-      <span style="color:var(--text-muted); font-size:0.9rem">{{ current_user.email }}</span>
+      <div class="topbar-left">
+        <button class="hamburger" onclick="toggleSidebar()" aria-label="Menú">&#9776;</button>
+      </div>
+      <div class="topbar-right">
+        <button class="theme-toggle" onclick="toggleTheme()">◐ Tema</button>
+        {% if unread_count %}
+        <a href="{{ url_for('main.mark_notifications_read') }}" class="notif-badge" title="{{ unread_count }} notificaciones sin leer">
+          🔔 <span class="badge">{{ unread_count }}</span>
+        </a>
+        {% else %}
+        <span style="color:var(--text-muted)">🔔</span>
+        {% endif %}
+        <span class="topbar-email">{{ current_user.email }}</span>
+      </div>
     </div>
     <div class="content">
       {% with messages = get_flashed_messages() %}
@@ -109,12 +203,63 @@
       {% block content %}{% endblock %}
     </div>
   </div>
+
   <script>
     function toggleTheme() {
       var t = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
       document.documentElement.setAttribute('data-theme', t);
       localStorage.setItem('theme', t);
     }
+
+    var sidebar  = document.getElementById('sidebar');
+    var overlay  = document.getElementById('sidebar-overlay');
+    var isMobile = function() { return window.innerWidth <= 768; };
+
+    function openSidebar() {
+      if (isMobile()) {
+        sidebar.classList.add('mobile-open');
+        overlay.classList.add('visible');
+        document.body.style.overflow = 'hidden';
+      } else {
+        sidebar.classList.remove('collapsed');
+        localStorage.setItem('sidebar-collapsed', 'false');
+      }
+    }
+
+    function closeSidebar() {
+      if (isMobile()) {
+        sidebar.classList.remove('mobile-open');
+        overlay.classList.remove('visible');
+        document.body.style.overflow = '';
+      } else {
+        sidebar.classList.add('collapsed');
+        localStorage.setItem('sidebar-collapsed', 'true');
+      }
+    }
+
+    function toggleSidebar() {
+      if (isMobile()) {
+        sidebar.classList.contains('mobile-open') ? closeSidebar() : openSidebar();
+      } else {
+        sidebar.classList.contains('collapsed') ? openSidebar() : closeSidebar();
+      }
+    }
+
+    // Restore desktop state
+    (function() {
+      if (!isMobile() && localStorage.getItem('sidebar-collapsed') === 'true') {
+        sidebar.classList.add('collapsed');
+      }
+    })();
+
+    // Close drawer when resizing to desktop
+    window.addEventListener('resize', function() {
+      if (!isMobile()) {
+        sidebar.classList.remove('mobile-open');
+        overlay.classList.remove('visible');
+        document.body.style.overflow = '';
+      }
+    });
   </script>
   {% block extra_js %}{% endblock %}
 </body>
