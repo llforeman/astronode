@@ -74,7 +74,7 @@ def _call_llm(prompt, max_retries=3):
                 model=MODEL,
                 messages=[{'role': 'user', 'content': prompt}],
                 temperature=0.8,
-                max_tokens=2500,
+                max_tokens=4000,
             )
             raw = resp.choices[0].message.content.strip()
             # Strip markdown code fences if present
@@ -100,7 +100,7 @@ Estás escribiendo sobre {body_label.upper()} EN {sign_label.upper()}.
 Devuelve únicamente un objeto JSON válido con estos tres campos:
 
 {{
-  "preview_text": "Entre 200 y 300 palabras. Segunda persona (tú/te/tu). Prosa fluida — sin listas, sin encabezados. Registro íntimo y directo, como si hablaras con alguien que ya confía en ti. Termina a mitad de pensamiento: la última frase debe crear tensión que pide resolución, pero sin mencionar otros planetas ni la carta completa.",
+  "preview_text": "Entre 200 y 300 palabras. Segunda persona (tú/te/tu). Prosa fluida — sin listas, sin encabezados. Registro observacional y sosegado: empieza con una afirmación concreta sobre cómo funciona esta persona, no con un superlativo ni con una negación dramática (evita aperturas tipo 'tú no eres X', 'llegas a la vida', 'no sientes a medias'). Sin hooks de marketing. Termina a mitad de pensamiento: la última frase debe crear tensión que pide resolución, pero sin mencionar otros planetas ni la carta completa.",
   "preview_hook": "Una o dos frases. El cierre que aparece en la página individual (/sol/aries, etc.) después del texto largo — apunta hacia el siguiente planeta como lo que viene a continuación sin resolverlo. Ejemplo de registro: 'Lo que el {body_label} en {sign_label} no te dice es qué haces cuando estás solo — eso es la Luna.'",
   "seo_body": "Entre 800 y 1200 palabras. HTML con etiquetas h2 y h3 para estructurar. Tono analítico pero accesible — ni académico ni de revista de belleza. Cubre: qué significa este planeta en este signo, cómo se manifiesta en la vida cotidiana, sus fortalezas, sus tensiones, cómo suele evolucionar con la madurez. Sin mencionar IA, Astronode, ni otras plataformas. Sin listas de palabras clave."
 }}
@@ -191,12 +191,8 @@ def populate_interaction(sun_sign, moon_sign, lang='es', dry_run=False):
 # Population order: moon → sun → rising (interaction fires as soon as moon + sun exist)
 TEST_PLACEMENTS = [
     ('moon',    'Virgo'),
-    ('sun',     'Pisces'),
-    ('rising',  'Cancer'),
 ]
-TEST_INTERACTIONS = [
-    ('Pisces', 'Virgo'),   # sun_sign, moon_sign — directional
-]
+TEST_INTERACTIONS = []
 
 if __name__ == '__main__':
     dry_run = '--dry-run' in sys.argv

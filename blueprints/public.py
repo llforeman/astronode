@@ -52,11 +52,10 @@ def _normalize_sign(sign):
 
 # ── Preview stitcher ───────────────────────────────────────────────────────────
 
-def build_chart_preview(sun_sign, moon_sign, rising_sign):
+def build_chart_preview(sun_sign, moon_sign):
     """Assemble preview snippets from DB for a given chart.
 
-    Assembly order: sun → moon → interaction → rising.
-    Each placement has {'text', 'hook', 'available'}.
+    Assembly order: sun → moon → interaction.
     Degrades gracefully — any piece may be None.
     """
     from models import PlacementContent, SunMoonInteraction
@@ -67,9 +66,8 @@ def build_chart_preview(sun_sign, moon_sign, rising_sign):
         hook = row.preview_hook if row else None
         return {'text': text, 'hook': hook, 'available': bool(text)}
 
-    sun    = get_piece('sun',    sun_sign)
-    moon   = get_piece('moon',   moon_sign)
-    rising = get_piece('rising', rising_sign)
+    sun    = get_piece('sun',  sun_sign)
+    moon   = get_piece('moon', moon_sign)
 
     row = SunMoonInteraction.query.filter_by(
         sun_sign=sun_sign, moon_sign=moon_sign, lang='es'
@@ -79,9 +77,8 @@ def build_chart_preview(sun_sign, moon_sign, rising_sign):
     return {
         'sun':         sun,
         'moon':        moon,
-        'rising':      rising,
         'interaction': interaction,
-        'has_any':     sun['available'] or moon['available'] or rising['available'],
+        'has_any':     sun['available'] or moon['available'],
     }
 
 
@@ -172,14 +169,10 @@ def chart():
     preview = None
     if result and 'positions' in result:
         try:
-            sun_sign    = result['positions'].get('Sun',       {}).get('sign')
-            moon_sign   = result['positions'].get('Moon',      {}).get('sign')
-            rising_sign = result['positions'].get('Ascendant', {}).get('sign')
-            sun_sign    = _normalize_sign(sun_sign)
-            moon_sign   = _normalize_sign(moon_sign)
-            rising_sign = _normalize_sign(rising_sign)
-            if sun_sign and moon_sign and rising_sign:
-                preview = build_chart_preview(sun_sign, moon_sign, rising_sign)
+            sun_sign  = _normalize_sign(result['positions'].get('Sun',  {}).get('sign'))
+            moon_sign = _normalize_sign(result['positions'].get('Moon', {}).get('sign'))
+            if sun_sign and moon_sign:
+                preview = build_chart_preview(sun_sign, moon_sign)
         except Exception as e:
             log.exception('build_chart_preview failed: %s', e)
             preview = None
