@@ -264,6 +264,13 @@ def placement_page(body_slug, sign_slug):
                                     .filter(PlacementContent.sign != sign)\
                                     .order_by(PlacementContent.sign).all()
 
+    # All 12 signs in zodiac order for the sidebar
+    all_signs_nav = [
+        {'sign_en': s, 'sign_es': SIGN_LABEL_ES[s], 'slug': SIGN_EN_TO_ES[s],
+         'active': s == sign}
+        for s in ALL_SIGNS_EN
+    ]
+
     canonical = url_for('public.placement_page', body_slug=body_slug,
                         sign_slug=sign_slug, _external=True)
 
@@ -277,6 +284,7 @@ def placement_page(body_slug, sign_slug):
         body_label=BODY_LABEL_ES[body],
         sign_label=SIGN_LABEL_ES[sign],
         related=related,
+        all_signs_nav=all_signs_nav,
         sign_en_to_es=SIGN_EN_TO_ES,
         sign_label_es=SIGN_LABEL_ES,
         indexable=indexable,

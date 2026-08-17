@@ -124,6 +124,53 @@
     max-width: 760px;
     margin: 0 auto 3rem;
   }
+  .placement-layout {
+    display: flex;
+    gap: 2rem;
+    max-width: 1040px;
+    margin: 0 auto;
+    padding: 0 1.5rem;
+    align-items: flex-start;
+  }
+  .sign-sidebar {
+    width: 170px;
+    flex-shrink: 0;
+    position: sticky;
+    top: 5rem;
+  }
+  .sign-sidebar .sidebar-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--text-muted);
+    margin-bottom: 0.6rem;
+  }
+  .sign-sidebar a {
+    display: block;
+    padding: 0.4rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.88rem;
+    color: var(--text-muted);
+    text-decoration: none;
+    transition: background 0.15s, color 0.15s;
+    margin-bottom: 2px;
+  }
+  .sign-sidebar a:hover { background: var(--bg2); color: var(--text); text-decoration: none; }
+  .sign-sidebar a.active {
+    background: var(--bg2);
+    color: var(--accent-light);
+    font-weight: 600;
+    border-left: 2px solid var(--accent);
+    padding-left: calc(0.75rem - 2px);
+  }
+  .placement-main { flex: 1; min-width: 0; }
+  @media (max-width: 700px) {
+    .placement-layout { flex-direction: column; }
+    .sign-sidebar { width: 100%; position: static; display: flex; flex-wrap: wrap; gap: 0.4rem; }
+    .sign-sidebar .sidebar-label { width: 100%; }
+    .sign-sidebar a { display: inline-block; background: var(--bg2); margin-bottom: 0; }
+  }
 </style>
 {% endblock %}
 
@@ -133,7 +180,7 @@
   <div class="breadcrumb">
     <a href="{{ url_for('public.landing') }}">Inicio</a>
     <span>›</span>
-    <span>{{ body_label }}</span>
+    <a href="{{ url_for('public.body_index', body_slug=body_slug) }}">{{ body_label }}</a>
     <span>›</span>
     <span>{{ sign_label }}</span>
   </div>
@@ -143,44 +190,47 @@
   </p>
 </div>
 
-<div class="prose-section">
-  {% if content.seo_body %}
-  <div class="prose-body">
-    {{ content.seo_body | safe }}
-    {% if content.preview_hook %}
-    <p style="color:var(--accent-light); font-style:italic; margin-top:1.5rem; border-left:3px solid var(--accent); padding-left:1rem;">{{ content.preview_hook }}</p>
-    {% endif %}
-  </div>
-  {% else %}
-  <div class="empty-notice">
-    El contenido para esta página está en preparación. Vuelve pronto.
-  </div>
-  {% endif %}
-</div>
-
-<div class="cta-banner" style="padding-left:1.5rem; padding-right:1.5rem; margin-left:1.5rem; margin-right:1.5rem; max-width:calc(760px - 3rem);">
-  <h2>¿Tienes {{ body_label }} en {{ sign_label }}? Descubre cómo encaja en el resto de tu carta.</h2>
-  <p>
-    El {{ body_label }} es solo una pieza. Tu carta natal completa — con la Luna, el Ascendente,
-    las casas y los aspectos — es donde aparece la imagen real de quién eres.
-    Calcula la tuya en segundos.
-  </p>
-  <a href="{{ url_for('public.chart') }}" class="btn btn-primary" style="font-size:1rem; padding:0.75rem 2rem;">
-    Calcular mi carta — es gratis →
-  </a>
-</div>
-
-{% if related %}
-<div class="related-section">
-  <h3>{{ body_label }} en otros signos</h3>
-  <div class="related-links">
-    {% for r in related %}
-    <a href="{{ url_for('public.placement_page', body_slug=body_slug, sign_slug=sign_en_to_es[r.sign]) }}">
-      {{ body_label }} en {{ sign_label_es[r.sign] }}
+<div class="placement-layout">
+  <!-- Sign sidebar -->
+  <nav class="sign-sidebar">
+    <div class="sidebar-label">{{ body_label }} en...</div>
+    {% for s in all_signs_nav %}
+    <a href="{{ url_for('public.placement_page', body_slug=body_slug, sign_slug=s.slug) }}"
+       {% if s.active %}class="active"{% endif %}>
+      {{ s.sign_es }}
     </a>
     {% endfor %}
+  </nav>
+
+  <!-- Main content -->
+  <div class="placement-main">
+    <div class="prose-section" style="max-width:none; padding:0 0 3rem;">
+      {% if content.seo_body %}
+      <div class="prose-body">
+        {{ content.seo_body | safe }}
+        {% if content.preview_hook %}
+        <p style="color:var(--accent-light); font-style:italic; margin-top:1.5rem; border-left:3px solid var(--accent); padding-left:1rem;">{{ content.preview_hook }}</p>
+        {% endif %}
+      </div>
+      {% else %}
+      <div class="empty-notice" style="margin:0 0 3rem;">
+        El contenido para esta página está en preparación. Vuelve pronto.
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="cta-banner" style="margin: 0 0 3rem;">
+      <h2>¿Tienes {{ body_label }} en {{ sign_label }}? Descubre cómo encaja en el resto de tu carta.</h2>
+      <p>
+        El {{ body_label }} es solo una pieza. Tu carta natal completa — con la Luna, el Ascendente,
+        las casas y los aspectos — es donde aparece la imagen real de quién eres.
+        Calcula la tuya en segundos.
+      </p>
+      <a href="{{ url_for('public.chart') }}" class="btn btn-primary" style="font-size:1rem; padding:0.75rem 2rem;">
+        Calcular mi carta — es gratis →
+      </a>
+    </div>
   </div>
 </div>
-{% endif %}
 
 {% endblock %}
