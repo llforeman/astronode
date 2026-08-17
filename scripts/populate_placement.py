@@ -185,34 +185,52 @@ def populate_interaction(sun_sign, moon_sign, lang='es', dry_run=False):
     print(f'  Saved: Sol {sun_label} / Luna {moon_label}')
 
 
-# ── Run ───────────────────────────────────────────────────────────────────────
+# ── All combinations ──────────────────────────────────────────────────────────
 
-# Test batch: Sun Aries, Moon Cancer, Rising Capricorn + Aries→Cancer interaction
-# Population order: moon → sun → rising (interaction fires as soon as moon + sun exist)
-TEST_PLACEMENTS = [
-    ('moon',    'Virgo'),
+ALL_BODIES = ['moon', 'sun', 'rising']  # moon first so interaction fires earlier
+ALL_SIGNS  = [
+    'Aries', 'Taurus', 'Gemini', 'Cancer', 'Leo', 'Virgo',
+    'Libra', 'Scorpio', 'Sagittarius', 'Capricorn', 'Aquarius', 'Pisces',
 ]
-TEST_INTERACTIONS = []
+
+# 36 placements: moon×12 + sun×12 + rising×12
+ALL_PLACEMENTS   = [(body, sign) for body in ALL_BODIES for sign in ALL_SIGNS]
+# 144 directed interactions: every sun_sign × moon_sign pair
+ALL_INTERACTIONS = [(sun, moon) for sun in ALL_SIGNS for moon in ALL_SIGNS]
+
 
 if __name__ == '__main__':
-    dry_run = '--dry-run' in sys.argv
+    dry_run        = '--dry-run'        in sys.argv
+    skip_existing  = '--skip-existing'  in sys.argv  # skip rows already in DB
 
     app = create_app()
     with app.app_context():
-        print('=== Placement content ===')
-        for body, sign in TEST_PLACEMENTS:
+        print(f'=== Placement content ({len(ALL_PLACEMENTS)} rows) ===')
+        for body, sign in ALL_PLACEMENTS:
+            if skip_existing:
+                existing = PlacementContent.query.filter_by(body=body, sign=sign, lang='es').first()
+                if existing and existing.preview_text:
+                    print(f'  Skipping {BODY_LABEL[body]} en {SIGN_LABEL[sign]} (exists)')
+                    continue
             try:
                 populate_placement(body, sign, dry_run=dry_run)
-                time.sleep(1)  # avoid rate limits
+                time.sleep(1)
             except Exception as e:
-                print(f'  ERROR: {e}')
+                print(f'  ERROR {body}/{sign}: {e}')
 
-        print('\n=== Sun-Moon interactions ===')
-        for sun_sign, moon_sign in TEST_INTERACTIONS:
+        print(f'\n=== Sun-Moon interactions ({len(ALL_INTERACTIONS)} rows) ===')
+        for sun_sign, moon_sign in ALL_INTERACTIONS:
+            if skip_existing:
+                existing = SunMoonInteraction.query.filter_by(
+                    sun_sign=sun_sign, moon_sign=moon_sign, lang='es'
+                ).first()
+                if existing and existing.text:
+                    print(f'  Skipping Sol {SIGN_LABEL[sun_sign]} / Luna {SIGN_LABEL[moon_sign]} (exists)')
+                    continue
             try:
                 populate_interaction(sun_sign, moon_sign, dry_run=dry_run)
                 time.sleep(1)
             except Exception as e:
-                print(f'  ERROR: {e}')
+                print(f'  ERROR {sun_sign}/{moon_sign}: {e}')
 
     print('\nDone. Review output in DB, then flip status to "published" to index.')
