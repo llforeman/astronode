@@ -9,8 +9,9 @@
   .placement-hero {
     max-width: 760px;
     margin: 0 auto;
-    padding: 3.5rem 1.5rem 2.5rem;
+    padding: 3.5rem 1.5rem 2rem;
   }
+  @media (max-width: 540px) { .placement-hero { padding: 2rem 1rem 1.5rem; } }
   .breadcrumb {
     font-size: 0.78rem;
     color: var(--text-muted);
@@ -132,6 +133,7 @@
     padding: 0 1.5rem;
     align-items: flex-start;
   }
+  @media (max-width: 540px) { .placement-layout { padding: 0 1rem; } }
   .sign-sidebar {
     width: 170px;
     flex-shrink: 0;

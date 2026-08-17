@@ -39,6 +39,7 @@
     box-shadow: 0 0 60px rgba(212,175,55,0.18), 0 0 30px rgba(155,89,182,0.3);
   }
   .hero-cta { display: flex; gap: 1rem; flex-wrap: wrap; align-items: center; }
+  @media (max-width: 400px) { .hero-cta { flex-direction: column; align-items: stretch; text-align: center; } }
   .hero-footnote { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.75rem; }
 
   /* ── Section common ───────────────────────────────── */
@@ -142,11 +143,12 @@
     background: linear-gradient(135deg, #1a1a30, #2a1040);
     border: 1px solid var(--accent);
     border-radius: 12px;
-    padding: 2.5rem;
+    padding: 2.5rem 2rem;
     text-align: center;
     margin-top: 2rem;
   }
-  .price-block .price { font-size: 3rem; font-weight: 800; color: var(--gold); }
+  @media (max-width: 540px) { .price-block { padding: 1.75rem 1.25rem; border-radius: 10px; } }
+  .price-block .price { font-size: clamp(2rem, 8vw, 3rem); font-weight: 800; color: var(--gold); }
   .price-block .price sup { font-size: 1.2rem; vertical-align: super; }
   .price-block .price-label { color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem; }
   .price-includes { display: flex; flex-wrap: wrap; gap: 0.5rem 1.5rem; justify-content: center; margin: 1rem 0 2rem; }
@@ -180,11 +182,12 @@
   /* ── Final CTA banner ─────────────────────────────── */
   .final-cta {
     text-align: center;
-    padding: 5rem 2rem;
+    padding: 4rem 1.5rem;
     max-width: 640px;
     margin: 0 auto;
   }
-  .final-cta h2 { font-size: clamp(1.6rem, 3vw, 2.2rem); font-weight: 800; color: var(--text); margin-bottom: 1rem; }
+  @media (max-width: 540px) { .final-cta { padding: 2.5rem 1.25rem; } }
+  .final-cta h2 { font-size: clamp(1.4rem, 3vw, 2.2rem); font-weight: 800; color: var(--text); margin-bottom: 1rem; }
   .final-cta p { color: var(--text-muted); margin-bottom: 2rem; font-size: 1rem; line-height: 1.65; }
 </style>
 {% endblock %}

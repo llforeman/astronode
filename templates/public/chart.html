@@ -5,17 +5,20 @@
 {% block extra_css %}
 <style>
   .chart-wrap { max-width: 860px; margin: 0 auto; padding: 2rem 1rem; }
+  @media (max-width: 540px) { .chart-wrap { padding: 1.25rem 0.75rem; } }
   .form-card {
     background: var(--card);
     border: 1px solid var(--border);
     border-top: 1px solid var(--gold-dim);
     border-radius: 12px;
-    padding: 2.5rem;
+    padding: 2rem;
     margin-bottom: 2rem;
     box-shadow: 0 8px 32px rgba(0,0,0,0.4);
   }
-  .form-row { display: flex; gap: 1.25rem; flex-wrap: wrap; margin-bottom: 1.5rem; }
-  .form-group { display: flex; flex-direction: column; flex: 1; min-width: 180px; }
+  @media (max-width: 540px) { .form-card { padding: 1.25rem; } }
+  .form-row { display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.25rem; }
+  .form-group { display: flex; flex-direction: column; flex: 1; min-width: 140px; }
+  @media (max-width: 540px) { .form-group { min-width: 100%; } }
   .form-group label {
     font-size: 0.72rem;
     color: #b3a9c4;
@@ -43,9 +46,10 @@
   .chart-img-wrap { text-align: center; margin-bottom: 2rem; overflow-x: auto; }
   .chart-img-wrap svg { max-width: 100%; height: auto; border-radius: 12px; box-shadow: 0 0 60px rgba(212,175,55,0.15), 0 0 30px rgba(155,89,182,0.25); }
 
-  table.planets { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
-  table.planets th { color: var(--text-muted); text-align: left; padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--border); font-weight: 600; }
-  table.planets td { padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--border); }
+  .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  table.planets { width: 100%; border-collapse: collapse; font-size: 0.9rem; min-width: 380px; }
+  table.planets th { color: var(--text-muted); text-align: left; padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--border); font-weight: 600; white-space: nowrap; }
+  table.planets td { padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--border); white-space: nowrap; }
   table.planets tr:last-child td { border-bottom: none; }
   .sign-pill { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.8rem; background: var(--border); color: var(--accent-light); }
 
@@ -153,6 +157,7 @@
   <!-- Planet positions -->
   <div class="form-card">
     <div class="section-title">Posiciones Planetarias</div>
+    <div class="table-scroll">
     <table class="planets">
       <thead>
         <tr>
@@ -184,6 +189,7 @@
         {% endfor %}
       </tbody>
     </table>
+    </div>
   </div>
 
   <!-- House cusps -->
