@@ -36,6 +36,19 @@ SIGN_LABEL_ES  = {
 
 ALL_SIGNS_EN = list(SIGN_ES_TO_EN.values())
 
+# kerykeion returns 3-char abbreviations — expand to full names for DB lookups
+_SIGN_ABBR_TO_FULL = {
+    'Ari': 'Aries', 'Tau': 'Taurus', 'Gem': 'Gemini',
+    'Can': 'Cancer', 'Leo': 'Leo',    'Vir': 'Virgo',
+    'Lib': 'Libra',  'Sco': 'Scorpio','Sag': 'Sagittarius',
+    'Cap': 'Capricorn', 'Aqu': 'Aquarius', 'Pis': 'Pisces',
+}
+
+
+def _normalize_sign(sign):
+    """Expand kerykeion 3-char abbreviation to full English sign name."""
+    return _SIGN_ABBR_TO_FULL.get(sign, sign)
+
 
 # ── Preview stitcher ───────────────────────────────────────────────────────────
 
@@ -162,13 +175,12 @@ def chart():
             sun_sign    = result['positions'].get('Sun',       {}).get('sign')
             moon_sign   = result['positions'].get('Moon',      {}).get('sign')
             rising_sign = result['positions'].get('Ascendant', {}).get('sign')
-            print(f'[PREVIEW DEBUG] sun={sun_sign!r} moon={moon_sign!r} rising={rising_sign!r}', flush=True)
+            sun_sign    = _normalize_sign(sun_sign)
+            moon_sign   = _normalize_sign(moon_sign)
+            rising_sign = _normalize_sign(rising_sign)
             if sun_sign and moon_sign and rising_sign:
                 preview = build_chart_preview(sun_sign, moon_sign, rising_sign)
-                print(f'[PREVIEW DEBUG] has_any={preview.get("has_any") if preview else None}', flush=True)
         except Exception as e:
-            import traceback
-            print(f'[PREVIEW ERROR] {e}\n{traceback.format_exc()}', flush=True)
             log.exception('build_chart_preview failed: %s', e)
             preview = None
 
