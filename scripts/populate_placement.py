@@ -190,12 +190,12 @@ def populate_interaction(sun_sign, moon_sign, lang='es', dry_run=False):
 # Test batch: Sun Aries, Moon Cancer, Rising Capricorn + Aries→Cancer interaction
 # Population order: moon → sun → rising (interaction fires as soon as moon + sun exist)
 TEST_PLACEMENTS = [
-    ('moon',    'Cancer'),
-    ('sun',     'Aries'),
-    ('rising',  'Capricorn'),
+    ('moon',    'Virgo'),
+    ('sun',     'Pisces'),
+    ('rising',  'Cancer'),
 ]
 TEST_INTERACTIONS = [
-    ('Aries', 'Cancer'),   # sun_sign, moon_sign — directional
+    ('Pisces', 'Virgo'),   # sun_sign, moon_sign — directional
 ]
 
 if __name__ == '__main__':
