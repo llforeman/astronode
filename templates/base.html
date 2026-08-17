@@ -62,7 +62,7 @@
     .sidebar .logo { font-size: 1.3rem; font-weight: 700; color: var(--accent-light); margin-bottom: 1rem; letter-spacing: 2px; white-space: nowrap; }
     .sidebar a { color: var(--text-muted); padding: 0.5rem 0.75rem; border-radius: 6px; display: block; transition: all 0.2s; white-space: nowrap; }
     .sidebar a:hover, .sidebar a.active { background: var(--border); color: var(--text); text-decoration: none; }
-    .sidebar .sidebar-spacer { flex: 1; }
+
 
     /* ── Mobile overlay ── */
     .sidebar-overlay {
@@ -175,7 +175,7 @@
     {% if current_user.role == 'superadmin' %}
     <a href="{{ url_for('admin.index') }}">Admin</a>
     {% endif %}
-    <div class="sidebar-spacer"></div>
+    <hr style="border:none; border-top:1px solid var(--border); margin: 0.5rem 0;">
     <a href="{{ url_for('auth.logout') }}" style="color:var(--text-muted)">Cerrar sesión</a>
   </nav>
 
