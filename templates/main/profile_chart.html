@@ -84,6 +84,72 @@
     </div>
   </div>
 
+  {% if age_point %}
+  {% set planet_es = {
+    'Sun': '☉ Sol', 'Moon': '☽ Luna', 'Mercury': '☿ Mercurio',
+    'Venus': '♀ Venus', 'Mars': '♂ Marte', 'Jupiter': '♃ Júpiter',
+    'Saturn': '♄ Saturno', 'Uranus': '♅ Urano', 'Neptune': '♆ Neptuno',
+    'Pluto': '♇ Plutón', 'Chiron': '⚷ Quirón',
+    'Ascendant': 'Asc', 'North_Node': '☊ N.Norte', 'South_Node': '☋ N.Sur'
+  } %}
+  <div class="card" style="border-color: var(--accent);">
+    <h3 style="margin-bottom:1.25rem; color:var(--accent-light); font-size:0.85rem; text-transform:uppercase; letter-spacing:1px;">✦ Punto de Edad · Método Huber</h3>
+
+    <div style="display:flex; gap:0.75rem; flex-wrap:wrap; margin-bottom:1.25rem;">
+      <div style="background:var(--bg2); border:1px solid var(--border); border-radius:8px; padding:0.75rem 1rem; flex:1; min-width:120px;">
+        <div style="font-size:0.68rem; text-transform:uppercase; letter-spacing:1px; color:var(--text-muted); margin-bottom:0.3rem;">Edad</div>
+        <div style="font-size:1.4rem; font-weight:700; color:var(--text);">{{ age_point.age }}</div>
+        <div style="font-size:0.75rem; color:var(--text-muted);">ciclo {{ age_point.cycle }}</div>
+      </div>
+      <div style="background:var(--bg2); border:1px solid var(--border); border-radius:8px; padding:0.75rem 1rem; flex:1; min-width:120px;">
+        <div style="font-size:0.68rem; text-transform:uppercase; letter-spacing:1px; color:var(--text-muted); margin-bottom:0.3rem;">Casa actual</div>
+        <div style="font-size:1.4rem; font-weight:700; color:var(--accent-light);">Casa {{ age_point.house }}</div>
+        <div style="font-size:0.75rem; color:var(--text-muted);">{{ age_point.degree }}° {{ age_point.sign }}</div>
+      </div>
+      <div style="background:var(--bg2); border:1px solid var(--border); border-radius:8px; padding:0.75rem 1rem; flex:2; min-width:180px;">
+        <div style="font-size:0.68rem; text-transform:uppercase; letter-spacing:1px; color:var(--text-muted); margin-bottom:0.3rem;">Tránsito por Casa {{ age_point.house }}</div>
+        <div style="font-size:0.88rem; font-weight:600; color:var(--text);">{{ age_point.house_entry_age }} → {{ age_point.house_exit_age }} años</div>
+        <div style="background:var(--border); border-radius:4px; height:5px; margin-top:0.5rem; overflow:hidden;">
+          <div style="background:var(--accent); border-radius:4px; height:5px; width:{{ age_point.progress_in_house }}%;"></div>
+        </div>
+        <div style="font-size:0.72rem; color:var(--text-muted); margin-top:0.3rem;">{{ age_point.progress_in_house }}% completado</div>
+      </div>
+    </div>
+
+    {% if age_point.current_aspects %}
+    <div style="margin-bottom:1rem;">
+      <div style="font-size:0.7rem; text-transform:uppercase; letter-spacing:1px; color:var(--text-muted); margin-bottom:0.5rem;">Aspectos activos (orbe ≤ 3°)</div>
+      <div style="display:flex; flex-wrap:wrap; gap:0.4rem;">
+        {% for asp in age_point.current_aspects %}
+        <span style="background:var(--border); border:1px solid var(--accent); border-radius:6px; padding:0.3rem 0.65rem; font-size:0.82rem; color:var(--accent-light);">
+          PA {{ asp.aspect }} {{ planet_es.get(asp.planet, asp.planet) }}
+          <span style="color:var(--text-muted); font-size:0.75rem;">({{ asp.orb }}°)</span>
+        </span>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    {% if age_point.upcoming_aspects %}
+    <div>
+      <div style="font-size:0.7rem; text-transform:uppercase; letter-spacing:1px; color:var(--text-muted); margin-bottom:0.5rem;">Próximos aspectos — 5 años</div>
+      {% for asp in age_point.upcoming_aspects %}
+      <div style="display:flex; align-items:center; gap:0.75rem; padding:0.35rem 0; border-bottom:1px solid var(--border); font-size:0.84rem; flex-wrap:wrap;">
+        <span style="color:var(--text-muted); min-width:56px; font-size:0.78rem;">{{ asp.date }}</span>
+        <span style="color:var(--accent-light); font-weight:600;">PA {{ asp.aspect }}</span>
+        <span style="color:var(--text);">{{ planet_es.get(asp.planet, asp.planet) }}</span>
+        <span style="color:var(--text-muted); font-size:0.76rem; margin-left:auto;">edad {{ asp.age }} · en {{ asp.years_away }} a.</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <p style="color:var(--text-muted); font-size:0.75rem; margin-top:1rem; border-top:1px solid var(--border); padding-top:0.75rem;">
+      El Punto de Edad (Huber) se desplaza por las 12 casas en ciclos de 72 años, señalando procesos internos de crecimiento en cada etapa de la vida.
+    </p>
+  </div>
+  {% endif %}
+
   {% if result.aspects %}
   <div class="card">
     <h3 style="margin-bottom:1rem; color:var(--accent-light); font-size:0.85rem; text-transform:uppercase; letter-spacing:1px;">Aspectos Principales</h3>

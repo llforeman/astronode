@@ -454,6 +454,153 @@ def compute_chart(birth_date, birth_time, birth_place, lat=None, lng=None) -> di
     }
 
 
+# ── Age Point (Huber) ─────────────────────────────────────────────────────────
+
+_SIGNS_ES = [
+    'Aries', 'Tauro', 'Géminis', 'Cáncer', 'Leo', 'Virgo',
+    'Libra', 'Escorpio', 'Sagitario', 'Capricornio', 'Acuario', 'Piscis',
+]
+
+
+def compute_age_point(house_cusps: dict, birth_date, target_date=None,
+                      positions: dict = None) -> dict:
+    """
+    Compute the Huber Age Point.
+
+    The AP completes one full loop through all 12 houses in 72 years,
+    starting at the Ascendant (house 1 cusp) at birth.
+    Time spent in each house is proportional to its angular span.
+
+    Args:
+        house_cusps: {1: lon, ..., 12: lon} ecliptic degrees 0-360
+        birth_date:  datetime.date
+        target_date: datetime.date (defaults to today)
+        positions:   natal planet dict from compute_chart / _build_chart_kerykeion
+
+    Returns dict with current house, longitude, sign, aspects, upcoming aspects.
+    """
+    import datetime as _dt
+
+    if target_date is None:
+        target_date = _dt.date.today()
+
+    age = (target_date - birth_date).days / 365.25
+    cycle = int(age // 72)
+    age_in_cycle = age % 72
+
+    # Angular span of each house (degrees from its cusp to next cusp)
+    spans = {}
+    for h in range(1, 13):
+        next_h = (h % 12) + 1
+        spans[h] = (house_cusps[next_h] - house_cusps[h]) % 360
+
+    # Age at entry into each house (proportional to cumulative span)
+    entry_ages = {}
+    cumulative_deg = 0.0
+    for h in range(1, 13):
+        entry_ages[h] = cumulative_deg / 360.0 * 72.0
+        cumulative_deg += spans[h]
+
+    # Locate current house
+    current_house = 12
+    house_entry_age = entry_ages[12]
+    house_exit_age = 72.0
+    for h in range(1, 13):
+        next_h = (h % 12) + 1
+        exit_age = entry_ages[next_h] if next_h != 1 else 72.0
+        if entry_ages[h] <= age_in_cycle < exit_age:
+            current_house = h
+            house_entry_age = entry_ages[h]
+            house_exit_age = exit_age
+            break
+
+    span_h = max(spans[current_house], 0.001)
+    dur_h  = max(house_exit_age - house_entry_age, 0.001)
+    progress = (age_in_cycle - house_entry_age) / dur_h
+    ap_lon = (house_cusps[current_house] + progress * span_h) % 360
+
+    out = {
+        'age':               round(age, 1),
+        'cycle':             cycle + 1,
+        'age_in_cycle':      round(age_in_cycle, 1),
+        'longitude':         round(ap_lon, 2),
+        'sign':              _SIGNS_ES[int(ap_lon // 30) % 12],
+        'degree':            round(ap_lon % 30, 1),
+        'house':             current_house,
+        'house_entry_age':   round(house_entry_age, 1),
+        'house_exit_age':    round(house_exit_age, 1),
+        'progress_in_house': min(round(progress * 100), 100),
+        'current_aspects':   [],
+        'upcoming_aspects':  [],
+    }
+
+    if not positions:
+        return out
+
+    _ASPECT_TYPES = [
+        ('conjunción', 0), ('oposición', 180), ('trígono', 120),
+        ('cuadratura', 90), ('sextil', 60),
+    ]
+    _SKIP = {'MC', 'Medium_Coeli', 'Descendant', 'Imum_Coeli'}
+    ORB = 3.0
+
+    # Current aspects
+    current_aspects = []
+    for pname, pdata in positions.items():
+        if pname in _SKIP:
+            continue
+        plon = pdata['longitude']
+        diff = abs(ap_lon - plon) % 360
+        if diff > 180:
+            diff = 360 - diff
+        for asp_name, asp_angle in _ASPECT_TYPES:
+            orb = abs(diff - asp_angle)
+            if orb <= ORB:
+                current_aspects.append({'planet': pname, 'aspect': asp_name, 'orb': round(orb, 1)})
+                break
+    current_aspects.sort(key=lambda x: x['orb'])
+    out['current_aspects'] = current_aspects
+
+    # Upcoming aspects in next 5 years
+    upcoming = []
+    LOOKAHEAD = 5.0
+
+    for pname, pdata in positions.items():
+        if pname in _SKIP:
+            continue
+        plon = pdata['longitude']
+        for asp_name, asp_angle in _ASPECT_TYPES:
+            target_lons = {(plon + asp_angle) % 360, (plon - asp_angle) % 360}
+            for tlon in target_lons:
+                for h in range(1, 13):
+                    delta = (tlon - house_cusps[h]) % 360
+                    if delta < spans[h]:
+                        next_h2 = (h % 12) + 1
+                        exit_h = entry_ages[next_h2] if next_h2 != 1 else 72.0
+                        frac = delta / max(spans[h], 0.001)
+                        asp_age = entry_ages[h] + frac * (exit_h - entry_ages[h])
+
+                        years_away = asp_age - age_in_cycle
+                        if years_away <= 0:
+                            years_away += 72.0
+
+                        if 0 < years_away <= LOOKAHEAD:
+                            asp_date = target_date + _dt.timedelta(days=int(years_away * 365.25))
+                            upcoming.append({
+                                'planet':     pname,
+                                'aspect':     asp_name,
+                                'age':        round(age_in_cycle + years_away, 1),
+                                'date':       asp_date.strftime('%b %Y'),
+                                'years_away': round(years_away, 1),
+                            })
+                        break
+
+    upcoming.sort(key=lambda x: x['years_away'])
+    out['upcoming_aspects'] = upcoming[:10]
+
+    return out
+
+
 # ── Pipeline ───────────────────────────────────────────────────────────────────
 
 def _build_overall_text(pos_es: dict, house_cusps: dict) -> str:

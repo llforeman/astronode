@@ -1,8 +1,11 @@
 import datetime as dt
+import logging
 
 from flask import Blueprint, render_template, redirect, url_for, request, flash, session
 from flask_login import login_required, current_user
 from extensions import db
+
+log = logging.getLogger(__name__)
 
 main_bp = Blueprint('main', __name__)
 
@@ -167,11 +170,12 @@ def profile_chart(profile_id):
     from models import Profile
     p = Profile.query.filter_by(id=profile_id, user_id=current_user.id).first_or_404()
 
-    result = None
-    error  = None
+    result    = None
+    error     = None
+    age_point = None
     if p.birth_date and p.birth_place:
         try:
-            from ai import compute_chart
+            from ai import compute_chart, compute_age_point
             result = compute_chart(
                 p.birth_date,
                 p.birth_time or dt.time(12, 0),
@@ -182,6 +186,16 @@ def profile_chart(profile_id):
             result['birth_place'] = p.birth_place
             result['birth_date']  = p.birth_date
             result['birth_time']  = p.birth_time
+
+            try:
+                age_point = compute_age_point(
+                    result['house_cusps'],
+                    p.birth_date,
+                    positions=result['positions'],
+                )
+            except Exception as e:
+                log.warning('compute_age_point failed: %s', e)
+
         except Exception as e:
             error = f'No se pudo calcular la carta: {str(e)}'
     else:
@@ -191,6 +205,7 @@ def profile_chart(profile_id):
     import datetime as _dt
     reading_types = ReadingType.query.filter_by(active=True).all()
     return render_template('main/profile_chart.html', p=p, result=result, error=error,
+                           age_point=age_point,
                            reading_types=reading_types, now=_dt.date.today())
 
 
