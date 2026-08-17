@@ -6,12 +6,93 @@
 <link rel="canonical" href="{{ canonical }}">
 {% if not indexable %}<meta name="robots" content="noindex">{% endif %}
 <style>
-  .placement-hero {
-    max-width: 760px;
+  /* ── Page shell ── */
+  .guide-shell {
+    display: flex;
+    min-height: calc(100vh - 57px);
+    max-width: 1200px;
     margin: 0 auto;
-    padding: 3.5rem 1.5rem 2rem;
   }
-  @media (max-width: 540px) { .placement-hero { padding: 2rem 1rem 1.5rem; } }
+
+  /* ── Left sidebar ── */
+  .guide-sidebar {
+    width: 220px;
+    flex-shrink: 0;
+    background: var(--bg2);
+    border-right: 1px solid var(--border);
+    padding: 2rem 0.75rem 3rem;
+    position: sticky;
+    top: 57px;
+    height: calc(100vh - 57px);
+    overflow-y: auto;
+  }
+  .guide-sidebar .sidebar-top-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--text-muted);
+    padding: 0 0.5rem;
+    margin-bottom: 1rem;
+  }
+  .guide-sidebar .body-group { margin-bottom: 0.25rem; }
+  .guide-sidebar .body-link {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.55rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.92rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-decoration: none;
+    transition: background 0.15s, color 0.15s;
+  }
+  .guide-sidebar .body-link:hover { background: var(--border); color: var(--text); text-decoration: none; }
+  .guide-sidebar .body-link.active-body { color: var(--accent-light); }
+  .guide-sidebar .body-link .chevron { font-size: 0.65rem; opacity: 0.5; }
+  .guide-sidebar .sign-list { margin-bottom: 0.5rem; }
+  .guide-sidebar .sign-list a {
+    display: block;
+    padding: 0.35rem 0.75rem 0.35rem 1.5rem;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    border-radius: 6px;
+    text-decoration: none;
+    transition: background 0.15s, color 0.15s;
+  }
+  .guide-sidebar .sign-list a:hover { background: var(--border); color: var(--text); text-decoration: none; }
+  .guide-sidebar .sign-list a.active {
+    background: var(--border);
+    color: var(--accent-light);
+    font-weight: 600;
+    border-left: 2px solid var(--accent);
+    padding-left: calc(1.5rem - 2px);
+  }
+  .guide-sidebar .sidebar-divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 1rem 0.5rem;
+  }
+  .guide-sidebar .sidebar-chart-link {
+    display: block;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.85rem;
+    color: var(--accent-light);
+    border-radius: 6px;
+    text-decoration: none;
+    transition: background 0.15s;
+  }
+  .guide-sidebar .sidebar-chart-link:hover { background: var(--border); text-decoration: none; }
+
+  /* ── Main content ── */
+  .guide-main {
+    flex: 1;
+    min-width: 0;
+    padding: 3rem 2.5rem 4rem;
+    max-width: 780px;
+  }
+
   .breadcrumb {
     font-size: 0.78rem;
     color: var(--text-muted);
@@ -24,31 +105,30 @@
   .breadcrumb a { color: var(--text-muted); }
   .breadcrumb a:hover { color: var(--text); text-decoration: none; }
   .breadcrumb span { color: var(--border); }
-  .placement-hero h1 {
-    font-size: clamp(2rem, 4vw, 2.8rem);
+
+  h1.placement-title {
+    font-size: clamp(1.8rem, 3.5vw, 2.6rem);
     font-weight: 800;
     color: var(--text);
     line-height: 1.15;
-    margin-bottom: 1rem;
+    margin-bottom: 0.75rem;
     letter-spacing: -0.5px;
   }
-  .placement-hero h1 em { font-style: normal; color: var(--accent-light); }
-  .placement-hero .intro {
-    font-size: 1.05rem;
+  h1.placement-title em { font-style: normal; color: var(--accent-light); }
+  .placement-intro {
+    font-size: 1.02rem;
     color: var(--text-muted);
     line-height: 1.7;
-    max-width: 600px;
+    margin-bottom: 2.5rem;
+    max-width: 580px;
   }
-  .prose-section {
-    max-width: 760px;
-    margin: 0 auto;
-    padding: 0 1.5rem 3rem;
-  }
+
   .prose-body {
     font-family: Georgia, 'Times New Roman', serif;
     font-size: 1.05rem;
     line-height: 1.85;
     color: var(--text);
+    margin-bottom: 2.5rem;
   }
   .prose-body h2, .prose-body h3 {
     font-family: 'Segoe UI', sans-serif;
@@ -59,61 +139,18 @@
   .prose-body h2 { font-size: 1.3rem; }
   .prose-body h3 { font-size: 1.1rem; }
   .prose-body p  { margin-bottom: 1.25rem; }
+
   .cta-banner {
     background: linear-gradient(135deg, #1a1a30, #2a1040);
     border: 1px solid var(--accent);
     border-radius: 14px;
     padding: 2.5rem;
     text-align: center;
-    max-width: 760px;
-    margin: 0 auto 3rem;
+    margin-bottom: 3rem;
   }
-  .cta-banner h2 {
-    font-size: 1.4rem;
-    font-weight: 800;
-    color: var(--text);
-    margin-bottom: 0.75rem;
-    line-height: 1.3;
-  }
-  .cta-banner p {
-    color: var(--text-muted);
-    font-size: 0.95rem;
-    margin-bottom: 1.5rem;
-    line-height: 1.65;
-  }
-  .related-section {
-    max-width: 760px;
-    margin: 0 auto;
-    padding: 0 1.5rem 4rem;
-  }
-  .related-section h3 {
-    font-size: 0.72rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 1.5px;
-    color: var(--text-muted);
-    margin-bottom: 1rem;
-  }
-  .related-links {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-  }
-  .related-links a {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 0.35rem 0.75rem;
-    font-size: 0.83rem;
-    color: var(--text-muted);
-    text-decoration: none;
-    transition: border-color 0.2s, color 0.2s;
-  }
-  .related-links a:hover {
-    border-color: var(--accent);
-    color: var(--accent-light);
-    text-decoration: none;
-  }
+  .cta-banner h2 { font-size: 1.3rem; font-weight: 800; color: var(--text); margin-bottom: 0.75rem; line-height: 1.3; }
+  .cta-banner p { color: var(--text-muted); font-size: 0.95rem; margin-bottom: 1.5rem; line-height: 1.65; }
+
   .empty-notice {
     background: var(--card);
     border: 1px solid var(--border);
@@ -122,117 +159,132 @@
     text-align: center;
     color: var(--text-muted);
     font-size: 0.95rem;
-    max-width: 760px;
-    margin: 0 auto 3rem;
+    margin-bottom: 2rem;
   }
-  .placement-layout {
-    display: flex;
-    gap: 2rem;
-    max-width: 1040px;
-    margin: 0 auto;
-    padding: 0 1.5rem;
-    align-items: flex-start;
-  }
-  @media (max-width: 540px) { .placement-layout { padding: 0 1rem; } }
-  .sign-sidebar {
-    width: 170px;
-    flex-shrink: 0;
-    position: sticky;
-    top: 5rem;
-  }
-  .sign-sidebar .sidebar-label {
-    font-size: 0.68rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 1.5px;
-    color: var(--text-muted);
-    margin-bottom: 0.6rem;
-  }
-  .sign-sidebar a {
-    display: block;
-    padding: 0.4rem 0.75rem;
-    border-radius: 6px;
-    font-size: 0.88rem;
-    color: var(--text-muted);
-    text-decoration: none;
-    transition: background 0.15s, color 0.15s;
-    margin-bottom: 2px;
-  }
-  .sign-sidebar a:hover { background: var(--bg2); color: var(--text); text-decoration: none; }
-  .sign-sidebar a.active {
-    background: var(--bg2);
-    color: var(--accent-light);
-    font-weight: 600;
-    border-left: 2px solid var(--accent);
-    padding-left: calc(0.75rem - 2px);
-  }
-  .placement-main { flex: 1; min-width: 0; }
-  @media (max-width: 700px) {
-    .placement-layout { flex-direction: column; }
-    .sign-sidebar { width: 100%; position: static; display: flex; flex-wrap: wrap; gap: 0.4rem; }
-    .sign-sidebar .sidebar-label { width: 100%; }
-    .sign-sidebar a { display: inline-block; background: var(--bg2); margin-bottom: 0; }
+
+  /* ── Mobile ── */
+  @media (max-width: 768px) {
+    .guide-shell { flex-direction: column; }
+    .guide-sidebar {
+      width: 100%;
+      height: auto;
+      position: static;
+      border-right: none;
+      border-bottom: 1px solid var(--border);
+      padding: 1rem 1rem 0.75rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.25rem;
+      align-items: center;
+    }
+    .guide-sidebar .sidebar-top-label { width: 100%; margin-bottom: 0.5rem; }
+    .guide-sidebar .sidebar-divider,
+    .guide-sidebar .sidebar-chart-link { display: none; }
+    .guide-sidebar .body-group { margin-bottom: 0; }
+    .guide-sidebar .body-link {
+      padding: 0.4rem 0.75rem;
+      font-size: 0.85rem;
+      border: 1px solid var(--border);
+      background: var(--card);
+    }
+    .guide-sidebar .body-link .chevron { display: none; }
+    .guide-sidebar .body-link.active-body {
+      background: var(--border);
+      color: var(--accent-light);
+    }
+    .guide-sidebar .sign-list {
+      width: 100%;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.25rem;
+      margin: 0.5rem 0 0.25rem;
+    }
+    .guide-sidebar .sign-list a {
+      display: inline-block;
+      padding: 0.3rem 0.65rem;
+      font-size: 0.8rem;
+      border: 1px solid var(--border);
+      background: var(--card);
+      border-radius: 6px;
+    }
+    .guide-sidebar .sign-list a.active {
+      border-color: var(--accent);
+      border-left: 1px solid var(--accent);
+      padding-left: 0.65rem;
+    }
+    .guide-main { padding: 1.5rem 1rem 3rem; }
+    .cta-banner { padding: 1.5rem 1.25rem; }
   }
 </style>
 {% endblock %}
 
 {% block content %}
+{% set ALL_BODIES = [('sol','Sol'), ('luna','Luna'), ('ascendente','Ascendente')] %}
 
-<div class="placement-hero">
-  <div class="breadcrumb">
-    <a href="{{ url_for('public.landing') }}">Inicio</a>
-    <span>›</span>
-    <a href="{{ url_for('public.body_index', body_slug=body_slug) }}">{{ body_label }}</a>
-    <span>›</span>
-    <span>{{ sign_label }}</span>
-  </div>
-  <h1>{{ body_label }} en <em>{{ sign_label }}</em></h1>
-  <p class="intro">
-    {{ content.meta_desc or 'Qué significa ' + body_label + ' en ' + sign_label + ' en tu carta astral y cómo influye en tu vida.' }}
-  </p>
-</div>
+<div class="guide-shell">
 
-<div class="placement-layout">
-  <!-- Sign sidebar -->
-  <nav class="sign-sidebar">
-    <div class="sidebar-label">{{ body_label }} en...</div>
-    {% for s in all_signs_nav %}
-    <a href="{{ url_for('public.placement_page', body_slug=body_slug, sign_slug=s.slug) }}"
-       {% if s.active %}class="active"{% endif %}>
-      {{ s.sign_es }}
-    </a>
-    {% endfor %}
-  </nav>
+  <!-- ── Sidebar ── -->
+  <nav class="guide-sidebar">
+    <div class="sidebar-top-label">Guías</div>
 
-  <!-- Main content -->
-  <div class="placement-main">
-    <div class="prose-section" style="max-width:none; padding:0 0 3rem;">
-      {% if content.seo_body %}
-      <div class="prose-body">
-        {{ content.seo_body | safe }}
-        {% if content.preview_hook %}
-        <p style="color:var(--accent-light); font-style:italic; margin-top:1.5rem; border-left:3px solid var(--accent); padding-left:1rem;">{{ content.preview_hook }}</p>
-        {% endif %}
-      </div>
-      {% else %}
-      <div class="empty-notice" style="margin:0 0 3rem;">
-        El contenido para esta página está en preparación. Vuelve pronto.
+    {% for b_slug, b_label in ALL_BODIES %}
+    <div class="body-group">
+      <a href="{{ url_for('public.body_index', body_slug=b_slug) }}"
+         class="body-link {% if b_slug == body_slug %}active-body{% endif %}">
+        {{ b_label }}
+        <span class="chevron">{% if b_slug == body_slug %}▾{% else %}›{% endif %}</span>
+      </a>
+      {% if b_slug == body_slug %}
+      <div class="sign-list">
+        {% for s in all_signs_nav %}
+        <a href="{{ url_for('public.placement_page', body_slug=b_slug, sign_slug=s.slug) }}"
+           class="{% if s.active %}active{% endif %}">{{ s.sign_es }}</a>
+        {% endfor %}
       </div>
       {% endif %}
     </div>
+    {% endfor %}
 
-    <div class="cta-banner" style="margin: 0 0 3rem;">
+    <hr class="sidebar-divider">
+    <a href="{{ url_for('public.chart') }}" class="sidebar-chart-link">✦ Calcular mi carta</a>
+  </nav>
+
+  <!-- ── Main ── -->
+  <main class="guide-main">
+    <div class="breadcrumb">
+      <a href="{{ url_for('public.landing') }}">Inicio</a>
+      <span>›</span>
+      <a href="{{ url_for('public.body_index', body_slug=body_slug) }}">{{ body_label }}</a>
+      <span>›</span>
+      <span>{{ sign_label }}</span>
+    </div>
+
+    <h1 class="placement-title">{{ body_label }} en <em>{{ sign_label }}</em></h1>
+    <p class="placement-intro">
+      {{ content.meta_desc or 'Qué significa ' + body_label + ' en ' + sign_label + ' en tu carta astral y cómo influye en tu vida.' }}
+    </p>
+
+    {% if content.seo_body %}
+    <div class="prose-body">
+      {{ content.seo_body | safe }}
+      {% if content.preview_hook %}
+      <p style="color:var(--accent-light); font-style:italic; margin-top:1.5rem; border-left:3px solid var(--accent); padding-left:1rem;">{{ content.preview_hook }}</p>
+      {% endif %}
+    </div>
+    {% else %}
+    <div class="empty-notice">
+      El contenido para esta página está en preparación. Vuelve pronto.
+    </div>
+    {% endif %}
+
+    <div class="cta-banner">
       <h2>¿Tienes {{ body_label }} en {{ sign_label }}? Descubre cómo encaja en el resto de tu carta.</h2>
-      <p>
-        El {{ body_label }} es solo una pieza. Tu carta natal completa — con la Luna, el Ascendente,
-        las casas y los aspectos — es donde aparece la imagen real de quién eres.
-        Calcula la tuya en segundos.
-      </p>
+      <p>El {{ body_label }} es solo una pieza. Tu carta natal completa — con la Luna, el Ascendente, las casas y los aspectos — es donde aparece la imagen real de quién eres.</p>
       <a href="{{ url_for('public.chart') }}" class="btn btn-primary" style="font-size:1rem; padding:0.75rem 2rem;">
         Calcular mi carta — es gratis →
       </a>
     </div>
-  </div>
-</div>
+  </main>
 
+</div>
 {% endblock %}

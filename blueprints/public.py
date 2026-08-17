@@ -224,12 +224,18 @@ def body_index(body_slug):
                                   .order_by(PlacementContent.sign).all()
     published_count = sum(1 for r in rows if r.status == 'published')
 
+    all_signs_nav = [
+        {'sign_en': s, 'sign_es': SIGN_LABEL_ES[s], 'slug': SIGN_EN_TO_ES[s], 'active': False}
+        for s in ALL_SIGNS_EN
+    ]
+
     return render_template(
         'public/body_index.html',
         body=body,
         body_slug=body_slug,
         body_label=BODY_LABEL_ES[body],
         rows=rows,
+        all_signs_nav=all_signs_nav,
         sign_en_to_es=SIGN_EN_TO_ES,
         sign_label_es=SIGN_LABEL_ES,
         indexable=published_count >= 8,
