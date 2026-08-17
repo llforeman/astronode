@@ -162,11 +162,13 @@ def chart():
             sun_sign    = result['positions'].get('Sun',       {}).get('sign')
             moon_sign   = result['positions'].get('Moon',      {}).get('sign')
             rising_sign = result['positions'].get('Ascendant', {}).get('sign')
-            log.info('chart preview signs: sun=%r moon=%r rising=%r', sun_sign, moon_sign, rising_sign)
+            print(f'[PREVIEW DEBUG] sun={sun_sign!r} moon={moon_sign!r} rising={rising_sign!r}', flush=True)
             if sun_sign and moon_sign and rising_sign:
                 preview = build_chart_preview(sun_sign, moon_sign, rising_sign)
-                log.info('chart preview has_any=%s', preview.get('has_any') if preview else None)
+                print(f'[PREVIEW DEBUG] has_any={preview.get("has_any") if preview else None}', flush=True)
         except Exception as e:
+            import traceback
+            print(f'[PREVIEW ERROR] {e}\n{traceback.format_exc()}', flush=True)
             log.exception('build_chart_preview failed: %s', e)
             preview = None
 
