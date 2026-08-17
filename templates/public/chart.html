@@ -130,18 +130,18 @@
   <div class="form-card" style="border-color: var(--accent); font-family: Georgia, serif; line-height: 1.85; font-size: 1.02rem;">
     <div class="section-title" style="margin-top:0;">Tu lectura preliminar</div>
 
+    {% if preview.interaction.available %}
+    <p style="color: var(--accent-light); font-style: italic; border-left: 3px solid var(--accent); padding-left: 1rem; margin-bottom: 1.25rem;">
+      {{ preview.interaction.text }}
+    </p>
+    {% endif %}
+
     {% if preview.sun.available %}
     <p style="margin-bottom: 1.25rem;">{{ preview.sun.text }}</p>
     {% endif %}
 
     {% if preview.moon.available %}
     <p style="margin-bottom: 1.25rem;">{{ preview.moon.text }}</p>
-    {% endif %}
-
-    {% if preview.interaction.available %}
-    <p style="color: var(--accent-light); font-style: italic; border-left: 3px solid var(--accent); padding-left: 1rem; margin-bottom: 1.25rem;">
-      {{ preview.interaction.text }}
-    </p>
     {% endif %}
 
     <p style="color: var(--text-muted); font-family: 'Segoe UI', sans-serif; font-size: 0.88rem; border-top: 1px solid var(--border); padding-top: 1rem; margin-bottom: 0;">
