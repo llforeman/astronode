@@ -1,0 +1,181 @@
+{% extends "public_base.html" %}
+{% block title %}{{ body_label }} en {{ sign_label }} — Astronode{% endblock %}
+{% block meta_desc %}{{ content.meta_desc or (body_label + ' en ' + sign_label + ': qué significa en tu carta astral, cómo influye en tu personalidad y de qué forma interactúa con el resto de tu carta.') }}{% endblock %}
+
+{% block extra_css %}
+<style>
+  .placement-hero {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 3.5rem 1.5rem 2.5rem;
+  }
+  .breadcrumb {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    margin-bottom: 1.25rem;
+    display: flex;
+    gap: 0.4rem;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .breadcrumb a { color: var(--text-muted); }
+  .breadcrumb a:hover { color: var(--text); text-decoration: none; }
+  .breadcrumb span { color: var(--border); }
+  .placement-hero h1 {
+    font-size: clamp(2rem, 4vw, 2.8rem);
+    font-weight: 800;
+    color: var(--text);
+    line-height: 1.15;
+    margin-bottom: 1rem;
+    letter-spacing: -0.5px;
+  }
+  .placement-hero h1 em { font-style: normal; color: var(--accent-light); }
+  .placement-hero .intro {
+    font-size: 1.05rem;
+    color: var(--text-muted);
+    line-height: 1.7;
+    max-width: 600px;
+  }
+  .prose-section {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 0 1.5rem 3rem;
+  }
+  .prose-body {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 1.05rem;
+    line-height: 1.85;
+    color: var(--text);
+  }
+  .prose-body h2, .prose-body h3 {
+    font-family: 'Segoe UI', sans-serif;
+    color: var(--accent-light);
+    font-weight: 700;
+    margin: 2rem 0 0.75rem;
+  }
+  .prose-body h2 { font-size: 1.3rem; }
+  .prose-body h3 { font-size: 1.1rem; }
+  .prose-body p  { margin-bottom: 1.25rem; }
+  .cta-banner {
+    background: linear-gradient(135deg, #1a1a30, #2a1040);
+    border: 1px solid var(--accent);
+    border-radius: 14px;
+    padding: 2.5rem;
+    text-align: center;
+    max-width: 760px;
+    margin: 0 auto 3rem;
+  }
+  .cta-banner h2 {
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: var(--text);
+    margin-bottom: 0.75rem;
+    line-height: 1.3;
+  }
+  .cta-banner p {
+    color: var(--text-muted);
+    font-size: 0.95rem;
+    margin-bottom: 1.5rem;
+    line-height: 1.65;
+  }
+  .related-section {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 0 1.5rem 4rem;
+  }
+  .related-section h3 {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--text-muted);
+    margin-bottom: 1rem;
+  }
+  .related-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .related-links a {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.35rem 0.75rem;
+    font-size: 0.83rem;
+    color: var(--text-muted);
+    text-decoration: none;
+    transition: border-color 0.2s, color 0.2s;
+  }
+  .related-links a:hover {
+    border-color: var(--accent);
+    color: var(--accent-light);
+    text-decoration: none;
+  }
+  .empty-notice {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 3rem;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.95rem;
+    max-width: 760px;
+    margin: 0 auto 3rem;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="placement-hero">
+  <div class="breadcrumb">
+    <a href="{{ url_for('public.landing') }}">Inicio</a>
+    <span>›</span>
+    <span>{{ body_label }}</span>
+    <span>›</span>
+    <span>{{ sign_label }}</span>
+  </div>
+  <h1>{{ body_label }} en <em>{{ sign_label }}</em></h1>
+  <p class="intro">
+    {{ content.meta_desc or 'Qué significa ' + body_label + ' en ' + sign_label + ' en tu carta astral y cómo influye en tu vida.' }}
+  </p>
+</div>
+
+<div class="prose-section">
+  {% if content.seo_body %}
+  <div class="prose-body">
+    {{ content.seo_body | safe }}
+  </div>
+  {% else %}
+  <div class="empty-notice">
+    El contenido para esta página está en preparación. Vuelve pronto.
+  </div>
+  {% endif %}
+</div>
+
+<div class="cta-banner" style="padding-left:1.5rem; padding-right:1.5rem; margin-left:1.5rem; margin-right:1.5rem; max-width:calc(760px - 3rem);">
+  <h2>¿Tienes {{ body_label }} en {{ sign_label }}? Descubre cómo encaja en el resto de tu carta.</h2>
+  <p>
+    El {{ body_label }} es solo una pieza. Tu carta natal completa — con la Luna, el Ascendente,
+    las casas y los aspectos — es donde aparece la imagen real de quién eres.
+    Calcula la tuya en segundos.
+  </p>
+  <a href="{{ url_for('public.chart') }}" class="btn btn-primary" style="font-size:1rem; padding:0.75rem 2rem;">
+    Calcular mi carta — es gratis →
+  </a>
+</div>
+
+{% if related %}
+<div class="related-section">
+  <h3>{{ body_label }} en otros signos</h3>
+  <div class="related-links">
+    {% for r in related %}
+    <a href="{{ url_for('public.placement_page', body_slug=body_slug, sign_slug=sign_en_to_es[r.sign]) }}">
+      {{ body_label }} en {{ sign_label_es[r.sign] }}
+    </a>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}

@@ -151,6 +151,34 @@ class Subscription(db.Model):
     cancelled_at             = db.Column(db.DateTime, nullable=True)
 
 
+class PlacementContent(db.Model):
+    __tablename__ = 'placement_content'
+
+    id           = db.Column(db.Integer, primary_key=True)
+    body         = db.Column(db.String(10), nullable=False)   # sun / moon / rising
+    sign         = db.Column(db.String(20), nullable=False)   # English: Aries, Taurus...
+    seo_body     = db.Column(db.Text, nullable=True)          # 800-1200 words, HTML
+    preview_text = db.Column(db.Text, nullable=True)          # 200-300 words, ends mid-thought
+    meta_title   = db.Column(db.String(100), nullable=True)
+    meta_desc    = db.Column(db.String(200), nullable=True)
+    lang         = db.Column(db.String(5), default='es', nullable=False)
+    updated_at   = db.Column(db.DateTime, default=datetime.utcnow)
+
+    __table_args__ = (db.UniqueConstraint('body', 'sign', 'lang', name='uq_placement_lang'),)
+
+
+class SunMoonInteraction(db.Model):
+    __tablename__ = 'sun_moon_interaction'
+
+    id     = db.Column(db.Integer, primary_key=True)
+    sign_a = db.Column(db.String(20), nullable=False)  # alphabetically first of the pair
+    sign_b = db.Column(db.String(20), nullable=False)  # alphabetically second (or same)
+    text   = db.Column(db.Text, nullable=True)          # 1-2 sentences
+    lang   = db.Column(db.String(5), default='es', nullable=False)
+
+    __table_args__ = (db.UniqueConstraint('sign_a', 'sign_b', 'lang', name='uq_sunmoon_lang'),)
+
+
 class Notification(db.Model):
     __tablename__ = 'notification'
 

@@ -1,9 +1,53 @@
 import datetime
-from flask import Blueprint, render_template, redirect, url_for, request, flash, session
+from flask import Blueprint, render_template, redirect, url_for, request, flash, session, abort
 from flask_login import current_user
 from extensions import limiter
 
 public_bp = Blueprint('public', __name__)
+
+# ── Sign / body mappings ───────────────────────────────────────────────────────
+
+SIGN_ES_TO_EN = {
+    'aries': 'Aries', 'tauro': 'Taurus', 'geminis': 'Gemini',
+    'cancer': 'Cancer', 'leo': 'Leo', 'virgo': 'Virgo',
+    'libra': 'Libra', 'escorpio': 'Scorpio', 'sagitario': 'Sagittarius',
+    'capricornio': 'Capricorn', 'acuario': 'Aquarius', 'piscis': 'Pisces',
+}
+SIGN_EN_TO_ES = {v: k for k, v in SIGN_ES_TO_EN.items()}
+
+BODY_ES_TO_EN = {'sol': 'sun', 'luna': 'moon', 'ascendente': 'rising'}
+BODY_LABEL_ES = {'sun': 'Sol', 'moon': 'Luna', 'rising': 'Ascendente'}
+SIGN_LABEL_ES = {
+    'Aries': 'Aries', 'Taurus': 'Tauro', 'Gemini': 'Géminis',
+    'Cancer': 'Cáncer', 'Leo': 'Leo', 'Virgo': 'Virgo',
+    'Libra': 'Libra', 'Scorpio': 'Escorpio', 'Sagittarius': 'Sagitario',
+    'Capricorn': 'Capricornio', 'Aquarius': 'Acuario', 'Pisces': 'Piscis',
+}
+
+ALL_SIGNS_EN = list(SIGN_ES_TO_EN.values())
+
+
+def build_chart_preview(sun_sign, moon_sign, rising_sign):
+    """Assemble preview snippets from DB for a given chart.
+
+    Returns a dict with keys: sun_text, interaction_text, moon_text, rising_text.
+    Any value may be None if content has not been generated yet.
+    """
+    from models import PlacementContent, SunMoonInteraction
+
+    def get_preview(body, sign):
+        row = PlacementContent.query.filter_by(body=body, sign=sign, lang='es').first()
+        return row.preview_text if row else None
+
+    sa_, sb = sorted([sun_sign, moon_sign])
+    interaction = SunMoonInteraction.query.filter_by(sign_a=sa_, sign_b=sb, lang='es').first()
+
+    return {
+        'sun_text':         get_preview('sun', sun_sign),
+        'interaction_text': interaction.text if interaction else None,
+        'moon_text':        get_preview('moon', moon_sign),
+        'rising_text':      get_preview('rising', rising_sign),
+    }
 
 
 @public_bp.route('/')
@@ -90,3 +134,36 @@ def chart():
                     error = f'Could not compute chart: {str(e)}'
 
     return render_template('public/chart.html', result=result, error=error, form_data=form_data)
+
+
+# ── Placement SEO pages ────────────────────────────────────────────────────────
+
+@public_bp.route('/<body_slug>/<sign_slug>')
+def placement_page(body_slug, sign_slug):
+    if body_slug not in BODY_ES_TO_EN or sign_slug not in SIGN_ES_TO_EN:
+        abort(404)
+
+    from models import PlacementContent
+    body = BODY_ES_TO_EN[body_slug]
+    sign = SIGN_ES_TO_EN[sign_slug]
+
+    content = PlacementContent.query.filter_by(body=body, sign=sign, lang='es').first_or_404()
+
+    # Related placements for internal linking
+    related = PlacementContent.query.filter_by(body=body, lang='es')\
+                                    .filter(PlacementContent.sign != sign)\
+                                    .order_by(PlacementContent.sign).all()
+
+    return render_template(
+        'public/placement.html',
+        content=content,
+        body=body,
+        sign=sign,
+        body_slug=body_slug,
+        sign_slug=sign_slug,
+        body_label=BODY_LABEL_ES[body],
+        sign_label=SIGN_LABEL_ES[sign],
+        related=related,
+        sign_en_to_es=SIGN_EN_TO_ES,
+        sign_label_es=SIGN_LABEL_ES,
+    )
