@@ -1,0 +1,137 @@
+{% extends "public_base.html" %}
+{% block title %}{{ body_label }} por signo — Astronode{% endblock %}
+{% block meta_desc %}Qué significa el {{ body_label }} en cada uno de los 12 signos del zodiaco. Guías detalladas por signo.{% endblock %}
+
+{% block extra_css %}
+<style>
+  .index-hero {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 3.5rem 1.5rem 2.5rem;
+  }
+  .breadcrumb {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    margin-bottom: 1.25rem;
+    display: flex;
+    gap: 0.4rem;
+    align-items: center;
+  }
+  .breadcrumb a { color: var(--text-muted); }
+  .breadcrumb a:hover { color: var(--text); text-decoration: none; }
+  .breadcrumb span { color: var(--border); }
+  .index-hero h1 {
+    font-size: clamp(1.8rem, 4vw, 2.5rem);
+    font-weight: 800;
+    color: var(--text);
+    margin-bottom: 0.75rem;
+    letter-spacing: -0.5px;
+  }
+  .index-hero p {
+    color: var(--text-muted);
+    font-size: 1rem;
+    line-height: 1.7;
+    max-width: 560px;
+  }
+  .signs-grid {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 0 1.5rem 4rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 0.75rem;
+  }
+  .sign-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.1rem 1.25rem;
+    text-decoration: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    transition: border-color 0.2s, transform 0.15s;
+  }
+  .sign-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+    text-decoration: none;
+  }
+  .sign-card .sign-name {
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--text);
+  }
+  .sign-card .sign-status {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+  }
+  .sign-card.available .sign-name { color: var(--accent-light); }
+  .other-bodies {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 0 1.5rem 4rem;
+  }
+  .other-bodies h3 {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--text-muted);
+    margin-bottom: 1rem;
+  }
+  .other-links { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+  .other-links a {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.4rem 1rem;
+    font-size: 0.88rem;
+    color: var(--text-muted);
+    transition: border-color 0.2s, color 0.2s;
+  }
+  .other-links a:hover { border-color: var(--accent); color: var(--accent-light); text-decoration: none; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="index-hero">
+  <div class="breadcrumb">
+    <a href="{{ url_for('public.landing') }}">Inicio</a>
+    <span>›</span>
+    <span>{{ body_label }}</span>
+  </div>
+  <h1>{{ body_label }} en los 12 signos</h1>
+  <p>Selecciona un signo para ver qué significa {{ body_label }} en {{ body_label|lower }} en tu carta astral.</p>
+</div>
+
+<div class="signs-grid">
+  {% set sign_order = ['Aries','Taurus','Gemini','Cancer','Leo','Virgo','Libra','Scorpio','Sagittarius','Capricorn','Aquarius','Pisces'] %}
+  {% set row_map = {} %}
+  {% for r in rows %}{% set _ = row_map.update({r.sign: r}) %}{% endfor %}
+
+  {% for sign_en in sign_order %}
+    {% set slug = sign_en_to_es[sign_en] %}
+    {% set label = sign_label_es[sign_en] %}
+    {% set r = row_map.get(sign_en) %}
+    {% set is_available = r and r.seo_body %}
+    <a href="{{ url_for('public.placement_page', body_slug=body_slug, sign_slug=slug) }}"
+       class="sign-card {% if is_available %}available{% endif %}">
+      <div class="sign-name">{{ body_label }} en {{ label }}</div>
+      <div class="sign-status">{% if is_available %}Disponible{% else %}Próximamente{% endif %}</div>
+    </a>
+  {% endfor %}
+</div>
+
+<div class="other-bodies">
+  <h3>También en Astronode</h3>
+  <div class="other-links">
+    {% if body_slug != 'sol' %}<a href="{{ url_for('public.body_index', body_slug='sol') }}">Sol por signo</a>{% endif %}
+    {% if body_slug != 'luna' %}<a href="{{ url_for('public.body_index', body_slug='luna') }}">Luna por signo</a>{% endif %}
+    {% if body_slug != 'ascendente' %}<a href="{{ url_for('public.body_index', body_slug='ascendente') }}">Ascendente por signo</a>{% endif %}
+    <a href="{{ url_for('public.chart') }}">Calcular mi carta →</a>
+  </div>
+</div>
+
+{% endblock %}

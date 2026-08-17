@@ -1,5 +1,5 @@
 import datetime
-from flask import Blueprint, render_template, redirect, url_for, request, flash, session, abort
+from flask import Blueprint, render_template, redirect, url_for, request, flash, session, abort, Response
 from flask_login import current_user
 from extensions import limiter
 
@@ -15,9 +15,16 @@ SIGN_ES_TO_EN = {
 }
 SIGN_EN_TO_ES = {v: k for k, v in SIGN_ES_TO_EN.items()}
 
-BODY_ES_TO_EN = {'sol': 'sun', 'luna': 'moon', 'ascendente': 'rising'}
-BODY_LABEL_ES = {'sun': 'Sol', 'moon': 'Luna', 'rising': 'Ascendente'}
-SIGN_LABEL_ES = {
+# Accent variants that 301 to the canonical (no-accent) slug
+SIGN_SLUG_ALIASES = {
+    'géminis': 'geminis',
+    'gémeinis': 'geminis',
+    'cáncer': 'cancer',
+}
+
+BODY_ES_TO_EN  = {'sol': 'sun', 'luna': 'moon', 'ascendente': 'rising'}
+BODY_LABEL_ES  = {'sun': 'Sol', 'moon': 'Luna', 'rising': 'Ascendente'}
+SIGN_LABEL_ES  = {
     'Aries': 'Aries', 'Taurus': 'Tauro', 'Gemini': 'Géminis',
     'Cancer': 'Cáncer', 'Leo': 'Leo', 'Virgo': 'Virgo',
     'Libra': 'Libra', 'Scorpio': 'Escorpio', 'Sagittarius': 'Sagitario',
@@ -27,28 +34,40 @@ SIGN_LABEL_ES = {
 ALL_SIGNS_EN = list(SIGN_ES_TO_EN.values())
 
 
+# ── Preview stitcher ───────────────────────────────────────────────────────────
+
 def build_chart_preview(sun_sign, moon_sign, rising_sign):
     """Assemble preview snippets from DB for a given chart.
 
-    Returns a dict with keys: sun_text, interaction_text, moon_text, rising_text.
-    Any value may be None if content has not been generated yet.
+    Returns a dict where each placement has {'text': str|None, 'available': bool}.
+    Degrades gracefully — partial previews are valid.
     """
     from models import PlacementContent, SunMoonInteraction
 
-    def get_preview(body, sign):
+    def get_piece(body, sign):
         row = PlacementContent.query.filter_by(body=body, sign=sign, lang='es').first()
-        return row.preview_text if row else None
+        text = row.preview_text if row else None
+        return {'text': text, 'available': bool(text)}
 
-    sa_, sb = sorted([sun_sign, moon_sign])
-    interaction = SunMoonInteraction.query.filter_by(sign_a=sa_, sign_b=sb, lang='es').first()
+    sun    = get_piece('sun',    sun_sign)
+    moon   = get_piece('moon',   moon_sign)
+    rising = get_piece('rising', rising_sign)
+
+    row = SunMoonInteraction.query.filter_by(
+        sun_sign=sun_sign, moon_sign=moon_sign, lang='es'
+    ).first()
+    interaction = {'text': row.text if row else None, 'available': bool(row and row.text)}
 
     return {
-        'sun_text':         get_preview('sun', sun_sign),
-        'interaction_text': interaction.text if interaction else None,
-        'moon_text':        get_preview('moon', moon_sign),
-        'rising_text':      get_preview('rising', rising_sign),
+        'sun':         sun,
+        'moon':        moon,
+        'rising':      rising,
+        'interaction': interaction,
+        'has_any':     sun['available'] or moon['available'] or rising['available'],
     }
 
+
+# ── Static pages ───────────────────────────────────────────────────────────────
 
 @public_bp.route('/')
 def landing():
@@ -80,16 +99,16 @@ def refunds():
 @public_bp.route('/chart', methods=['GET', 'POST'])
 @limiter.limit("200 per hour")
 def chart():
-    result     = None
-    error      = None
-    form_data  = {}
+    result    = None
+    error     = None
+    form_data = {}
 
     if request.method == 'POST':
-        birth_date_str  = request.form.get('birth_date', '').strip()
-        birth_time_str  = request.form.get('birth_time', '').strip()
-        birth_place     = request.form.get('birth_place', '').strip()
-        birth_lat_str   = request.form.get('birth_lat', '').strip()
-        birth_lng_str   = request.form.get('birth_lng', '').strip()
+        birth_date_str = request.form.get('birth_date', '').strip()
+        birth_time_str = request.form.get('birth_time', '').strip()
+        birth_place    = request.form.get('birth_place', '').strip()
+        birth_lat_str  = request.form.get('birth_lat', '').strip()
+        birth_lng_str  = request.form.get('birth_lng', '').strip()
 
         try:
             birth_lat = float(birth_lat_str) if birth_lat_str else None
@@ -122,7 +141,6 @@ def chart():
                     result['birth_date']  = birth_date
                     result['birth_time']  = birth_time
 
-                    # Store in session so logged-in users can save it as a profile
                     session['chart_prefill'] = {
                         'birth_date':  birth_date_str,
                         'birth_time':  birth_time_str,
@@ -136,10 +154,74 @@ def chart():
     return render_template('public/chart.html', result=result, error=error, form_data=form_data)
 
 
+# ── Sitemap ────────────────────────────────────────────────────────────────────
+
+@public_bp.route('/sitemap.xml')
+def sitemap():
+    from models import PlacementContent
+
+    static_urls = [
+        url_for('public.landing',  _external=True),
+        url_for('public.chart',    _external=True),
+        url_for('public.pricing',  _external=True),
+    ]
+    for body_slug in BODY_ES_TO_EN:
+        static_urls.append(url_for('public.body_index', body_slug=body_slug, _external=True))
+
+    # Only include placement pages where seo_body is populated
+    indexed_rows = PlacementContent.query.filter(
+        PlacementContent.seo_body.isnot(None),
+        PlacementContent.lang == 'es',
+    ).all()
+    placement_urls = [
+        url_for('public.placement_page',
+                body_slug={v: k for k, v in BODY_ES_TO_EN.items()}[r.body],
+                sign_slug=SIGN_EN_TO_ES[r.sign],
+                _external=True)
+        for r in indexed_rows
+    ]
+
+    xml = render_template('public/sitemap.xml',
+                          static_urls=static_urls,
+                          placement_urls=placement_urls)
+    return Response(xml, mimetype='application/xml')
+
+
+# ── Body index pages (/sol, /luna, /ascendente) ───────────────────────────────
+
+@public_bp.route('/<body_slug>')
+def body_index(body_slug):
+    if body_slug not in BODY_ES_TO_EN:
+        abort(404)
+
+    from models import PlacementContent
+    body = BODY_ES_TO_EN[body_slug]
+    rows = PlacementContent.query.filter_by(body=body, lang='es')\
+                                  .order_by(PlacementContent.sign).all()
+
+    return render_template(
+        'public/body_index.html',
+        body=body,
+        body_slug=body_slug,
+        body_label=BODY_LABEL_ES[body],
+        rows=rows,
+        sign_en_to_es=SIGN_EN_TO_ES,
+        sign_label_es=SIGN_LABEL_ES,
+    )
+
+
 # ── Placement SEO pages ────────────────────────────────────────────────────────
 
 @public_bp.route('/<body_slug>/<sign_slug>')
 def placement_page(body_slug, sign_slug):
+    # 301 for accented slug variants
+    if sign_slug in SIGN_SLUG_ALIASES:
+        return redirect(
+            url_for('public.placement_page', body_slug=body_slug,
+                    sign_slug=SIGN_SLUG_ALIASES[sign_slug]),
+            code=301,
+        )
+
     if body_slug not in BODY_ES_TO_EN or sign_slug not in SIGN_ES_TO_EN:
         abort(404)
 
@@ -149,10 +231,15 @@ def placement_page(body_slug, sign_slug):
 
     content = PlacementContent.query.filter_by(body=body, sign=sign, lang='es').first_or_404()
 
-    # Related placements for internal linking
+    # noindex until seo_body is populated
+    indexable = bool(content.seo_body)
+
     related = PlacementContent.query.filter_by(body=body, lang='es')\
                                     .filter(PlacementContent.sign != sign)\
                                     .order_by(PlacementContent.sign).all()
+
+    canonical = url_for('public.placement_page', body_slug=body_slug,
+                        sign_slug=sign_slug, _external=True)
 
     return render_template(
         'public/placement.html',
@@ -166,4 +253,6 @@ def placement_page(body_slug, sign_slug):
         related=related,
         sign_en_to_es=SIGN_EN_TO_ES,
         sign_label_es=SIGN_LABEL_ES,
+        indexable=indexable,
+        canonical=canonical,
     )

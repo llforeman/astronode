@@ -170,13 +170,13 @@ class PlacementContent(db.Model):
 class SunMoonInteraction(db.Model):
     __tablename__ = 'sun_moon_interaction'
 
-    id     = db.Column(db.Integer, primary_key=True)
-    sign_a = db.Column(db.String(20), nullable=False)  # alphabetically first of the pair
-    sign_b = db.Column(db.String(20), nullable=False)  # alphabetically second (or same)
-    text   = db.Column(db.Text, nullable=True)          # 1-2 sentences
-    lang   = db.Column(db.String(5), default='es', nullable=False)
+    id        = db.Column(db.Integer, primary_key=True)
+    sun_sign  = db.Column(db.String(20), nullable=False)  # English: Aries, Taurus...
+    moon_sign = db.Column(db.String(20), nullable=False)  # English: Aries, Taurus...
+    text      = db.Column(db.Text, nullable=True)          # 1-2 sentences, directional
+    lang      = db.Column(db.String(5), default='es', nullable=False)
 
-    __table_args__ = (db.UniqueConstraint('sign_a', 'sign_b', 'lang', name='uq_sunmoon_lang'),)
+    __table_args__ = (db.UniqueConstraint('sun_sign', 'moon_sign', 'lang', name='uq_sunmoon_lang'),)
 
 
 class Notification(db.Model):

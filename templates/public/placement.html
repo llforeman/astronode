@@ -1,8 +1,10 @@
 {% extends "public_base.html" %}
-{% block title %}{{ body_label }} en {{ sign_label }} — Astronode{% endblock %}
+{% block title %}{{ content.meta_title or (body_label + ' en ' + sign_label + ' — Astronode') }}{% endblock %}
 {% block meta_desc %}{{ content.meta_desc or (body_label + ' en ' + sign_label + ': qué significa en tu carta astral, cómo influye en tu personalidad y de qué forma interactúa con el resto de tu carta.') }}{% endblock %}
 
 {% block extra_css %}
+<link rel="canonical" href="{{ canonical }}">
+{% if not indexable %}<meta name="robots" content="noindex">{% endif %}
 <style>
   .placement-hero {
     max-width: 760px;
