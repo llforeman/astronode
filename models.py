@@ -159,9 +159,11 @@ class PlacementContent(db.Model):
     sign         = db.Column(db.String(20), nullable=False)   # English: Aries, Taurus...
     seo_body     = db.Column(db.Text, nullable=True)          # 800-1200 words, HTML
     preview_text = db.Column(db.Text, nullable=True)          # 200-300 words, ends mid-thought
+    preview_hook = db.Column(db.Text, nullable=True)          # 1-2 sentences, forward-pointing close
     meta_title   = db.Column(db.String(100), nullable=True)
     meta_desc    = db.Column(db.String(200), nullable=True)
     lang         = db.Column(db.String(5), default='es', nullable=False)
+    status       = db.Column(db.String(20), default='generated', nullable=False)  # generated | published
     updated_at   = db.Column(db.DateTime, default=datetime.utcnow)
 
     __table_args__ = (db.UniqueConstraint('body', 'sign', 'lang', name='uq_placement_lang'),)

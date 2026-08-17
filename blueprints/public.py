@@ -39,15 +39,17 @@ ALL_SIGNS_EN = list(SIGN_ES_TO_EN.values())
 def build_chart_preview(sun_sign, moon_sign, rising_sign):
     """Assemble preview snippets from DB for a given chart.
 
-    Returns a dict where each placement has {'text': str|None, 'available': bool}.
-    Degrades gracefully — partial previews are valid.
+    Assembly order: sun → moon → interaction → rising.
+    Each placement has {'text', 'hook', 'available'}.
+    Degrades gracefully — any piece may be None.
     """
     from models import PlacementContent, SunMoonInteraction
 
     def get_piece(body, sign):
         row = PlacementContent.query.filter_by(body=body, sign=sign, lang='es').first()
         text = row.preview_text if row else None
-        return {'text': text, 'available': bool(text)}
+        hook = row.preview_hook if row else None
+        return {'text': text, 'hook': hook, 'available': bool(text)}
 
     sun    = get_piece('sun',    sun_sign)
     moon   = get_piece('moon',   moon_sign)
@@ -151,7 +153,19 @@ def chart():
                 except Exception as e:
                     error = f'Could not compute chart: {str(e)}'
 
-    return render_template('public/chart.html', result=result, error=error, form_data=form_data)
+    preview = None
+    if result and 'positions' in result:
+        try:
+            sun_sign    = result['positions'].get('Sun',       {}).get('sign')
+            moon_sign   = result['positions'].get('Moon',      {}).get('sign')
+            rising_sign = result['positions'].get('Ascendant', {}).get('sign')
+            if sun_sign and moon_sign and rising_sign:
+                preview = build_chart_preview(sun_sign, moon_sign, rising_sign)
+        except Exception:
+            preview = None
+
+    return render_template('public/chart.html', result=result, error=error,
+                           form_data=form_data, preview=preview)
 
 
 # ── Sitemap ────────────────────────────────────────────────────────────────────
@@ -168,11 +182,8 @@ def sitemap():
     for body_slug in BODY_ES_TO_EN:
         static_urls.append(url_for('public.body_index', body_slug=body_slug, _external=True))
 
-    # Only include placement pages where seo_body is populated
-    indexed_rows = PlacementContent.query.filter(
-        PlacementContent.seo_body.isnot(None),
-        PlacementContent.lang == 'es',
-    ).all()
+    # Only include placement pages that have been manually published
+    indexed_rows = PlacementContent.query.filter_by(status='published', lang='es').all()
     placement_urls = [
         url_for('public.placement_page',
                 body_slug={v: k for k, v in BODY_ES_TO_EN.items()}[r.body],
@@ -198,6 +209,7 @@ def body_index(body_slug):
     body = BODY_ES_TO_EN[body_slug]
     rows = PlacementContent.query.filter_by(body=body, lang='es')\
                                   .order_by(PlacementContent.sign).all()
+    published_count = sum(1 for r in rows if r.status == 'published')
 
     return render_template(
         'public/body_index.html',
@@ -207,6 +219,7 @@ def body_index(body_slug):
         rows=rows,
         sign_en_to_es=SIGN_EN_TO_ES,
         sign_label_es=SIGN_LABEL_ES,
+        indexable=published_count >= 8,
     )
 
 
@@ -231,8 +244,8 @@ def placement_page(body_slug, sign_slug):
 
     content = PlacementContent.query.filter_by(body=body, sign=sign, lang='es').first_or_404()
 
-    # noindex until seo_body is populated
-    indexable = bool(content.seo_body)
+    # noindex until manually published after editing
+    indexable = content.status == 'published'
 
     related = PlacementContent.query.filter_by(body=body, lang='es')\
                                     .filter(PlacementContent.sign != sign)\

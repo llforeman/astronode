@@ -125,6 +125,35 @@
   </div>
   {% endif %}
 
+  <!-- Free preview -->
+  {% if preview and preview.has_any %}
+  <div class="form-card" style="border-color: var(--accent); font-family: Georgia, serif; line-height: 1.85; font-size: 1.02rem;">
+    <div class="section-title" style="margin-top:0;">Tu lectura preliminar</div>
+
+    {% if preview.sun.available %}
+    <p style="margin-bottom: 1.25rem;">{{ preview.sun.text }}</p>
+    {% endif %}
+
+    {% if preview.moon.available %}
+    <p style="margin-bottom: 1.25rem;">{{ preview.moon.text }}</p>
+    {% endif %}
+
+    {% if preview.interaction.available %}
+    <p style="color: var(--accent-light); font-style: italic; border-left: 3px solid var(--accent); padding-left: 1rem; margin-bottom: 1.25rem;">
+      {{ preview.interaction.text }}
+    </p>
+    {% endif %}
+
+    {% if preview.rising.available %}
+    <p style="margin-bottom: 1.5rem;">{{ preview.rising.text }}</p>
+    {% endif %}
+
+    <p style="color: var(--text-muted); font-family: 'Segoe UI', sans-serif; font-size: 0.88rem; border-top: 1px solid var(--border); padding-top: 1rem; margin-bottom: 0;">
+      La lectura completa cubre los aspectos entre tus planetas, las doce casas y la síntesis de cómo estas posiciones interactúan a lo largo de tu vida — lo que no puede derivarse de los signos por separado.
+    </p>
+  </div>
+  {% endif %}
+
   <!-- Planet positions -->
   <div class="form-card">
     <div class="section-title">Posiciones Planetarias</div>

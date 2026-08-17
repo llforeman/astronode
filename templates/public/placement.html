@@ -147,6 +147,9 @@
   {% if content.seo_body %}
   <div class="prose-body">
     {{ content.seo_body | safe }}
+    {% if content.preview_hook %}
+    <p style="color:var(--accent-light); font-style:italic; margin-top:1.5rem; border-left:3px solid var(--accent); padding-left:1rem;">{{ content.preview_hook }}</p>
+    {% endif %}
   </div>
   {% else %}
   <div class="empty-notice">

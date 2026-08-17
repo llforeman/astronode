@@ -3,6 +3,7 @@
 {% block meta_desc %}Qué significa el {{ body_label }} en cada uno de los 12 signos del zodiaco. Guías detalladas por signo.{% endblock %}
 
 {% block extra_css %}
+{% if not indexable %}<meta name="robots" content="noindex">{% endif %}
 <style>
   .index-hero {
     max-width: 760px;
