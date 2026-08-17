@@ -16,8 +16,11 @@ import re
 import sys
 import time
 
-# Add project root to path
+# Add project root to path and load .env
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from dotenv import load_dotenv
+load_dotenv(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '.env'))
 
 from app import create_app
 from extensions import db
@@ -30,7 +33,7 @@ _client = OpenAI(
     api_key=os.environ.get('AI_API_KEY', ''),
     base_url=os.environ.get('AI_API_URL', 'https://openrouter.ai/api/v1'),
 )
-MODEL = os.environ.get('AI_MODEL_PROSE', 'anthropic/claude-sonnet-4-5')
+MODEL = os.environ.get('AI_MODEL_PROSE', os.environ.get('AI_MODEL', 'anthropic/claude-sonnet-4-5'))
 
 # ── Label maps ────────────────────────────────────────────────────────────────
 
@@ -128,8 +131,12 @@ def populate_placement(body, sign, lang='es', dry_run=False):
     """Generate and upsert one placement_content row."""
     body_label = BODY_LABEL[body]
     sign_label = SIGN_LABEL[sign]
-    print(f'  Generating {body_label} en {sign_label}...')
 
+    if dry_run:
+        print(f'  [DRY RUN] Would generate: {body_label} en {sign_label} via {MODEL}')
+        return
+
+    print(f'  Generating {body_label} en {sign_label}...')
     data = _call_llm(_placement_prompt(body, sign))
 
     preview_text = data.get('preview_text', '').strip()
@@ -137,11 +144,6 @@ def populate_placement(body, sign, lang='es', dry_run=False):
     seo_body     = data.get('seo_body',     '').strip()
     meta_title   = f'{body_label} en {sign_label} — Astronode'
     meta_desc    = _derive_meta_desc(preview_text)
-
-    if dry_run:
-        print(f'  [DRY RUN] Would write: preview_text={len(preview_text)}chars, '
-              f'seo_body={len(seo_body)}chars')
-        return
 
     row = PlacementContent.query.filter_by(body=body, sign=sign, lang=lang).first()
     if not row:
@@ -162,14 +164,14 @@ def populate_interaction(sun_sign, moon_sign, lang='es', dry_run=False):
     """Generate and upsert one sun_moon_interaction row."""
     sun_label  = SIGN_LABEL[sun_sign]
     moon_label = SIGN_LABEL[moon_sign]
-    print(f'  Generating interaction: Sol en {sun_label} / Luna en {moon_label}...')
-
-    data = _call_llm(_interaction_prompt(sun_sign, moon_sign))
-    text = data.get('text', '').strip()
 
     if dry_run:
-        print(f'  [DRY RUN] Would write: text={len(text)}chars')
+        print(f'  [DRY RUN] Would generate: Sol {sun_label} / Luna {moon_label} via {MODEL}')
         return
+
+    print(f'  Generating interaction: Sol en {sun_label} / Luna en {moon_label}...')
+    data = _call_llm(_interaction_prompt(sun_sign, moon_sign))
+    text = data.get('text', '').strip()
 
     row = SunMoonInteraction.query.filter_by(
         sun_sign=sun_sign, moon_sign=moon_sign, lang=lang

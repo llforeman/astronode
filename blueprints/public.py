@@ -1,7 +1,10 @@
 import datetime
+import logging
 from flask import Blueprint, render_template, redirect, url_for, request, flash, session, abort, Response
 from flask_login import current_user
 from extensions import limiter
+
+log = logging.getLogger(__name__)
 
 public_bp = Blueprint('public', __name__)
 
@@ -159,9 +162,12 @@ def chart():
             sun_sign    = result['positions'].get('Sun',       {}).get('sign')
             moon_sign   = result['positions'].get('Moon',      {}).get('sign')
             rising_sign = result['positions'].get('Ascendant', {}).get('sign')
+            log.info('chart preview signs: sun=%r moon=%r rising=%r', sun_sign, moon_sign, rising_sign)
             if sun_sign and moon_sign and rising_sign:
                 preview = build_chart_preview(sun_sign, moon_sign, rising_sign)
-        except Exception:
+                log.info('chart preview has_any=%s', preview.get('has_any') if preview else None)
+        except Exception as e:
+            log.exception('build_chart_preview failed: %s', e)
             preview = None
 
     return render_template('public/chart.html', result=result, error=error,
