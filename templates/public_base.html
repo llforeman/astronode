@@ -92,10 +92,12 @@
     .mobile-menu-panel a:last-of-type { border-bottom: none; }
     .mobile-menu-panel a:hover { color: var(--accent-light); text-decoration: none; }
     .mobile-menu-panel .btn { margin-top: 1rem; text-align: center; display: block; }
+    .nav-logo { height: 44px; width: auto; display: block; }
     @media (max-width: 640px) {
       nav.topnav { padding: 0.75rem 1rem; }
       nav.topnav .nav-links { display: none; }
       .nav-mobile { display: flex; }
+      .nav-logo { height: 34px; }
     }
     .container { max-width: 960px; margin: 0 auto; padding: 2rem 1rem; }
     .btn { display: inline-block; padding: 0.6rem 1.5rem; border-radius: 8px; border: none; cursor: pointer; font-size: 0.95rem; font-weight: 500; letter-spacing: 0.4px; transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s; text-decoration: none; }
@@ -130,7 +132,7 @@
 <body>
   <nav class="topnav">
     <a href="{{ url_for('public.landing') }}" style="display:block; line-height:0; text-decoration:none;">
-      <img src="{{ url_for('static', filename='logo.png') }}" alt="Astronode" style="height:36px; width:auto; display:block;">
+      <img src="{{ url_for('static', filename='logo.png') }}" alt="Astronode" class="nav-logo">
     </a>
     <div class="nav-links">
       {% if current_user.is_authenticated %}
