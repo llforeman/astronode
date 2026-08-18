@@ -13,24 +13,37 @@
   </script>
   <style>
     :root[data-theme="dark"] {
-      --bg: #0d0d1a; --bg2: #13101e; --text: #e8e0f0; --text-muted: #8a7fa0;
-      --accent: #9b59b6; --accent-light: #c39bd3; --border: #2a2a45; --card: #1a1525;
-      --gold: #d4af37; --gold-dim: rgba(212,175,55,0.25);
+      --bg: #09000f; --bg2: #160428; --text: #ede8f5; --text-muted: #8878a0;
+      --accent: #c9963a; --accent-light: #e8c060; --border: #2e1048; --card: #160428;
+      --gold: #d4af37; --gold-dim: rgba(212,175,55,0.18);
     }
     :root[data-theme="light"] {
       --bg: #f5f0ff; --bg2: #ffffff; --text: #1a0a2e; --text-muted: #6b5b80;
-      --accent: #7d3c98; --accent-light: #9b59b6; --border: #d8c8e8; --card: #ffffff;
+      --accent: #8a5200; --accent-light: #b87020; --border: #d8c8e8; --card: #ffffff;
+      --gold: #b8860b; --gold-dim: rgba(184,134,11,0.2);
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; min-height: 100vh; }
     a { color: var(--accent-light); text-decoration: none; }
     a:hover { text-decoration: underline; }
-    nav.topnav { background: var(--bg2); border-bottom: 1px solid var(--border); padding: 0.85rem 1.5rem; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
-    nav.topnav .logo { font-size: 1.2rem; font-weight: 700; color: var(--accent-light); letter-spacing: 2px; }
-    nav.topnav .logo span.star { color: var(--gold); }
+    nav.topnav {
+      background-color: #350F4C;
+      background-image:
+        radial-gradient(ellipse at 8% 50%, rgba(212,175,55,0.09) 0%, transparent 50%),
+        radial-gradient(ellipse at 92% 50%, rgba(212,175,55,0.05) 0%, transparent 40%),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+      border-bottom: 1px solid rgba(212,175,55,0.18);
+      padding: 0.85rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
     nav.topnav .nav-links { display: flex; gap: 1.5rem; align-items: center; }
-    nav.topnav .nav-links a:not(.btn) { color: var(--text-muted); font-size: 0.9rem; }
-    nav.topnav .nav-links a:not(.btn):hover { color: var(--text); text-decoration: none; }
+    nav.topnav .nav-links a:not(.btn) { color: rgba(237,232,245,0.75); font-size: 0.9rem; }
+    nav.topnav .nav-links a:not(.btn):hover { color: #fff; text-decoration: none; }
     .nav-mobile { display: none; gap: 0.6rem; align-items: center; }
     .hamburger { background: none; border: 1px solid var(--border); color: var(--text-muted); padding: 0.35rem 0.6rem; border-radius: 6px; cursor: pointer; font-size: 1.1rem; line-height: 1; }
     /* Mobile drawer */
@@ -85,8 +98,8 @@
     }
     .container { max-width: 960px; margin: 0 auto; padding: 2rem 1rem; }
     .btn { display: inline-block; padding: 0.6rem 1.5rem; border-radius: 8px; border: none; cursor: pointer; font-size: 0.95rem; font-weight: 500; letter-spacing: 0.4px; transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s; text-decoration: none; }
-    .btn-primary { background: linear-gradient(135deg, #7c5295 0%, #5d3876 100%); border: 1px solid rgba(255,255,255,0.1); color: #fff; }
-    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(124,82,149,0.45); color: #fff; text-decoration: none; }
+    .btn-primary { background: linear-gradient(135deg, #d4a030 0%, #a07020 100%); border: 1px solid rgba(255,255,255,0.15); color: #fff; }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(212,160,48,0.45); color: #fff; text-decoration: none; }
     .btn-outline { background: transparent; color: var(--accent-light); border: 1px solid var(--accent); }
     .btn-outline:hover { transform: translateY(-2px); text-decoration: none; }
     .flash { padding: 0.75rem 1rem; border-radius: 6px; margin-bottom: 1rem; background: var(--border); color: var(--text); max-width: 960px; margin: 0 auto 1rem; }
@@ -115,7 +128,9 @@
 </head>
 <body>
   <nav class="topnav">
-    <a href="{{ url_for('public.landing') }}" class="logo"><span class="star">✦</span> ASTRONODE</a>
+    <a href="{{ url_for('public.landing') }}" style="display:block; line-height:0; text-decoration:none;">
+      <img src="{{ url_for('static', filename='logo.png') }}" alt="Astronode" style="height:30px; width:auto; display:block;">
+    </a>
     <div class="nav-links">
       {% if current_user.is_authenticated %}
         <a href="#sample">Ejemplo</a>
@@ -182,8 +197,8 @@
   <footer class="site-footer">
     <div class="footer-inner">
       <div>
-        <div class="footer-brand"><span>✦</span> ASTRONODE</div>
-        <p style="font-size:0.8rem; color:var(--text-muted); margin-top:0.5rem; max-width:220px;">Lecturas de carta natal con IA. Personalizadas, en profundidad, en tu idioma.</p>
+        <img src="{{ url_for('static', filename='logo.png') }}" alt="Astronode" style="height:22px; width:auto; display:block; margin-bottom:0.65rem; opacity:0.82;">
+        <p style="font-size:0.8rem; color:var(--text-muted); margin-top:0; max-width:220px;">Lecturas de carta natal con IA. Personalizadas, en profundidad, en tu idioma.</p>
         <p class="footer-copy">© 2026 Astronode. Todos los derechos reservados.</p>
       </div>
       <div class="footer-links">

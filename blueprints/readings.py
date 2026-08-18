@@ -131,44 +131,48 @@ def download(reading_id):
     def _s(text):
         return text.translate(_UNICODE_MAP).encode('latin-1', errors='replace').decode('latin-1')
 
+    import os as _os
+    from flask import current_app
+
     # ── colours ──────────────────────────────────────────────────
-    C_BG      = (248, 244, 255)
-    C_HEADER  = (255, 255, 255)
-    C_ACCENT  = (124, 82, 149)
-    C_GOLD    = (180, 140, 40)
-    C_TEXT    = (26, 10, 46)
-    C_MUTED   = (107, 91, 128)
+    C_BG          = (9, 0, 15)        # #09000f near-black
+    C_HEADER      = (53, 15, 76)      # #350F4C brand purple
+    C_ACCENT      = (201, 150, 58)    # gold for section headings
+    C_GOLD        = (212, 175, 55)    # gold divider / ornaments
+    C_TEXT        = (220, 210, 240)   # light lavender-white body text
+    C_MUTED       = (130, 110, 155)   # muted purple-grey
+    C_HEADER_TEXT = (245, 235, 200)   # warm cream for header subtitle
 
     pdf = FPDF(orientation='P', unit='mm', format='A4')
     pdf.set_auto_page_break(auto=True, margin=20)
     pdf.add_page()
 
+    # ── full page background (draw first) ────────────────────────
+    pdf.set_fill_color(*C_BG)
+    pdf.rect(0, 0, 210, 297, 'F')
+
     # ── header band ──────────────────────────────────────────────
     pdf.set_fill_color(*C_HEADER)
-    pdf.rect(0, 0, 210, 38, 'F')
+    pdf.rect(0, 0, 210, 42, 'F')
 
-    pdf.set_xy(14, 8)
-    pdf.set_font('Helvetica', 'B', 18)
-    pdf.set_text_color(*C_GOLD)
-    pdf.cell(6, 10, '*', ln=0)
-    pdf.set_text_color(*C_ACCENT)
-    pdf.cell(0, 10, ' ASTRONODE', ln=1)
+    # Logo image (white PNG on purple bg)
+    _logo_path = _os.path.join(current_app.root_path, 'static', 'logo.png')
+    if _os.path.exists(_logo_path):
+        pdf.image(_logo_path, x=12, y=10, w=86)
 
-    pdf.set_xy(14, 20)
-    pdf.set_font('Helvetica', '', 11)
-    pdf.set_text_color(*C_MUTED)
-    pdf.cell(0, 7, _s(reading.reading_type.name), ln=1)
+    # Reading type (right side of header)
+    pdf.set_xy(110, 17)
+    pdf.set_font('Helvetica', '', 10)
+    pdf.set_text_color(*C_HEADER_TEXT)
+    pdf.cell(88, 6, _s(reading.reading_type.name), align='R')
 
+    # Gold divider line at bottom of header
     pdf.set_draw_color(*C_GOLD)
-    pdf.set_line_width(0.6)
-    pdf.line(14, 38, 196, 38)
-
-    # ── page background ───────────────────────────────────────────
-    pdf.set_fill_color(*C_BG)
-    pdf.rect(0, 38, 210, 262, 'F')
+    pdf.set_line_width(0.5)
+    pdf.line(0, 42, 210, 42)
 
     # ── meta line ────────────────────────────────────────────────
-    pdf.set_xy(14, 43)
+    pdf.set_xy(14, 47)
     pdf.set_font('Helvetica', '', 9)
     pdf.set_text_color(*C_MUTED)
     meta_parts = []
