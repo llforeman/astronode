@@ -14,9 +14,9 @@
   </script>
   <style>
     :root[data-theme="dark"] {
-      --bg: #09000f; --bg2: #160428; --text: #ede8f5; --text-muted: #a090b8;
-      --accent: #c9963a; --accent-light: #f0cf60; --border: #2e1048; --card: #160428;
-      --gold: #d4bc48; --gold-dim: rgba(212,188,72,0.18);
+      --bg: #0a0710; --bg2: #131020; --text: #e2dded; --text-muted: #9088a8;
+      --accent: #a07840; --accent-light: #c8a864; --border: #211830; --card: #1a1625;
+      --gold: #c5a059; --gold-dim: rgba(197,160,89,0.13);
     }
     :root[data-theme="light"] {
       --bg: #f5f0ff; --bg2: #ffffff; --text: #1a0a2e; --text-muted: #6b5b80;
@@ -32,9 +32,9 @@
       backdrop-filter: blur(14px) saturate(160%);
       -webkit-backdrop-filter: blur(14px) saturate(160%);
       background-image:
-        radial-gradient(ellipse at 8% 50%, rgba(212,188,72,0.08) 0%, transparent 50%),
-        radial-gradient(ellipse at 92% 50%, rgba(212,188,72,0.04) 0%, transparent 40%);
-      border-bottom: 1px solid rgba(212,188,72,0.14);
+        radial-gradient(ellipse at 8% 50%, rgba(197,160,89,0.07) 0%, transparent 50%),
+        radial-gradient(ellipse at 92% 50%, rgba(197,160,89,0.03) 0%, transparent 40%);
+      border-bottom: 1px solid rgba(197,160,89,0.12);
       padding: 0.85rem 1.75rem;
       display: flex;
       align-items: center;
@@ -102,10 +102,10 @@
     }
     .container { max-width: 960px; margin: 0 auto; padding: 2rem 1rem; }
     .btn { display: inline-block; padding: 0.6rem 1.5rem; border-radius: 8px; border: none; cursor: pointer; font-size: 0.95rem; font-weight: 500; letter-spacing: 0.4px; transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s; text-decoration: none; }
-    .btn-primary { background: linear-gradient(135deg, #d4a030 0%, #a07020 100%); border: 1px solid rgba(255,255,255,0.15); color: #fff; }
-    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(212,160,48,0.45); color: #fff; text-decoration: none; }
-    .btn-outline { background: transparent; color: var(--accent-light); border: 1px solid rgba(212,188,72,0.5); }
-    .btn-outline:hover { background: rgba(212,188,72,0.08); border-color: var(--gold); color: var(--gold); transform: translateY(-2px); text-decoration: none; }
+    .btn-primary { background: linear-gradient(135deg, #c8a454 0%, #9a7235 100%); border: 1px solid rgba(255,255,255,0.12); color: #fff; }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(197,160,89,0.38); color: #fff; text-decoration: none; }
+    .btn-outline { background: transparent; color: var(--accent-light); border: 1px solid rgba(197,160,89,0.4); }
+    .btn-outline:hover { background: rgba(197,160,89,0.08); border-color: var(--gold); color: var(--gold); transform: translateY(-2px); text-decoration: none; }
     .flash { padding: 0.75rem 1rem; border-radius: 6px; margin-bottom: 1rem; background: var(--border); color: var(--text); max-width: 960px; margin: 0 auto 1rem; }
     .theme-toggle { background: none; border: 1px solid var(--border); color: var(--text-muted); padding: 0.3rem 0.7rem; border-radius: 6px; cursor: pointer; }
     /* Footer */
@@ -123,10 +123,10 @@
     .footer-copy { font-size: 0.75rem; color: var(--text-muted); margin-top: 2rem; }
     /* Autocomplete shared styles */
     .place-autocomplete { position: relative; }
-    .autocomplete-dropdown { display: none; position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: #241d33; border: 1px solid rgba(212,175,55,0.3); border-radius: 8px; max-height: 220px; overflow-y: auto; z-index: 200; box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
-    .autocomplete-item { padding: 0.65rem 1rem; cursor: pointer; font-size: 0.9rem; color: #e0e0e0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+    .autocomplete-dropdown { display: none; position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: var(--card); border: 1px solid rgba(197,160,89,0.22); border-radius: 8px; max-height: 220px; overflow-y: auto; z-index: 200; box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
+    .autocomplete-item { padding: 0.65rem 1rem; cursor: pointer; font-size: 0.9rem; color: var(--text); border-bottom: 1px solid rgba(255,255,255,0.05); }
     .autocomplete-item:last-child { border-bottom: none; }
-    .autocomplete-item:hover { background: rgba(212,175,55,0.12); color: #fff; }
+    .autocomplete-item:hover { background: rgba(197,160,89,0.1); color: #fff; }
   </style>
   {% block extra_css %}{% endblock %}
 </head>

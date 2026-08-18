@@ -142,12 +142,14 @@
   .how-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 1.25rem; margin: 2rem 0; }
   .how-card {
     background: var(--card);
-    border: 1px solid var(--border);
     border-radius: 10px;
     padding: 1.5rem;
+    box-shadow: 0 2px 16px rgba(0,0,0,0.35);
   }
   .how-card .icon { font-size: 1.5rem; margin-bottom: 0.75rem; }
-  .how-card h4 { font-size: 0.95rem; color: var(--accent-light); margin-bottom: 0.5rem; font-weight: 700; }
+  .how-card h4 { font-size: 0.95rem; color: var(--text); margin-bottom: 0.5rem; font-weight: 700; }
+  .btn-subtle { background: rgba(255,255,255,0.07); color: var(--text); border: 1px solid rgba(255,255,255,0.12); }
+  .btn-subtle:hover { background: rgba(255,255,255,0.11); transform: translateY(-1px); text-decoration: none; color: var(--text); }
   .how-card p { font-size: 0.85rem; color: var(--text-muted); line-height: 1.6; }
   /* ── Pricing two-column ───────────────────────────── */
   .pricing-grid {
@@ -164,14 +166,14 @@
     text-align: center;
     position: relative;
   }
-  .pricing-card.basic { background: var(--card); border: 1px solid var(--border); }
-  .pricing-card.featured { background: linear-gradient(135deg, #1a1a30, #2a1040); border: 1px solid var(--accent); }
+  .pricing-card.basic { background: var(--card); }
+  .pricing-card.featured { background: linear-gradient(135deg, #0e0c1e, #160a28); border: 1px solid var(--accent); }
   @media (max-width: 540px) { .pricing-card { padding: 1.75rem 1.25rem; border-radius: 10px; } }
   .pricing-badge {
     position: absolute;
     top: -13px; left: 50%;
     transform: translateX(-50%);
-    background: linear-gradient(135deg, #d4a030 0%, #a07020 100%);
+    background: linear-gradient(135deg, #c8a454 0%, #9a7235 100%);
     color: #fff;
     font-size: 0.65rem; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
     padding: 0.22rem 0.9rem;
@@ -179,7 +181,7 @@
     white-space: nowrap;
   }
   .pricing-card .price-title { font-size: 0.95rem; font-weight: 700; color: var(--accent-light); margin-bottom: 0.75rem; }
-  .pricing-card .price { font-size: clamp(2rem, 8vw, 2.8rem); font-weight: 800; color: var(--gold); }
+  .pricing-card .price { font-size: clamp(2rem, 8vw, 2.8rem); font-weight: 800; color: var(--text); }
   .pricing-card .price sup { font-size: 1.1rem; vertical-align: super; }
   .pricing-card .price-label { color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1.25rem; }
   .price-includes { display: flex; flex-direction: column; gap: 0.4rem; text-align: left; margin: 1rem 0 1.75rem; }
@@ -452,7 +454,7 @@
           <li>PDF por email + guardada en tu cuenta</li>
           <li>En español, específica para ti</li>
         </ul>
-        <a href="{{ url_for('auth.register') }}" class="btn btn-outline" style="font-size:0.95rem; padding:0.7rem 1.75rem; display:block;">
+        <a href="{{ url_for('auth.register') }}" class="btn btn-subtle" style="font-size:0.95rem; padding:0.7rem 1.75rem; display:block;">
           Obtener mi lectura natal →
         </a>
       </div>
