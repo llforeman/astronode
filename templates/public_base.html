@@ -162,17 +162,13 @@
       {% if current_user.is_authenticated %}
         <a href="{{ url_for('public.chart') }}">Carta gratuita</a>
         <a href="{{ url_for('main.dashboard') }}">Panel</a>
-        <a href="{{ url_for('public.body_index', body_slug='sol') }}">Sol por signo</a>
-        <a href="{{ url_for('public.body_index', body_slug='luna') }}">Luna por signo</a>
-        <a href="{{ url_for('public.body_index', body_slug='ascendente') }}">Ascendente por signo</a>
+        <a href="{{ url_for('public.blog_index') }}">Blog</a>
         <a href="{{ url_for('public.pricing') }}">Precios</a>
         <a href="{{ url_for('main.dashboard') }}" class="btn btn-primary">Ir al panel →</a>
       {% else %}
         <a href="{{ url_for('public.chart') }}">Carta gratuita</a>
         <a href="{{ url_for('auth.login') }}">Iniciar sesión</a>
-        <a href="{{ url_for('public.body_index', body_slug='sol') }}">Sol por signo</a>
-        <a href="{{ url_for('public.body_index', body_slug='luna') }}">Luna por signo</a>
-        <a href="{{ url_for('public.body_index', body_slug='ascendente') }}">Ascendente por signo</a>
+        <a href="{{ url_for('public.blog_index') }}">Blog</a>
         <a href="{{ url_for('public.pricing') }}">Precios</a>
         <a href="{{ url_for('auth.register') }}" class="btn btn-primary">Calcular mi carta →</a>
       {% endif %}
@@ -214,7 +210,8 @@
         <a href="{{ url_for('public.pricing') }}">Precios</a>
       </div>
       <div class="footer-links">
-        <strong style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px;">Guías</strong>
+        <strong style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px;">Blog</strong>
+        <a href="{{ url_for('public.blog_index') }}">Guías astrológicas</a>
         <a href="{{ url_for('public.body_index', body_slug='sol') }}">Sol por signo</a>
         <a href="{{ url_for('public.body_index', body_slug='luna') }}">Luna por signo</a>
         <a href="{{ url_for('public.body_index', body_slug='ascendente') }}">Ascendente por signo</a>

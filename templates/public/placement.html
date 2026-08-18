@@ -5,6 +5,9 @@
 {% block extra_css %}
 <link rel="canonical" href="{{ canonical }}">
 {% if not indexable %}<meta name="robots" content="noindex">{% endif %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,600;1,400&display=swap">
 <style>
   /* ── Page shell ── */
   .guide-shell {
@@ -124,9 +127,9 @@
   }
 
   .prose-body {
-    font-family: Georgia, 'Times New Roman', serif;
-    font-size: 1.05rem;
-    line-height: 1.85;
+    font-family: 'EB Garamond', Georgia, serif;
+    font-size: 1.12rem;
+    line-height: 1.9;
     color: var(--text);
     margin-bottom: 2.5rem;
   }
@@ -253,6 +256,8 @@
   <main class="guide-main">
     <div class="breadcrumb">
       <a href="{{ url_for('public.landing') }}">Inicio</a>
+      <span>›</span>
+      <a href="{{ url_for('public.blog_index') }}">Blog</a>
       <span>›</span>
       <a href="{{ url_for('public.body_index', body_slug=body_slug) }}">{{ body_label }}</a>
       <span>›</span>

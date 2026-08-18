@@ -188,9 +188,10 @@ def sitemap():
     from models import PlacementContent
 
     static_urls = [
-        url_for('public.landing',  _external=True),
-        url_for('public.chart',    _external=True),
-        url_for('public.pricing',  _external=True),
+        url_for('public.landing',    _external=True),
+        url_for('public.chart',      _external=True),
+        url_for('public.pricing',    _external=True),
+        url_for('public.blog_index', _external=True),
     ]
     for body_slug in BODY_ES_TO_EN:
         static_urls.append(url_for('public.body_index', body_slug=body_slug, _external=True))
@@ -211,9 +212,16 @@ def sitemap():
     return Response(xml, mimetype='application/xml')
 
 
-# ── Body index pages (/sol, /luna, /ascendente) ───────────────────────────────
+# ── Blog index (/blog) ────────────────────────────────────────────────────────
 
-@public_bp.route('/<body_slug>')
+@public_bp.route('/blog')
+def blog_index():
+    return render_template('public/blog.html')
+
+
+# ── Body index pages (/blog/sol, /blog/luna, /blog/ascendente) ────────────────
+
+@public_bp.route('/blog/<body_slug>')
 def body_index(body_slug):
     if body_slug not in BODY_ES_TO_EN:
         abort(404)
@@ -242,9 +250,9 @@ def body_index(body_slug):
     )
 
 
-# ── Placement SEO pages ────────────────────────────────────────────────────────
+# ── Placement SEO pages (/blog/sol/aries etc.) ────────────────────────────────
 
-@public_bp.route('/<body_slug>/<sign_slug>')
+@public_bp.route('/blog/<body_slug>/<sign_slug>')
 def placement_page(body_slug, sign_slug):
     # 301 for accented slug variants
     if sign_slug in SIGN_SLUG_ALIASES:
@@ -296,3 +304,21 @@ def placement_page(body_slug, sign_slug):
         indexable=indexable,
         canonical=canonical,
     )
+
+
+# ── 301 redirects from old bare URLs ─────────────────────────────────────────
+
+@public_bp.route('/sol')
+@public_bp.route('/luna')
+@public_bp.route('/ascendente')
+def body_index_redirect(body_slug=None):
+    slug = request.path.lstrip('/')
+    return redirect(url_for('public.body_index', body_slug=slug), 301)
+
+
+@public_bp.route('/sol/<sign_slug>')
+@public_bp.route('/luna/<sign_slug>')
+@public_bp.route('/ascendente/<sign_slug>')
+def placement_redirect(sign_slug, body_slug=None):
+    slug = request.path.lstrip('/').split('/')[0]
+    return redirect(url_for('public.placement_page', body_slug=slug, sign_slug=sign_slug), 301)
