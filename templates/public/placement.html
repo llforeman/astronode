@@ -47,11 +47,11 @@
     border-radius: 6px;
     font-size: 0.92rem;
     font-weight: 600;
-    color: var(--text-muted);
+    color: rgba(237,232,245,0.62);
     text-decoration: none;
     transition: background 0.15s, color 0.15s;
   }
-  .guide-sidebar .body-link:hover { background: var(--border); color: var(--text); text-decoration: none; }
+  .guide-sidebar .body-link:hover { background: rgba(237,232,245,0.06); color: rgba(237,232,245,0.9); text-decoration: none; }
   .guide-sidebar .body-link.active-body { color: var(--accent-light); }
   .guide-sidebar .body-link .chevron { font-size: 0.65rem; opacity: 0.5; }
   .guide-sidebar .sign-list { margin-bottom: 0.5rem; }
@@ -59,12 +59,12 @@
     display: block;
     padding: 0.35rem 0.75rem 0.35rem 1.5rem;
     font-size: 0.85rem;
-    color: var(--text-muted);
+    color: rgba(237,232,245,0.65);
     border-radius: 6px;
     text-decoration: none;
     transition: background 0.15s, color 0.15s;
   }
-  .guide-sidebar .sign-list a:hover { background: var(--border); color: var(--text); text-decoration: none; }
+  .guide-sidebar .sign-list a:hover { background: rgba(237,232,245,0.06); color: rgba(237,232,245,0.9); text-decoration: none; }
   .guide-sidebar .sign-list a.active {
     background: var(--border);
     color: var(--accent-light);
@@ -98,16 +98,16 @@
 
   .breadcrumb {
     font-size: 0.78rem;
-    color: var(--text-muted);
+    color: rgba(237,232,245,0.75);
     margin-bottom: 1.25rem;
     display: flex;
     gap: 0.4rem;
     align-items: center;
     flex-wrap: wrap;
   }
-  .breadcrumb a { color: var(--text-muted); }
-  .breadcrumb a:hover { color: var(--text); text-decoration: none; }
-  .breadcrumb span { color: var(--border); }
+  .breadcrumb a { color: rgba(237,232,245,0.55); }
+  .breadcrumb a:hover { color: var(--gold); text-decoration: none; }
+  .breadcrumb .sep { color: rgba(237,232,245,0.22); }
 
   h1.placement-title {
     font-size: clamp(1.8rem, 3.5vw, 2.6rem);
@@ -256,11 +256,11 @@
   <main class="guide-main">
     <div class="breadcrumb">
       <a href="{{ url_for('public.landing') }}">Inicio</a>
-      <span>›</span>
+      <span class="sep">›</span>
       <a href="{{ url_for('public.blog_index') }}">Blog</a>
-      <span>›</span>
+      <span class="sep">›</span>
       <a href="{{ url_for('public.body_index', body_slug=body_slug) }}">{{ body_label }}</a>
-      <span>›</span>
+      <span class="sep">›</span>
       <span>{{ sign_label }}</span>
     </div>
 
