@@ -28,8 +28,21 @@ def create_app(config_class=Config):
     for bp in (public_bp, auth_bp, main_bp, admin_bp, billing_bp, readings_bp):
         app.register_blueprint(bp)
 
+    _register_filters(app)
     _register_hooks(app)
     return app
+
+
+def _register_filters(app):
+    import markdown as _md
+    from markupsafe import Markup
+
+    @app.template_filter('md')
+    def render_markdown(text):
+        return Markup(_md.markdown(
+            text or '',
+            extensions=['nl2br', 'sane_lists'],
+        ))
 
 
 def _register_hooks(app):

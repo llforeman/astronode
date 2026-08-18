@@ -23,7 +23,21 @@
         ⬇ Descargar PDF
       </a>
     </div>
-    <div class="card" style="line-height: 1.8; white-space: pre-wrap;">{{ reading.content }}</div>
+    <style>
+      .reading-content h1,.reading-content h2 {
+        color: var(--accent-light); font-size: 1.2rem; margin: 1.6rem 0 0.5rem;
+        padding-bottom: 0.3rem; border-bottom: 1px solid var(--gold-dim);
+      }
+      .reading-content h3,.reading-content h4 {
+        color: var(--accent); font-size: 1rem; margin: 1.2rem 0 0.35rem;
+      }
+      .reading-content p { margin-bottom: 0.9rem; line-height: 1.85; }
+      .reading-content ul,.reading-content ol { padding-left: 1.4rem; margin-bottom: 0.9rem; }
+      .reading-content li { margin-bottom: 0.3rem; line-height: 1.75; }
+      .reading-content strong { color: var(--text); }
+      .reading-content hr { border: none; border-top: 1px solid var(--gold-dim); margin: 1.4rem 0; }
+    </style>
+    <div class="card reading-content" style="line-height: 1.8;">{{ reading.content | md }}</div>
   {% elif reading.status == 'generating' %}
     <div class="card" style="text-align:center; padding: 3rem;">
       <div style="font-size: 2rem; margin-bottom: 1rem;">✦</div>

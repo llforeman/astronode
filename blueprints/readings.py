@@ -134,83 +134,122 @@ def download(reading_id):
     import os as _os
     from flask import current_app
 
-    # ── colours ──────────────────────────────────────────────────
-    C_BG          = (9, 0, 15)        # #09000f near-black
-    C_HEADER      = (53, 15, 76)      # #350F4C brand purple
-    C_ACCENT      = (201, 150, 58)    # gold for section headings
-    C_GOLD        = (212, 175, 55)    # gold divider / ornaments
-    C_TEXT        = (220, 210, 240)   # light lavender-white body text
-    C_MUTED       = (130, 110, 155)   # muted purple-grey
-    C_HEADER_TEXT = (245, 235, 200)   # warm cream for header subtitle
+    _logo_path = _os.path.join(current_app.root_path, 'static', 'logo.png')
+    _has_logo  = _os.path.exists(_logo_path)
 
-    pdf = FPDF(orientation='P', unit='mm', format='A4')
-    pdf.set_auto_page_break(auto=True, margin=20)
+    # ── document metadata ─────────────────────────────────────────
+    doc_title = _s(reading.reading_type.name)
+    _meta_parts = []
+    if reading.profile:
+        _lbl = reading.profile.name
+        if reading.profile.is_self:
+            _lbl += ' (tu)'
+        _meta_parts.append(_lbl)
+    _date_str = reading.created_at.strftime('%d/%m/%Y')
+    _meta_parts.append(_date_str)
+    _profile_label = _s('  |  '.join(_meta_parts))
+
+    # ── colour palette ────────────────────────────────────────────
+    C_PURPLE  = (53, 15, 76)
+    C_GOLD    = (212, 175, 55)
+    C_TEXT    = (28, 22, 38)       # near-black body
+    C_HEADING = (53, 15, 76)       # brand purple headings
+    C_MUTED   = (120, 105, 140)
+    C_CREAM   = (245, 235, 200)
+
+    class _PDF(FPDF):
+        def header(self):
+            if self.page_no() == 1:
+                # Purple cover band — 52 mm tall
+                self.set_fill_color(*C_PURPLE)
+                self.rect(0, 0, 210, 52, 'F')
+                # Logo: w=90 mm → h≈19.9 mm; vertically centred → y=(52−20)/2=16
+                if _has_logo:
+                    self.image(_logo_path, x=16, y=16, w=90)
+                # Right side — reading type + meta
+                self.set_font('Helvetica', 'B', 9)
+                self.set_text_color(*C_CREAM)
+                self.set_xy(110, 18)
+                self.cell(84, 5, doc_title, align='R', ln=1)
+                self.set_font('Helvetica', '', 8)
+                self.set_text_color(180, 155, 110)
+                self.set_x(110)
+                self.cell(84, 5, _profile_label, align='R')
+                # Thin gold divider at base of band
+                self.set_draw_color(*C_GOLD)
+                self.set_line_width(0.4)
+                self.line(0, 52, 210, 52)
+                # Body starts below band
+                self.set_y(60)
+            else:
+                # Continuation pages — thin gold top rule only
+                self.set_draw_color(*C_GOLD)
+                self.set_line_width(0.25)
+                self.line(16, 13, 194, 13)
+                self.set_y(18)
+
+        def footer(self):
+            # Gold separator line
+            self.set_draw_color(*C_GOLD)
+            self.set_line_width(0.25)
+            self.line(16, 275, 194, 275)
+            # Purple pill with white logo — left
+            self.set_fill_color(*C_PURPLE)
+            self.rect(16, 279, 44, 9, 'F')
+            if _has_logo:
+                self.image(_logo_path, x=17, y=279.1, w=42)
+            # Page number — centre
+            self.set_y(279)
+            self.set_x(16)
+            self.set_font('Helvetica', '', 7.5)
+            self.set_text_color(*C_MUTED)
+            self.cell(178, 9, f'Pagina {self.page_no()}', align='C')
+            # Reading title — right
+            self.set_y(279)
+            self.set_x(16)
+            self.set_font('Helvetica', '', 7)
+            self.cell(178, 9, doc_title, align='R')
+
+    pdf = _PDF(orientation='P', unit='mm', format='A4')
+    pdf.set_margins(16, 10, 16)
+    pdf.set_auto_page_break(auto=True, margin=24)
     pdf.add_page()
 
-    # ── full page background (draw first) ────────────────────────
-    pdf.set_fill_color(*C_BG)
-    pdf.rect(0, 0, 210, 297, 'F')
-
-    # ── header band ──────────────────────────────────────────────
-    pdf.set_fill_color(*C_HEADER)
-    pdf.rect(0, 0, 210, 42, 'F')
-
-    # Logo image (white PNG on purple bg)
-    _logo_path = _os.path.join(current_app.root_path, 'static', 'logo.png')
-    if _os.path.exists(_logo_path):
-        pdf.image(_logo_path, x=12, y=10, w=86)
-
-    # Reading type (right side of header)
-    pdf.set_xy(110, 17)
-    pdf.set_font('Helvetica', '', 10)
-    pdf.set_text_color(*C_HEADER_TEXT)
-    pdf.cell(88, 6, _s(reading.reading_type.name), align='R')
-
-    # Gold divider line at bottom of header
-    pdf.set_draw_color(*C_GOLD)
-    pdf.set_line_width(0.5)
-    pdf.line(0, 42, 210, 42)
-
-    # ── meta line ────────────────────────────────────────────────
-    pdf.set_xy(14, 47)
-    pdf.set_font('Helvetica', '', 9)
-    pdf.set_text_color(*C_MUTED)
-    meta_parts = []
-    if reading.profile:
-        label = reading.profile.name
-        if reading.profile.is_self:
-            label += ' (tu)'
-        meta_parts.append(label)
-    meta_parts.append(reading.created_at.strftime('%d/%m/%Y'))
-    pdf.cell(0, 6, _s('  -  '.join(meta_parts)), ln=1)
-
-    pdf.ln(4)
-
     # ── body text ────────────────────────────────────────────────
-    pdf.set_left_margin(14)
-    pdf.set_right_margin(14)
     pdf.set_font('Helvetica', '', 10.5)
     pdf.set_text_color(*C_TEXT)
 
     for line in reading.content.split('\n'):
         stripped = line.strip()
-        if stripped and (stripped.isupper() or stripped.startswith(('#', '-', '='))):
+        if stripped.startswith('#'):
+            # Markdown heading — strip # prefix, render as titled section
+            text = stripped.lstrip('#').strip()
+            pdf.ln(5)
+            pdf.set_font('Helvetica', 'B', 12)
+            pdf.set_text_color(*C_HEADING)
+            pdf.multi_cell(0, 7, _s(text))
+            _y = pdf.get_y()
+            pdf.set_draw_color(*C_GOLD)
+            pdf.set_line_width(0.3)
+            pdf.line(16, _y, 194, _y)
             pdf.ln(3)
+            pdf.set_font('Helvetica', '', 10.5)
+            pdf.set_text_color(*C_TEXT)
+        elif stripped and stripped.isupper() and len(stripped) > 4:
+            # ALL-CAPS section heading
+            pdf.ln(5)
             pdf.set_font('Helvetica', 'B', 11)
-            pdf.set_text_color(*C_ACCENT)
-            pdf.multi_cell(0, 6, _s(stripped))
+            pdf.set_text_color(*C_HEADING)
+            pdf.multi_cell(0, 7, _s(stripped))
+            pdf.ln(1)
             pdf.set_font('Helvetica', '', 10.5)
             pdf.set_text_color(*C_TEXT)
         elif stripped == '':
             pdf.ln(3)
         else:
+            pdf.set_font('Helvetica', '', 10.5)
+            pdf.set_text_color(*C_TEXT)
             pdf.multi_cell(0, 6, _s(line))
-
-    # ── footer ───────────────────────────────────────────────────
-    pdf.set_y(-14)
-    pdf.set_font('Helvetica', '', 8)
-    pdf.set_text_color(*C_MUTED)
-    pdf.cell(0, 5, _s(f'astronode.com  -  {reading.created_at.strftime("%d/%m/%Y")}'), align='C')
 
     pdf_bytes = pdf.output()
     safe_name = reading.reading_type.name.lower().replace(' ', '-')
