@@ -133,7 +133,7 @@
 <body>
   <nav class="topnav">
     <a href="{{ url_for('public.landing') }}" style="display:block; line-height:0; text-decoration:none;">
-      <img src="{{ url_for('static', filename='logo.png') }}" alt="Astronode" class="nav-logo">
+      <img src="{{ url_for('static', filename='logolowres.png') }}" alt="Astronode" class="nav-logo">
     </a>
     <div class="nav-links">
       {% if current_user.is_authenticated %}
@@ -197,7 +197,7 @@
   <footer class="site-footer">
     <div class="footer-inner">
       <div>
-        <img src="{{ url_for('static', filename='logo.png') }}" alt="Astronode" style="height:22px; width:auto; display:block; margin-bottom:0.65rem; opacity:0.82;">
+        <img src="{{ url_for('static', filename='logolowres.png') }}" alt="Astronode" style="height:22px; width:auto; display:block; margin-bottom:0.65rem; opacity:0.82;">
         <p style="font-size:0.8rem; color:var(--text-muted); margin-top:0; max-width:220px;">Lecturas de carta natal con IA. Personalizadas, en profundidad, en tu idioma.</p>
         <p class="footer-copy">© 2026 Astronode. Todos los derechos reservados.</p>
       </div>
