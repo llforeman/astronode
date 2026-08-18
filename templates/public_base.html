@@ -13,9 +13,9 @@
   </script>
   <style>
     :root[data-theme="dark"] {
-      --bg: #09000f; --bg2: #160428; --text: #ede8f5; --text-muted: #8878a0;
-      --accent: #c9963a; --accent-light: #e8c060; --border: #2e1048; --card: #160428;
-      --gold: #d4af37; --gold-dim: rgba(212,175,55,0.18);
+      --bg: #09000f; --bg2: #160428; --text: #ede8f5; --text-muted: #a090b8;
+      --accent: #c9963a; --accent-light: #f0cf60; --border: #2e1048; --card: #160428;
+      --gold: #d4bc48; --gold-dim: rgba(212,188,72,0.18);
     }
     :root[data-theme="light"] {
       --bg: #f5f0ff; --bg2: #ffffff; --text: #1a0a2e; --text-muted: #6b5b80;
@@ -27,13 +27,14 @@
     a { color: var(--accent-light); text-decoration: none; }
     a:hover { text-decoration: underline; }
     nav.topnav {
-      background-color: #350F4C;
+      background: rgba(53, 15, 76, 0.80);
+      backdrop-filter: blur(14px) saturate(160%);
+      -webkit-backdrop-filter: blur(14px) saturate(160%);
       background-image:
-        radial-gradient(ellipse at 8% 50%, rgba(212,175,55,0.09) 0%, transparent 50%),
-        radial-gradient(ellipse at 92% 50%, rgba(212,175,55,0.05) 0%, transparent 40%),
-        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
-      border-bottom: 1px solid rgba(212,175,55,0.18);
-      padding: 0.85rem 1.5rem;
+        radial-gradient(ellipse at 8% 50%, rgba(212,188,72,0.08) 0%, transparent 50%),
+        radial-gradient(ellipse at 92% 50%, rgba(212,188,72,0.04) 0%, transparent 40%);
+      border-bottom: 1px solid rgba(212,188,72,0.14);
+      padding: 0.85rem 1.75rem;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -41,8 +42,8 @@
       top: 0;
       z-index: 100;
     }
-    nav.topnav .nav-links { display: flex; gap: 1.5rem; align-items: center; }
-    nav.topnav .nav-links a:not(.btn) { color: rgba(237,232,245,0.75); font-size: 0.9rem; }
+    nav.topnav .nav-links { display: flex; gap: 1.75rem; align-items: center; }
+    nav.topnav .nav-links a:not(.btn) { color: rgba(237,232,245,0.88); font-size: 0.92rem; letter-spacing: 0.2px; }
     nav.topnav .nav-links a:not(.btn):hover { color: #fff; text-decoration: none; }
     .nav-mobile { display: none; gap: 0.6rem; align-items: center; }
     .hamburger { background: none; border: 1px solid var(--border); color: var(--text-muted); padding: 0.35rem 0.6rem; border-radius: 6px; cursor: pointer; font-size: 1.1rem; line-height: 1; }
@@ -100,8 +101,8 @@
     .btn { display: inline-block; padding: 0.6rem 1.5rem; border-radius: 8px; border: none; cursor: pointer; font-size: 0.95rem; font-weight: 500; letter-spacing: 0.4px; transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s; text-decoration: none; }
     .btn-primary { background: linear-gradient(135deg, #d4a030 0%, #a07020 100%); border: 1px solid rgba(255,255,255,0.15); color: #fff; }
     .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(212,160,48,0.45); color: #fff; text-decoration: none; }
-    .btn-outline { background: transparent; color: var(--accent-light); border: 1px solid var(--accent); }
-    .btn-outline:hover { transform: translateY(-2px); text-decoration: none; }
+    .btn-outline { background: transparent; color: var(--accent-light); border: 1px solid rgba(212,188,72,0.5); }
+    .btn-outline:hover { background: rgba(212,188,72,0.08); border-color: var(--gold); color: var(--gold); transform: translateY(-2px); text-decoration: none; }
     .flash { padding: 0.75rem 1rem; border-radius: 6px; margin-bottom: 1rem; background: var(--border); color: var(--text); max-width: 960px; margin: 0 auto 1rem; }
     .theme-toggle { background: none; border: 1px solid var(--border); color: var(--text-muted); padding: 0.3rem 0.7rem; border-radius: 6px; cursor: pointer; }
     /* Footer */
@@ -129,7 +130,7 @@
 <body>
   <nav class="topnav">
     <a href="{{ url_for('public.landing') }}" style="display:block; line-height:0; text-decoration:none;">
-      <img src="{{ url_for('static', filename='logo.png') }}" alt="Astronode" style="height:30px; width:auto; display:block;">
+      <img src="{{ url_for('static', filename='logo.png') }}" alt="Astronode" style="height:36px; width:auto; display:block;">
     </a>
     <div class="nav-links">
       {% if current_user.is_authenticated %}
@@ -142,10 +143,10 @@
         <a href="{{ url_for('auth.login') }}">Iniciar sesión</a>
         <a href="{{ url_for('auth.register') }}" class="btn btn-primary">Calcular mi carta →</a>
       {% endif %}
-      <button class="theme-toggle" onclick="toggleTheme()">◐</button>
+      <button class="theme-toggle" onclick="toggleTheme()">☽</button>
     </div>
     <div class="nav-mobile">
-      <button class="theme-toggle" onclick="toggleTheme()">◐</button>
+      <button class="theme-toggle" onclick="toggleTheme()">☽</button>
       <button class="hamburger" onclick="openMobileMenu()" aria-label="Menú">☰</button>
     </div>
   </nav>
