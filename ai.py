@@ -747,37 +747,111 @@ def _compute_inter_aspects(pos_a: dict, pos_b: dict) -> list[dict]:
     return inter
 
 
-_LOVE_BODIES    = {'Sun', 'Moon', 'Venus', 'Mars', 'Ascendant'}
-_COMM_BODIES    = {'Mercury', 'Sun', 'Moon', 'Ascendant'}
-_NODE_BODIES    = {'North_Node', 'South_Node'}
-_TENSION_TYPES  = {'cuadratura', 'oposición'}
-_HARMONY_TYPES  = {'trígono', 'sextil'}
+_NODE_BODIES   = {'North_Node', 'South_Node'}
+_TENSION_TYPES = {'cuadratura', 'oposición'}
+_HARMONY_TYPES = {'trígono', 'sextil'}
+_LOVE_BODIES   = {'Sun', 'Moon', 'Venus', 'Mars', 'Ascendant'}
+_COMM_BODIES   = {'Mercury', 'Sun', 'Moon', 'Ascendant'}
+_TENSION_OWN   = {'Saturn', 'Mars', 'Pluto', 'Uranus'}  # conjunctions of these → §4
+_ANGULAR_HOUSES = {1, 4, 7, 10}
+
+# Scoring weights — higher = more dominant aspect in chart
+_PLANET_WEIGHT = {
+    'Sun': 1.0, 'Moon': 1.0, 'Ascendant': 0.9,
+    'Venus': 0.85, 'Mars': 0.85, 'Mercury': 0.8, 'Saturn': 0.8,
+    'Jupiter': 0.7, 'North_Node': 0.7, 'South_Node': 0.7,
+    'Pluto': 0.65, 'Uranus': 0.6, 'Neptune': 0.55, 'Chiron': 0.5,
+}
+_ASPECT_WEIGHT = {
+    'conjunción': 1.0, 'oposición': 0.9,
+    'cuadratura': 0.85, 'trígono': 0.75, 'sextil': 0.6,
+}
 
 
-def _aspects_for_section(inter: list, n: int) -> list:
-    """Return the subset of inter-aspects relevant to synastry section n."""
-    if n == 1:   # overview — broad sample
-        return inter[:18]
-    if n == 2:   # love/attraction — Venus, Mars, Moon, Sun, ASC
-        return [a for a in inter
-                if a['a'] in _LOVE_BODIES or a['b'] in _LOVE_BODIES][:15]
-    if n == 3:   # communication — Mercury-centric
-        return [a for a in inter
-                if a['a'] in _COMM_BODIES or a['b'] in _COMM_BODIES][:12]
-    if n == 4:   # tensions — squares and oppositions only
-        return [a for a in inter if a['aspecto'] in _TENSION_TYPES][:15]
-    if n == 5:   # harmony — trines and sextiles only
-        return [a for a in inter if a['aspecto'] in _HARMONY_TYPES][:15]
-    if n == 6:   # nodes/karmic purpose
-        return [a for a in inter
-                if a['a'] in _NODE_BODIES or a['b'] in _NODE_BODIES][:12]
-    return inter[:20]
+def _score_aspect(asp: dict) -> float:
+    """Composite score: planet importance × aspect importance × angularity / orb."""
+    pw      = _PLANET_WEIGHT.get(asp['a'], 0.5) * _PLANET_WEIGHT.get(asp['b'], 0.5)
+    aw      = _ASPECT_WEIGHT.get(asp['aspecto'], 0.5)
+    angular = 0.2 if (asp.get('casa_a') in _ANGULAR_HOUSES or
+                      asp.get('casa_b') in _ANGULAR_HOUSES) else 0.0
+    return (pw * aw + angular) / (asp['orbe'] + 0.5)
+
+
+def _assign_owner(asp: dict) -> int:
+    """Return the single section (2–6) that owns this aspect — no duplicates."""
+    a, b, kind = asp['a'], asp['b'], asp['aspecto']
+    if a in _NODE_BODIES or b in _NODE_BODIES:
+        return 6
+    if kind in _TENSION_TYPES:
+        return 4
+    if kind in _HARMONY_TYPES:
+        return 5
+    # Conjunction: route by planet character
+    if kind == 'conjunción':
+        if a in _TENSION_OWN or b in _TENSION_OWN:
+            return 4
+        if 'Mercury' in (a, b):
+            return 3
+        return 2  # love-planet conjunction
+    # Residual (rare aspect types) — planet-theme fallback
+    if 'Mercury' in (a, b):
+        return 3
+    if a in _LOVE_BODIES or b in _LOVE_BODIES:
+        return 2
+    return 2
+
+
+def _build_manifest(inter: list) -> dict[int, list]:
+    """Assign each aspect to exactly one owner section. Returns {n: [asps]}."""
+    manifest: dict[int, list] = {2: [], 3: [], 4: [], 5: [], 6: []}
+    for asp in inter:
+        manifest[_assign_owner(asp)].append(asp)
+    return manifest
+
+
+def _stubs_for(manifest: dict, n: int) -> list:
+    """Cross-relevant aspects from neighbouring sections — passed as stubs only."""
+    if n == 2:  # love: know about hard love-planet aspects owned by §4
+        return [a for a in manifest[4]
+                if a['a'] in _LOVE_BODIES or a['b'] in _LOVE_BODIES][:6]
+    if n == 3:  # comm: know about Mercury aspects owned by §4 or §5
+        return ([a for a in manifest[4] if 'Mercury' in (a['a'], a['b'])] +
+                [a for a in manifest[5] if 'Mercury' in (a['a'], a['b'])])[:6]
+    if n == 4:  # tensions: know about love conjunctions owned by §2
+        return manifest[2][:6]
+    if n == 5:  # harmony: know about love conjunctions owned by §2
+        return manifest[2][:6]
+    return []
+
+
+def _format_aspect_block(owned: list, stubs: list,
+                          name_a: str, name_b: str) -> str:
+    _SEC_LABEL = {2: 'Amor', 3: 'Comunicación', 4: 'Tensiones', 5: 'Armonía', 6: 'Nodos'}
+    parts = []
+    if owned:
+        parts.append('INTERASPECTOS PARA ANÁLISIS DETALLADO:')
+        for a in owned:
+            parts.append(
+                f"  {name_a}/{a['a_es']} {a['aspecto']} {name_b}/{a['b_es']} "
+                f"(orbe {a['orbe']}°, casa {a['casa_a']} — casa {a['casa_b']})"
+            )
+    else:
+        parts.append('INTERASPECTOS PARA ANÁLISIS DETALLADO:\n  (ninguno en esta categoría para este par)')
+    if stubs:
+        parts.append('\nASPECTOS ASIGNADOS A OTRAS SECCIONES')
+        parts.append('(menciona brevemente en UNA frase si es pertinente; NO los analices):')
+        for a in stubs:
+            label = _SEC_LABEL.get(_assign_owner(a), '?')
+            parts.append(
+                f"  [{label}] {name_a}/{a['a_es']} {a['aspecto']} "
+                f"{name_b}/{a['b_es']} (orbe {a['orbe']}°)"
+            )
+    return '\n'.join(parts)
 
 
 def _inter_aspects_text(inter: list, name_a: str, name_b: str) -> str:
-    from chart_analysis import PLANET_ES
     lines = []
-    for asp in inter[:40]:  # cap to avoid huge prompts
+    for asp in inter[:40]:
         lines.append(
             f"  {name_a}/{asp['a_es']} {asp['aspecto']} {name_b}/{asp['b_es']} "
             f"(orbe {asp['orbe']}°, casa {asp['casa_a']} — casa {asp['casa_b']})"
@@ -792,6 +866,43 @@ def _positions_summary(pos_es: dict) -> str:
         retro = ' R' if p.get('retrogrado') else ''
         lines.append(f"  {p['planeta_es']}: {p['grado']} Casa {p['casa']}{retro}")
     return '\n'.join(lines)
+
+
+def _element_modal_summary(pos_es: dict) -> str:
+    """Element / modality / angularity breakdown for §1 structural overview."""
+    PERSONAL = {'Sun', 'Moon', 'Mercury', 'Venus', 'Mars', 'Jupiter', 'Saturn', 'Ascendant'}
+    SIGN_MAP = {
+        'Ari': ('fuego', 'cardinal'),  'Aries':      ('fuego', 'cardinal'),
+        'Tau': ('tierra', 'fijo'),     'Tauro':       ('tierra', 'fijo'),
+        'Gem': ('aire', 'mutable'),    'Géminis':     ('aire', 'mutable'),
+        'Can': ('agua', 'cardinal'),   'Cáncer':      ('agua', 'cardinal'),
+        'Leo': ('fuego', 'fijo'),      'Vir': ('tierra', 'mutable'),
+        'Virgo': ('tierra', 'mutable'),
+        'Lib': ('aire', 'cardinal'),   'Libra':       ('aire', 'cardinal'),
+        'Sco': ('agua', 'fijo'),       'Escorpio':    ('agua', 'fijo'),
+        'Sag': ('fuego', 'mutable'),   'Sagitario':   ('fuego', 'mutable'),
+        'Cap': ('tierra', 'cardinal'), 'Capricornio': ('tierra', 'cardinal'),
+        'Aqu': ('aire', 'fijo'),       'Acuario':     ('aire', 'fijo'),
+        'Pis': ('agua', 'mutable'),    'Piscis':      ('agua', 'mutable'),
+    }
+    elem = {'fuego': 0, 'tierra': 0, 'aire': 0, 'agua': 0}
+    mod  = {'cardinal': 0, 'fijo': 0, 'mutable': 0}
+    angular = set()
+
+    for planet_key, p in pos_es.items():
+        if planet_key not in PERSONAL:
+            continue
+        em = SIGN_MAP.get(p.get('signo', ''))
+        if em:
+            elem[em[0]] += 1
+            mod[em[1]]  += 1
+        if p.get('casa') in _ANGULAR_HOUSES:
+            angular.add(f"Casa {p['casa']}")
+
+    elem_str = ', '.join(f"{v} {k}" for k, v in sorted(elem.items(), key=lambda x: -x[1]) if v)
+    mod_str  = ', '.join(f"{v} {k}" for k, v in sorted(mod.items(),  key=lambda x: -x[1]) if v)
+    ang_str  = ', '.join(sorted(angular)) or 'ninguna concentración angular destacada'
+    return f"Elementos: {elem_str}\nModalidades: {mod_str}\nConcentración angular (planetas personales): {ang_str}"
 
 
 # ── Carta Kármica ──────────────────────────────────────────────────────────────
@@ -897,25 +1008,53 @@ def generate_synastry(profile_a, profile_b, reading_type) -> dict:
     pos_a, es_a = _chart(profile_a)
     pos_b, es_b = _chart(profile_b)
 
-    inter   = _compute_inter_aspects(pos_a, pos_b)
+    # Score-rank aspects (planet weight × aspect weight × angularity / orb)
+    inter = _compute_inter_aspects(pos_a, pos_b)
+    inter.sort(key=_score_aspect, reverse=True)
+
     carta_a = _positions_summary(es_a)
     carta_b = _positions_summary(es_b)
 
-    # ── Sections 1–6: each gets a filtered aspect list scoped to its theme ────
-    calls = []
+    # ── Ownership manifest: each aspect has exactly one owner (§2–6) ──────────
+    manifest = _build_manifest(inter)
+    for n, asps in manifest.items():
+        log.info('[synastry §%d owns %d]: %s', n, len(asps),
+                 ', '.join(f"{a['a_es']}/{a['b_es']}" for a in asps[:5]))
+
+    # ── §1: structural overview — no per-aspect analysis ─────────────────────
+    msg_1 = P.PROMPT_SINASTRIA_OVERVIEW.format(
+        nombre_a=profile_a.name,
+        nombre_b=profile_b.name,
+        carta_a=carta_a,
+        carta_b=carta_b,
+        elem_modal_a=_element_modal_summary(es_a),
+        elem_modal_b=_element_modal_summary(es_b),
+        aspectos_top=_inter_aspects_text(inter[:8], profile_a.name, profile_b.name),
+    )
+    calls = [(1, msg_1)]
+
+    # ── §2–6: owned aspects + cross-section stubs ─────────────────────────────
     for sec in P.SECCIONES_SINASTRIA:
         n = sec['n']
-        if n == 7:
-            continue  # synthesis runs after 1–6 are complete
-        filtered_txt = _inter_aspects_text(
-            _aspects_for_section(inter, n), profile_a.name, profile_b.name)
+        if n in (1, 7):
+            continue
+        owned = manifest[n]
+        stubs = _stubs_for(manifest, n)
+
+        # Thin section: less than 2 owned aspects → honest short section
+        thin_note = (
+            "\n\nNOTA: No hay interaspectos directos en esta categoría para este par. "
+            "Escribe un párrafo breve y honesto (150–200 palabras) basado en el contexto "
+            "general de las cartas, sin inventar conexiones que no existen."
+        ) if len(owned) < 2 else ''
+
         msg = P.PROMPT_SINASTRIA_BASE.format(
             nombre_a=profile_a.name,
             nombre_b=profile_b.name,
-            instruccion=P.INSTRUCCION_SINASTRIA[n],
+            instruccion=P.INSTRUCCION_SINASTRIA[n] + thin_note,
             carta_a=carta_a,
             carta_b=carta_b,
-            interaspectos=filtered_txt,
+            interaspectos=_format_aspect_block(owned, stubs, profile_a.name, profile_b.name),
         )
         calls.append((n, msg))
 
@@ -929,19 +1068,20 @@ def generate_synastry(profile_a, profile_b, reading_type) -> dict:
 
     by_n = dict(results)
 
-    # ── Section 7: sequential synthesis — receives sections 1–6 as context ───
+    # ── §7: sequential synthesis — receives all prior sections as context ─────
     secciones_previas = '\n\n'.join(
         f"## {sec['titulo']}\n{by_n[sec['n']]}"
         for sec in P.SECCIONES_SINASTRIA
         if sec['n'] != 7 and sec['n'] in by_n
     )
-    msg_sintesis = P.PROMPT_SINASTRIA_SINTESIS.format(
-        nombre_a=profile_a.name,
-        nombre_b=profile_b.name,
-        secciones_previas=secciones_previas,
+    by_n[7] = _ask(
+        [{'role': 'user', 'content': P.PROMPT_SINASTRIA_SINTESIS.format(
+            nombre_a=profile_a.name,
+            nombre_b=profile_b.name,
+            secciones_previas=secciones_previas,
+        )}],
+        model=_MODEL_PROSE, temperature=0.82,
     )
-    by_n[7] = _ask([{'role': 'user', 'content': msg_sintesis}],
-                   model=_MODEL_PROSE, temperature=0.82)
 
     parts = [f"## {sec['titulo']}\n\n{by_n[sec['n']]}"
              for sec in P.SECCIONES_SINASTRIA if sec['n'] in by_n]

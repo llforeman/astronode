@@ -138,11 +138,42 @@ SECCIONES_SINASTRIA = [
     {"n": 7, "titulo": "Síntesis de la relación"},
 ]
 
+PROMPT_SINASTRIA_OVERVIEW = """\
+Analiza la sinastría entre {nombre_a} y {nombre_b}.
+Escribe la visión general ESTRUCTURAL de esta combinación de cartas.
+Tu tarea es describir el carácter global de esta unión — temperatura, ritmo, dinámica de poder —
+sin entrar en el análisis detallado de aspectos individuales (eso lo harán las secciones siguientes).
+
+Incluye:
+- Cómo se complementan o colisionan los elementos y modalidades de ambas cartas
+- Qué énfasis de casas dominan y qué áreas de vida activan mutuamente
+- Qué carta «lleva el peso» de la dinámica (quién lidera, quién estabiliza)
+- Una primera impresión holística del tipo de relación que está en potencia
+- Menciona 2-3 interaspectos significativos como orientación, sin analizarlos en profundidad
+
+Escribe en español de España, en tercera persona. Prosa corrida, sin listas. Extensión: 350-450 palabras.
+
+CARTA DE {nombre_a}
+{carta_a}
+{elem_modal_a}
+
+CARTA DE {nombre_b}
+{carta_b}
+{elem_modal_b}
+
+INTERASPECTOS MÁS SIGNIFICATIVOS (orientación — no analizar en detalle aquí):
+{aspectos_top}
+"""
+
 PROMPT_SINASTRIA_BASE = """\
 Analiza la sinastría entre {nombre_a} y {nombre_b}.
 {instruccion}
-Escribe en español de España, en tercera persona refiriéndote a ambas personas por nombre. \
-Prosa corrida, sin listas ni viñetas. Tono cercano, honesto y profundo.
+
+NORMAS DE ESTILO:
+- Español de España, tercera persona, refiriéndote a ambas personas por nombre.
+- Prosa corrida, sin listas ni viñetas. Extensión: 400-500 palabras.
+- Evita estas palabras sobreutilizadas: "orgullo", "teatralidad", "choques de voluntad",
+  "profundo", "intensidad", "inevitable", "destino", "alma gemela". Usa vocabulario fresco.
 
 CARTA DE {nombre_a}
 {carta_a}
@@ -150,36 +181,45 @@ CARTA DE {nombre_a}
 CARTA DE {nombre_b}
 {carta_b}
 
-INTERASPECTOS (planetas de {nombre_a} aspectando planetas de {nombre_b} y viceversa)
 {interaspectos}
 """
 
 INSTRUCCION_SINASTRIA = {
-    1: ("Da una visión general de la dinámica entre ambas personas: qué energías se atraen, qué las une y qué las reta. "
-        "Menciona los interaspectos más definitorios. Esta sección es la única que ofrece una panorámica global; "
-        "las secciones siguientes profundizarán en temas específicos (amor, comunicación, tensiones, armonía, nodos)."),
-    2: ("Analiza la atracción física y emocional usando SOLO los interaspectos proporcionados. "
-        "Céntrate en aspectos Venus-Marte, Venus-Luna, Sol-Luna y Sol-Venus. "
-        "No comentes aspectos de Mercurio, cuadraturas genéricas ni Nodos — esas secciones los analizarán por separado. "
-        "Explica qué tipo de amor, atracción y química existe entre ambas personas."),
-    3: ("Analiza la comunicación y compatibilidad mental usando SOLO los interaspectos proporcionados. "
-        "Céntrate en aspectos de Mercurio y en cómo Sol y Luna influyen en el estilo comunicativo. "
-        "No comentes atracción romántica, tensiones generales ni nodos kármicos — esas secciones los cubren. "
-        "¿Se entienden? ¿Dónde hay fricción intelectual?"),
-    4: ("Analiza las tensiones y retos usando SOLO los interaspectos proporcionados (cuadraturas y oposiciones). "
-        "No repitas aspectos ya abordados en las secciones de amor o comunicación. "
-        "Sé honesto pero constructivo: explica qué activa estas tensiones y qué pueden aprender de ellas."),
-    5: ("Analiza los flujos de apoyo usando SOLO los interaspectos proporcionados (trígonos y sextiles). "
-        "No repitas aspectos tensos ni aspectos de amor ya analizados en secciones anteriores. "
-        "¿Dónde fluye la energía con facilidad? ¿Qué se refuerzan mutuamente?"),
-    6: ("Analiza el propósito conjunto usando SOLO los interaspectos proporcionados (aspectos de Nodos). "
-        "¿Hay activación kármica? ¿Los planetas de uno tocan los nodos del otro? "
-        "No repitas aspectos de amor, tensión o comunicación — céntrate exclusivamente en el propósito evolutivo."),
+    2: (
+        "Analiza la atracción física y emocional usando SOLO los interaspectos del bloque «PARA ANÁLISIS DETALLADO».\n"
+        "Describe la química, el deseo, el tipo de apego que se forma entre estas dos personas.\n"
+        "Si hay aspectos en el bloque «ASIGNADOS A OTRAS SECCIONES», menciónalos en UNA frase — sin analizarlos.\n"
+        "VOZ: sensorial y corporal — describe una corriente física entre dos personas, no arquetipos abstractos."
+    ),
+    3: (
+        "Analiza la comunicación y compatibilidad mental usando SOLO los interaspectos del bloque «PARA ANÁLISIS DETALLADO».\n"
+        "Describe cómo se hablan, se escuchan, se estimulan o se bloquean intelectualmente.\n"
+        "Si hay aspectos en el bloque «ASIGNADOS A OTRAS SECCIONES», menciónalos en UNA frase — sin analizarlos.\n"
+        "VOZ: analítica y precisa — patrones de conversación, velocidad mental, silencios significativos."
+    ),
+    4: (
+        "Analiza las tensiones y retos usando SOLO los interaspectos del bloque «PARA ANÁLISIS DETALLADO».\n"
+        "Nombra el conflicto con claridad, sin eufemismos, y luego describe qué pueden aprender de él.\n"
+        "Si hay aspectos en el bloque «ASIGNADOS A OTRAS SECCIONES», menciónalos en UNA frase — sin analizarlos.\n"
+        "VOZ: directa — nombra la fricción concreta, no el arquetipo genérico."
+    ),
+    5: (
+        "Analiza los flujos de apoyo usando SOLO los interaspectos del bloque «PARA ANÁLISIS DETALLADO».\n"
+        "Describe qué construyen juntos con facilidad, qué alivio se aportan, dónde no tienen que esforzarse.\n"
+        "Si hay aspectos en el bloque «ASIGNADOS A OTRAS SECCIONES», menciónalos en UNA frase — sin analizarlos.\n"
+        "VOZ: fluida y concreta — describe situaciones reales, no abstracciones armónicas."
+    ),
+    6: (
+        "Analiza el propósito conjunto usando SOLO los interaspectos del bloque «PARA ANÁLISIS DETALLADO».\n"
+        "¿Los planetas de uno tocan los nodos del otro? ¿Qué deuda, misión o ciclo aparece?\n"
+        "Si hay aspectos en el bloque «ASIGNADOS A OTRAS SECCIONES», menciónalos en UNA frase — sin analizarlos.\n"
+        "VOZ: evolutiva y temporal — ciclos, lo que esta relación viene a resolver o a iniciar."
+    ),
 }
 
 PROMPT_SINASTRIA_SINTESIS = """\
 Eres el astrólogo que ha analizado en profundidad la sinastría entre {nombre_a} y {nombre_b}.
-Las secciones anteriores ya han analizado en detalle todos los interaspectos individuales.
+Las secciones anteriores ya han cubierto todos los interaspectos individuales.
 
 SECCIONES YA REDACTADAS:
 {secciones_previas}
@@ -189,14 +229,16 @@ SECCIONES YA REDACTADAS:
 Escribe ahora la SÍNTESIS FINAL del informe.
 
 INSTRUCCIONES ESTRICTAS:
-1. NO vuelvas a nombrar ni analizar aspectos astrológicos individuales por su nombre técnico — ya están cubiertos arriba.
-2. Habla del carácter GLOBAL de esta relación como si la conocieras íntimamente: qué tipo de vínculo es en esencia.
-3. Integra las fortalezas fundamentales y los retos estructurales en un relato coherente y no repetitivo.
-4. Explica qué necesitan {nombre_a} y {nombre_b} para que la relación funcione y evolucione.
-5. Cierra con un párrafo final poderoso y memorable — una imagen o metáfora que capture la esencia de esta unión.
+1. NO vuelvas a nombrar aspectos astrológicos por su nombre técnico — ya están en las secciones anteriores.
+2. Habla del carácter GLOBAL de esta relación: qué tipo de vínculo es en esencia, cuál es su temperatura y su ritmo.
+3. Integra fortalezas y retos en un relato coherente sin repetir los análisis previos.
+4. Sé específico: identifica UNA fortaleza estructural y UN reto estructural con un nombre concreto \
+(p.ej. «la brecha de validación», «los focos en competencia», «el andamiaje de confianza»).
+5. Explica qué necesitan {nombre_a} y {nombre_b} para que la relación funcione y evolucione.
+6. Cierra con un párrafo final de 3-4 frases — una imagen o metáfora que capture la esencia de esta unión.
 
-Escribe en español de España, en tercera persona refiriéndote a ambas personas por nombre.
-Prosa corrida, sin listas ni viñetas. Extensión: 450-550 palabras.
+Evita: "orgullo", "teatralidad", "profundo", "inevitable", "destino", "alma gemela", "intensidad".
+Español de España, tercera persona, prosa corrida, sin listas. Extensión: 450-550 palabras.
 """
 
 # ==========================================================================
