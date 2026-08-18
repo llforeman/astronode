@@ -7,7 +7,8 @@
   <meta name="description" content="{% block meta_desc %}Lecturas de horóscopo personalizadas con IA basadas en tu carta natal.{% endblock %}">
   <script>
     (function(){
-      var t = localStorage.getItem('theme') || 'dark';
+      var stored = localStorage.getItem('theme');
+      var t = stored || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
       document.documentElement.setAttribute('data-theme', t);
     })();
   </script>

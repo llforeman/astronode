@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Crear cuenta — Astronode</title>
-  <script>(function(){ document.documentElement.setAttribute('data-theme', localStorage.getItem('theme')||'dark'); })();</script>
+  <script>(function(){ var _s=localStorage.getItem('theme'); document.documentElement.setAttribute('data-theme', _s||(window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light')); })();</script>
   <style>
     :root[data-theme="dark"] { --bg:#09000f; --text:#ede8f5; --text-muted:#8878a0; --accent:#c9963a; --accent-light:#e8c060; --border:#2e1048; --card:#160428; --gold:#d4af37; }
     :root[data-theme="light"] { --bg:#f5f0ff; --text:#1a0a2e; --text-muted:#6b5b80; --accent:#8a5200; --accent-light:#b87020; --border:#d8c8e8; --card:#ffffff; --gold:#b8860b; }
