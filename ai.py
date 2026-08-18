@@ -747,6 +747,33 @@ def _compute_inter_aspects(pos_a: dict, pos_b: dict) -> list[dict]:
     return inter
 
 
+_LOVE_BODIES    = {'Sun', 'Moon', 'Venus', 'Mars', 'Ascendant'}
+_COMM_BODIES    = {'Mercury', 'Sun', 'Moon', 'Ascendant'}
+_NODE_BODIES    = {'North_Node', 'South_Node'}
+_TENSION_TYPES  = {'cuadratura', 'oposición'}
+_HARMONY_TYPES  = {'trígono', 'sextil'}
+
+
+def _aspects_for_section(inter: list, n: int) -> list:
+    """Return the subset of inter-aspects relevant to synastry section n."""
+    if n == 1:   # overview — broad sample
+        return inter[:18]
+    if n == 2:   # love/attraction — Venus, Mars, Moon, Sun, ASC
+        return [a for a in inter
+                if a['a'] in _LOVE_BODIES or a['b'] in _LOVE_BODIES][:15]
+    if n == 3:   # communication — Mercury-centric
+        return [a for a in inter
+                if a['a'] in _COMM_BODIES or a['b'] in _COMM_BODIES][:12]
+    if n == 4:   # tensions — squares and oppositions only
+        return [a for a in inter if a['aspecto'] in _TENSION_TYPES][:15]
+    if n == 5:   # harmony — trines and sextiles only
+        return [a for a in inter if a['aspecto'] in _HARMONY_TYPES][:15]
+    if n == 6:   # nodes/karmic purpose
+        return [a for a in inter
+                if a['a'] in _NODE_BODIES or a['b'] in _NODE_BODIES][:12]
+    return inter[:20]
+
+
 def _inter_aspects_text(inter: list, name_a: str, name_b: str) -> str:
     from chart_analysis import PLANET_ES
     lines = []
@@ -870,34 +897,52 @@ def generate_synastry(profile_a, profile_b, reading_type) -> dict:
     pos_a, es_a = _chart(profile_a)
     pos_b, es_b = _chart(profile_b)
 
-    inter = _compute_inter_aspects(pos_a, pos_b)
-    inter_txt = _inter_aspects_text(inter, profile_a.name, profile_b.name)
+    inter   = _compute_inter_aspects(pos_a, pos_b)
     carta_a = _positions_summary(es_a)
     carta_b = _positions_summary(es_b)
 
+    # ── Sections 1–6: each gets a filtered aspect list scoped to its theme ────
     calls = []
     for sec in P.SECCIONES_SINASTRIA:
         n = sec['n']
+        if n == 7:
+            continue  # synthesis runs after 1–6 are complete
+        filtered_txt = _inter_aspects_text(
+            _aspects_for_section(inter, n), profile_a.name, profile_b.name)
         msg = P.PROMPT_SINASTRIA_BASE.format(
             nombre_a=profile_a.name,
             nombre_b=profile_b.name,
             instruccion=P.INSTRUCCION_SINASTRIA[n],
             carta_a=carta_a,
             carta_b=carta_b,
-            interaspectos=inter_txt,
+            interaspectos=filtered_txt,
         )
         calls.append((n, msg))
 
-    from concurrent.futures import ThreadPoolExecutor
     def _call(item):
         n, msg = item
         return n, _ask([{'role': 'user', 'content': msg}],
                        model=_MODEL_PROSE, temperature=0.85)
 
-    with ThreadPoolExecutor(max_workers=7) as ex:
+    with ThreadPoolExecutor(max_workers=6) as ex:
         results = list(ex.map(_call, calls))
 
     by_n = dict(results)
+
+    # ── Section 7: sequential synthesis — receives sections 1–6 as context ───
+    secciones_previas = '\n\n'.join(
+        f"## {sec['titulo']}\n{by_n[sec['n']]}"
+        for sec in P.SECCIONES_SINASTRIA
+        if sec['n'] != 7 and sec['n'] in by_n
+    )
+    msg_sintesis = P.PROMPT_SINASTRIA_SINTESIS.format(
+        nombre_a=profile_a.name,
+        nombre_b=profile_b.name,
+        secciones_previas=secciones_previas,
+    )
+    by_n[7] = _ask([{'role': 'user', 'content': msg_sintesis}],
+                   model=_MODEL_PROSE, temperature=0.82)
+
     parts = [f"## {sec['titulo']}\n\n{by_n[sec['n']]}"
              for sec in P.SECCIONES_SINASTRIA if sec['n'] in by_n]
     return {'text': '\n\n'.join(parts), 'chart_image': None}

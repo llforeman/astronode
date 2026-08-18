@@ -155,14 +155,49 @@ INTERASPECTOS (planetas de {nombre_a} aspectando planetas de {nombre_b} y viceve
 """
 
 INSTRUCCION_SINASTRIA = {
-    1: "Da una visión general de la dinámica entre ambas personas: qué energías se atraen, qué las une, qué las reta. Menciona los interaspectos más definitorios.",
-    2: "Analiza la atracción física y emocional: aspectos Venus-Marte, Venus-Luna, Sol-Luna y Sol-Venus entre ambas cartas. Explica qué tipo de amor y atracción existe.",
-    3: "Analiza la comunicación y compatibilidad mental: aspectos Mercurio-Mercurio, Mercurio-Sol, Mercurio-Luna. ¿Se entienden? ¿Dónde hay fricción intelectual?",
-    4: "Analiza las tensiones y retos: cuadraturas y oposiciones entre las dos cartas, especialmente las que involucran planetas personales. Sé honesto pero constructivo.",
-    5: "Analiza los flujos de apoyo: trígonos y sextiles entre las dos cartas. ¿Dónde fluye la energía con facilidad? ¿Qué se refuerzan mutuamente?",
-    6: "Analiza el propósito conjunto usando los Nodos de ambas cartas y cómo los planetas de uno activan los Nodos del otro. ¿Hay un propósito kármico en esta relación?",
-    7: "Escribe una síntesis integradora: ¿qué tipo de relación es esta, cuáles son sus mayores fortalezas y retos, y qué necesitan para que funcione? Cierra con un mensaje poderoso.",
+    1: ("Da una visión general de la dinámica entre ambas personas: qué energías se atraen, qué las une y qué las reta. "
+        "Menciona los interaspectos más definitorios. Esta sección es la única que ofrece una panorámica global; "
+        "las secciones siguientes profundizarán en temas específicos (amor, comunicación, tensiones, armonía, nodos)."),
+    2: ("Analiza la atracción física y emocional usando SOLO los interaspectos proporcionados. "
+        "Céntrate en aspectos Venus-Marte, Venus-Luna, Sol-Luna y Sol-Venus. "
+        "No comentes aspectos de Mercurio, cuadraturas genéricas ni Nodos — esas secciones los analizarán por separado. "
+        "Explica qué tipo de amor, atracción y química existe entre ambas personas."),
+    3: ("Analiza la comunicación y compatibilidad mental usando SOLO los interaspectos proporcionados. "
+        "Céntrate en aspectos de Mercurio y en cómo Sol y Luna influyen en el estilo comunicativo. "
+        "No comentes atracción romántica, tensiones generales ni nodos kármicos — esas secciones los cubren. "
+        "¿Se entienden? ¿Dónde hay fricción intelectual?"),
+    4: ("Analiza las tensiones y retos usando SOLO los interaspectos proporcionados (cuadraturas y oposiciones). "
+        "No repitas aspectos ya abordados en las secciones de amor o comunicación. "
+        "Sé honesto pero constructivo: explica qué activa estas tensiones y qué pueden aprender de ellas."),
+    5: ("Analiza los flujos de apoyo usando SOLO los interaspectos proporcionados (trígonos y sextiles). "
+        "No repitas aspectos tensos ni aspectos de amor ya analizados en secciones anteriores. "
+        "¿Dónde fluye la energía con facilidad? ¿Qué se refuerzan mutuamente?"),
+    6: ("Analiza el propósito conjunto usando SOLO los interaspectos proporcionados (aspectos de Nodos). "
+        "¿Hay activación kármica? ¿Los planetas de uno tocan los nodos del otro? "
+        "No repitas aspectos de amor, tensión o comunicación — céntrate exclusivamente en el propósito evolutivo."),
 }
+
+PROMPT_SINASTRIA_SINTESIS = """\
+Eres el astrólogo que ha analizado en profundidad la sinastría entre {nombre_a} y {nombre_b}.
+Las secciones anteriores ya han analizado en detalle todos los interaspectos individuales.
+
+SECCIONES YA REDACTADAS:
+{secciones_previas}
+
+---
+
+Escribe ahora la SÍNTESIS FINAL del informe.
+
+INSTRUCCIONES ESTRICTAS:
+1. NO vuelvas a nombrar ni analizar aspectos astrológicos individuales por su nombre técnico — ya están cubiertos arriba.
+2. Habla del carácter GLOBAL de esta relación como si la conocieras íntimamente: qué tipo de vínculo es en esencia.
+3. Integra las fortalezas fundamentales y los retos estructurales en un relato coherente y no repetitivo.
+4. Explica qué necesitan {nombre_a} y {nombre_b} para que la relación funcione y evolucione.
+5. Cierra con un párrafo final poderoso y memorable — una imagen o metáfora que capture la esencia de esta unión.
+
+Escribe en español de España, en tercera persona refiriéndote a ambas personas por nombre.
+Prosa corrida, sin listas ni viñetas. Extensión: 450-550 palabras.
+"""
 
 # ==========================================================================
 # Carta de Relación de Davison
