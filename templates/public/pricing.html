@@ -1,32 +1,193 @@
 {% extends "public_base.html" %}
-{% block title %}Pricing — Astronode{% endblock %}
-{% block content %}
-<div class="container" style="padding-top: 3rem;">
-  <h1 style="text-align:center; color: var(--accent-light); margin-bottom: 0.5rem;">Plans & Pricing</h1>
-  <p style="text-align:center; color: var(--text-muted); margin-bottom: 3rem;">Choose the plan that fits your journey</p>
+{% block title %}Precios — Astronode{% endblock %}
+{% block meta_desc %}Sin suscripción. Carta Natal completa por €9.99 o Pack Astrología Completa para dos personas por €17.99. Pago único, acceso para siempre.{% endblock %}
 
-  <div style="display: flex; gap: 2rem; justify-content: center; flex-wrap: wrap;">
-    <!-- One-time -->
-    <div style="background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 2rem; width: 260px;">
-      <h3 style="margin-bottom: 0.5rem;">Single Reading</h3>
-      <div style="font-size: 2rem; font-weight: 700; color: var(--accent-light); margin: 1rem 0;">€9.99</div>
-      <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem;">One complete natal chart reading, delivered to your email.</p>
-      <a href="{{ url_for('auth.register') }}" class="btn btn-outline" style="width:100%; text-align:center;">Get started</a>
+{% block extra_css %}
+<style>
+  .pricing-page {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 4rem 1.5rem 5rem;
+  }
+  .pricing-header {
+    text-align: center;
+    margin-bottom: 3rem;
+  }
+  .pricing-header .label {
+    font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 2px; color: var(--gold); margin-bottom: 0.75rem;
+  }
+  .pricing-header h1 {
+    font-size: clamp(1.8rem, 4vw, 2.6rem);
+    font-weight: 800; color: var(--text);
+    letter-spacing: -0.4px; line-height: 1.2;
+    margin-bottom: 0.75rem;
+  }
+  .pricing-header p {
+    color: var(--text-muted); font-size: 1rem; line-height: 1.7;
+    max-width: 480px; margin: 0 auto;
+  }
+  .pricing-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    align-items: start;
+    margin-bottom: 2.5rem;
+  }
+  @media (max-width: 620px) { .pricing-grid { grid-template-columns: 1fr; } }
+  .pricing-card {
+    border-radius: 14px;
+    padding: 2.25rem 2rem;
+    position: relative;
+  }
+  .pricing-card.basic { background: var(--card); }
+  .pricing-card.featured {
+    background: linear-gradient(135deg, #0e0c1e, #160a28);
+    border: 1px solid var(--accent);
+  }
+  .pricing-badge {
+    position: absolute; top: -13px; left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(135deg, #c8a454 0%, #9a7235 100%);
+    color: #fff;
+    font-size: 0.65rem; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
+    padding: 0.22rem 0.9rem; border-radius: 20px; white-space: nowrap;
+  }
+  .price-tier { font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: var(--gold); margin-bottom: 0.5rem; }
+  .price-name { font-size: 1.15rem; font-weight: 800; color: var(--text); margin-bottom: 1rem; line-height: 1.3; }
+  .price-amount { font-size: clamp(2.4rem, 8vw, 3.2rem); font-weight: 800; color: var(--text); line-height: 1; margin-bottom: 0.3rem; }
+  .price-amount sup { font-size: 1.2rem; vertical-align: super; }
+  .price-note { font-size: 0.82rem; color: var(--text-muted); margin-bottom: 1.75rem; }
+  .price-divider { border: none; border-top: 1px solid var(--border); margin: 1.5rem 0; }
+  .price-includes { display: flex; flex-direction: column; gap: 0.55rem; margin-bottom: 2rem; }
+  .price-includes li {
+    font-size: 0.88rem; color: var(--text-muted);
+    list-style: none; padding-left: 1.3rem; position: relative; line-height: 1.5;
+  }
+  .price-includes li::before { content: '✦'; position: absolute; left: 0; color: var(--gold); font-size: 0.6rem; top: 3px; }
+  .price-includes li strong { color: var(--text); font-weight: 600; }
+  .btn-subtle { background: rgba(255,255,255,0.07); color: var(--text); border: 1px solid rgba(255,255,255,0.12); }
+  .btn-subtle:hover { background: rgba(255,255,255,0.11); transform: translateY(-1px); text-decoration: none; color: var(--text); }
+  .pricing-note {
+    text-align: center; font-size: 0.82rem; color: var(--text-muted); line-height: 1.7;
+  }
+  .pricing-faq { margin-top: 3.5rem; }
+  .pricing-faq h2 { font-size: 1.3rem; font-weight: 700; color: var(--text); margin-bottom: 1.25rem; }
+  .faq-list { display: flex; flex-direction: column; gap: 0.5rem; }
+  details.faq { background: var(--card); border-radius: 10px; overflow: hidden; }
+  details.faq summary {
+    padding: 1.1rem 1.4rem; cursor: pointer;
+    font-size: 0.92rem; font-weight: 600; color: var(--text);
+    list-style: none; display: flex; justify-content: space-between; align-items: center;
+  }
+  details.faq summary::-webkit-details-marker { display: none; }
+  details.faq summary::after { content: '+'; color: var(--gold); font-size: 1.2rem; font-weight: 400; }
+  details.faq[open] summary::after { content: '−'; }
+  details.faq .faq-body { padding: 0 1.4rem 1.1rem; color: var(--text-muted); font-size: 0.88rem; line-height: 1.7; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="pricing-page">
+
+  <div class="pricing-header">
+    <div class="label">Precios</div>
+    <h1>Sin suscripción. Sin renovaciones.</h1>
+    <p>Pagas una vez y la lectura es tuya para siempre. Elige la opción que encaja contigo.</p>
+  </div>
+
+  <div class="pricing-grid">
+
+    <!-- Carta Natal -->
+    <div class="pricing-card basic">
+      <div class="price-tier">Lectura individual</div>
+      <div class="price-name">Carta Natal</div>
+      <div class="price-amount"><sup>€</sup>9.99</div>
+      <div class="price-note">Pago único · Entrega inmediata</div>
+      <hr class="price-divider">
+      <ul class="price-includes">
+        <li><strong>13 capítulos</strong> sobre tu carta completa</li>
+        <li>~30 páginas en prosa fluida, en español</li>
+        <li>Planetas, casas y aspectos interpretados</li>
+        <li>PDF por email + guardada en tu cuenta</li>
+        <li>Específica para tus posiciones exactas</li>
+      </ul>
+      <a href="{{ url_for('auth.register') }}" class="btn btn-subtle" style="font-size:0.95rem; padding:0.75rem 1.75rem; display:block; text-align:center;">
+        Obtener mi lectura natal →
+      </a>
     </div>
-    <!-- Basic -->
-    <div style="background: var(--card); border: 2px solid var(--accent); border-radius: 12px; padding: 2rem; width: 260px;">
-      <h3 style="margin-bottom: 0.5rem;">Basic <span style="background:var(--accent);color:#fff;font-size:0.7rem;padding:2px 8px;border-radius:20px;vertical-align:middle;">POPULAR</span></h3>
-      <div style="font-size: 2rem; font-weight: 700; color: var(--accent-light); margin: 1rem 0;">€4.99<span style="font-size:1rem; color:var(--text-muted)">/mo</span></div>
-      <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem;">Monthly readings + access to your personal horoscope dashboard.</p>
-      <a href="{{ url_for('auth.register') }}" class="btn btn-primary" style="width:100%; text-align:center;">Subscribe</a>
+
+    <!-- Pack Completo -->
+    <div class="pricing-card featured">
+      <div class="pricing-badge">Más completo</div>
+      <div class="price-tier">Para dos personas</div>
+      <div class="price-name">Pack Astrología Completa</div>
+      <div class="price-amount"><sup>€</sup>17.99</div>
+      <div class="price-note">Pago único · Todo incluido · Para dos personas</div>
+      <hr class="price-divider">
+      <ul class="price-includes">
+        <li><strong>Carta Natal completa</strong> — 13 capítulos</li>
+        <li><strong>Carta Kármica</strong> — misión del alma, Nodo Norte, Quirón</li>
+        <li><strong>10 Revoluciones Solares</strong> — un año de tu vida, diez veces</li>
+        <li><strong>12 Revoluciones Lunares</strong> — un mes a la vez, doce veces</li>
+        <li>Todo lo anterior <strong>para una segunda persona</strong></li>
+        <li><strong>Sinastría</strong> — la dinámica entre vuestras cartas</li>
+        <li><strong>Carta Davison</strong> — la relación como entidad propia</li>
+      </ul>
+      <a href="{{ url_for('auth.register') }}" class="btn btn-primary" style="font-size:0.95rem; padding:0.75rem 1.75rem; display:block; text-align:center;">
+        Obtener el pack completo →
+      </a>
     </div>
-    <!-- VIP -->
-    <div style="background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 2rem; width: 260px;">
-      <h3 style="margin-bottom: 0.5rem;">VIP ✦</h3>
-      <div style="font-size: 2rem; font-weight: 700; color: var(--accent-light); margin: 1rem 0;">€9.99<span style="font-size:1rem; color:var(--text-muted)">/mo</span></div>
-      <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem;">Weekly readings, compatibility reports, priority generation, and all future features.</p>
-      <a href="{{ url_for('auth.register') }}" class="btn btn-outline" style="width:100%; text-align:center;">Go VIP</a>
+
+  </div>
+
+  <p class="pricing-note">
+    La carta natal es siempre gratuita, sin cuenta necesaria.<br>
+    Calcula tu carta primero y decide después.
+    <a href="{{ url_for('public.chart') }}" style="color: var(--gold); margin-left: 0.3rem;">Calcular mi carta →</a>
+  </p>
+
+  <div class="pricing-faq">
+    <h2>Preguntas frecuentes</h2>
+    <div class="faq-list">
+
+      <details class="faq">
+        <summary>¿Qué diferencia hay entre la Carta Natal y el Pack?</summary>
+        <div class="faq-body">
+          La Carta Natal es una lectura completa en profundidad de tu carta: 13 capítulos, ~30 páginas, que cubre toda tu personalidad, áreas de vida y dinámica interna. El Pack incluye todo eso más lecturas adicionales — kármica, solar, lunar — para dos personas, más la sinastría y la carta Davison entre vosotros. Es todo lo que la plataforma puede generar, en un solo pago.
+        </div>
+      </details>
+
+      <details class="faq">
+        <summary>¿El pack incluye la lectura completa para las dos personas?</summary>
+        <div class="faq-body">
+          Sí. Cada persona obtiene su Carta Natal (13 capítulos), Carta Kármica, 10 Revoluciones Solares y 12 Revoluciones Lunares. Además, el pack incluye la Sinastría entre vuestras cartas y la Carta Davison — la relación como entidad con su propio Sol, Luna y Ascendente.
+        </div>
+      </details>
+
+      <details class="faq">
+        <summary>¿Hay suscripción o pagos recurrentes?</summary>
+        <div class="faq-body">
+          No. Pagas una vez y la lectura es tuya para siempre. Sin renovaciones, sin cargos automáticos. La tienes guardada en tu cuenta y puedes releerla cuando quieras.
+        </div>
+      </details>
+
+      <details class="faq">
+        <summary>¿Cuánto tarda en llegar?</summary>
+        <div class="faq-body">
+          Normalmente menos de cinco minutos tras el pago. La lectura se genera y se envía a tu email en cuanto está lista. También la encontrarás en el panel de tu cuenta. Si algo falla, te avisamos y la regeneramos sin coste adicional.
+        </div>
+      </details>
+
+      <details class="faq">
+        <summary>¿Necesito la hora exacta de nacimiento?</summary>
+        <div class="faq-body">
+          Cuanto más precisa, mejor. El Ascendente y las casas requieren hora exacta — cambian cada dos horas aproximadamente. Sin hora, la lectura se centra en planetas y signos e indica dónde el análisis de casas es aproximado. Con hora exacta, la lectura es completa.
+        </div>
+      </details>
+
     </div>
   </div>
+
 </div>
 {% endblock %}
