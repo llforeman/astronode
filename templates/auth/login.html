@@ -6,23 +6,68 @@
   <title>Iniciar sesión — Astronode</title>
   <script>(function(){ document.documentElement.setAttribute('data-theme', localStorage.getItem('theme')||'dark'); })();</script>
   <style>
-    :root[data-theme="dark"] { --bg:#0d0d1a;--text:#e8e0f0;--text-muted:#8a7fa0;--accent:#9b59b6;--border:#2a2a45;--card:#1a1a30; }
-    :root[data-theme="light"] { --bg:#f5f0ff;--text:#1a0a2e;--text-muted:#6b5b80;--accent:#7d3c98;--border:#d8c8e8;--card:#ffffff; }
-    *{box-sizing:border-box;margin:0;padding:0;}
-    body{background:var(--bg);color:var(--text);font-family:'Segoe UI',sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;}
-    .box{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:2.5rem;width:100%;max-width:380px;}
-    .logo{text-align:center;font-size:1.4rem;font-weight:700;color:var(--accent);margin-bottom:2rem;letter-spacing:2px;}
-    label{display:block;font-size:0.85rem;color:var(--text-muted);margin-bottom:0.3rem;}
-    input{width:100%;padding:0.6rem 0.8rem;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:0.95rem;margin-bottom:1rem;}
-    .btn{width:100%;padding:0.7rem;border-radius:6px;border:none;background:var(--accent);color:#fff;font-size:1rem;cursor:pointer;margin-top:0.5rem;}
-    .flash{padding:0.6rem 0.8rem;border-radius:6px;background:var(--border);color:var(--text);margin-bottom:1rem;font-size:0.9rem;}
-    .links{text-align:center;margin-top:1.2rem;font-size:0.9rem;color:var(--text-muted);}
-    .links a{color:var(--accent);}
+    :root[data-theme="dark"] { --bg:#09000f; --text:#ede8f5; --text-muted:#8878a0; --accent:#c9963a; --accent-light:#e8c060; --border:#2e1048; --card:#160428; --gold:#d4af37; }
+    :root[data-theme="light"] { --bg:#f5f0ff; --text:#1a0a2e; --text-muted:#6b5b80; --accent:#8a5200; --accent-light:#b87020; --border:#d8c8e8; --card:#ffffff; --gold:#b8860b; }
+    *{ box-sizing:border-box; margin:0; padding:0; }
+    body {
+      background-color: #09000f;
+      background-image:
+        radial-gradient(ellipse at 30% 20%, rgba(53,15,76,0.8) 0%, transparent 60%),
+        radial-gradient(ellipse at 70% 80%, rgba(53,15,76,0.6) 0%, transparent 55%);
+      color: var(--text);
+      font-family: 'Segoe UI', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+    .box {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-top: 3px solid var(--gold);
+      border-radius: 14px;
+      padding: 2.5rem 2rem;
+      width: 100%;
+      max-width: 380px;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.6), 0 0 0 1px rgba(212,175,55,0.06);
+    }
+    .logo-wrap {
+      text-align: center;
+      margin-bottom: 2rem;
+      padding-bottom: 1.5rem;
+      border-bottom: 1px solid rgba(212,175,55,0.12);
+    }
+    .logo-wrap img { width: 160px; height: auto; }
+    label { display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:0.3rem; text-transform:uppercase; letter-spacing:0.8px; font-weight:600; }
+    input {
+      width:100%; padding:0.65rem 0.9rem;
+      border-radius:7px; border:1px solid var(--border);
+      background: rgba(0,0,0,0.3);
+      color:var(--text); font-size:0.95rem; margin-bottom:1.1rem;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    input:focus { outline:none; border-color:var(--gold); box-shadow:0 0 0 2px rgba(212,175,55,0.15); }
+    .btn {
+      width:100%; padding:0.75rem;
+      border-radius:7px; border:none;
+      background: linear-gradient(135deg, #d4a030 0%, #a07020 100%);
+      color:#fff; font-size:1rem; font-weight:600;
+      cursor:pointer; margin-top:0.25rem;
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    .btn:hover { transform:translateY(-1px); box-shadow:0 6px 20px rgba(212,160,48,0.4); }
+    .flash { padding:0.6rem 0.8rem; border-radius:6px; background:rgba(46,16,72,0.8); border:1px solid var(--border); color:var(--text); margin-bottom:1rem; font-size:0.9rem; }
+    .links { text-align:center; margin-top:1.4rem; font-size:0.88rem; color:var(--text-muted); }
+    .links a { color:var(--accent-light); }
+    .links a:hover { color:var(--gold); text-decoration:none; }
   </style>
 </head>
 <body>
   <div class="box">
-    <div class="logo">✦ ASTRONODE</div>
+    <div class="logo-wrap">
+      <img src="{{ url_for('static', filename='logo.png') }}" alt="Astronode">
+    </div>
     {% with messages = get_flashed_messages() %}
       {% for m in messages %}<div class="flash">{{ m }}</div>{% endfor %}
     {% endwith %}
