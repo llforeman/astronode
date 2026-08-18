@@ -8,7 +8,9 @@
   .guide-shell { display: flex; min-height: calc(100vh - 57px); max-width: 1200px; margin: 0 auto; }
   .guide-sidebar {
     width: 220px; flex-shrink: 0; background: var(--bg2);
-    border-right: 1px solid var(--border); padding: 2rem 0.75rem 3rem;
+    border-right: 1px solid rgba(237,232,245,0.1);
+    box-shadow: 2px 0 12px rgba(0,0,0,0.25);
+    padding: 2rem 0.75rem 3rem;
     position: sticky; top: 57px; height: calc(100vh - 57px); overflow-y: auto;
   }
   .guide-sidebar .sidebar-top-label { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-muted); padding: 0 0.5rem; margin-bottom: 1rem; }
@@ -36,7 +38,7 @@
   .sign-card.available .sign-name { color: var(--accent-light); }
   @media (max-width: 768px) {
     .guide-shell { flex-direction: column; }
-    .guide-sidebar { width: 100%; height: auto; position: static; border-right: none; border-bottom: 1px solid var(--border); padding: 1rem; display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; }
+    .guide-sidebar { width: 100%; height: auto; position: static; border-right: none; border-bottom: 1px solid rgba(237,232,245,0.1); box-shadow: none; padding: 1rem; display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; }
     .guide-sidebar .sidebar-top-label { width: 100%; margin-bottom: 0.25rem; }
     .guide-sidebar .sidebar-divider, .guide-sidebar .sidebar-chart-link { display: none; }
     .guide-sidebar .body-group { margin-bottom: 0; }
