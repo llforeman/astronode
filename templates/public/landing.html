@@ -1,6 +1,6 @@
 {% extends "public_base.html" %}
 {% block title %}Astronode — Tu carta, gratis. Luego cuarenta páginas sobre lo que dice de ti.{% endblock %}
-{% block meta_desc %}Carta natal gratuita + interpretación IA de 40 páginas en español. Planetas, casas, aspectos — todo explicado, de forma personal y en profundidad.{% endblock %}
+{% block meta_desc %}Carta natal gratuita + interpretación IA de 30 páginas en español. Planetas, casas, aspectos — todo explicado, de forma personal y en profundidad.{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -146,19 +146,40 @@
   .how-card .icon { font-size: 1.5rem; margin-bottom: 0.75rem; }
   .how-card h4 { font-size: 0.95rem; color: var(--accent-light); margin-bottom: 0.5rem; font-weight: 700; }
   .how-card p { font-size: 0.85rem; color: var(--text-muted); line-height: 1.6; }
-  .price-block {
-    background: linear-gradient(135deg, #1a1a30, #2a1040);
-    border: 1px solid var(--accent);
-    border-radius: 12px;
-    padding: 2.5rem 2rem;
-    text-align: center;
+  /* ── Pricing two-column ───────────────────────────── */
+  .pricing-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.25rem;
     margin-top: 2rem;
+    align-items: start;
   }
-  @media (max-width: 540px) { .price-block { padding: 1.75rem 1.25rem; border-radius: 10px; } }
-  .price-block .price { font-size: clamp(2rem, 8vw, 3rem); font-weight: 800; color: var(--gold); }
-  .price-block .price sup { font-size: 1.2rem; vertical-align: super; }
-  .price-block .price-label { color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem; }
-  .price-includes { display: flex; flex-wrap: wrap; gap: 0.5rem 1.5rem; justify-content: center; margin: 1rem 0 2rem; }
+  @media (max-width: 640px) { .pricing-grid { grid-template-columns: 1fr; } }
+  .pricing-card {
+    border-radius: 12px;
+    padding: 2rem 1.75rem;
+    text-align: center;
+    position: relative;
+  }
+  .pricing-card.basic { background: var(--card); border: 1px solid var(--border); }
+  .pricing-card.featured { background: linear-gradient(135deg, #1a1a30, #2a1040); border: 1px solid var(--accent); }
+  @media (max-width: 540px) { .pricing-card { padding: 1.75rem 1.25rem; border-radius: 10px; } }
+  .pricing-badge {
+    position: absolute;
+    top: -13px; left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(135deg, #d4a030 0%, #a07020 100%);
+    color: #fff;
+    font-size: 0.65rem; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
+    padding: 0.22rem 0.9rem;
+    border-radius: 20px;
+    white-space: nowrap;
+  }
+  .pricing-card .price-title { font-size: 0.95rem; font-weight: 700; color: var(--accent-light); margin-bottom: 0.75rem; }
+  .pricing-card .price { font-size: clamp(2rem, 8vw, 2.8rem); font-weight: 800; color: var(--gold); }
+  .pricing-card .price sup { font-size: 1.1rem; vertical-align: super; }
+  .pricing-card .price-label { color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1.25rem; }
+  .price-includes { display: flex; flex-direction: column; gap: 0.4rem; text-align: left; margin: 1rem 0 1.75rem; }
   .price-includes li { font-size: 0.85rem; color: var(--text-muted); list-style: none; padding-left: 1.2rem; position: relative; }
   .price-includes li::before { content: '✦'; position: absolute; left: 0; color: var(--gold); font-size: 0.65rem; top: 2px; }
 
@@ -207,10 +228,10 @@
 <section class="hero">
   <div class="hero-copy">
     <p class="section-label" style="margin-bottom:0.5rem;">✦ CARTA ASTRAL PERSONALIZADA</p>
-    <h1>Tu carta astral, detallada y personalizada como nunca antes, <em>en 2 minutos.</em></h1>
+    <h1>Tu carta astral, detallada y personalizada como nunca antes, <em>en cinco minutos.</em></h1>
     <p class="hero-sub">
-      La inteligencia de la astrología se basa en todas las combinaciones secretas de tu carta.
-      Sin subscripción, sin complicaciones.
+      La inteligencia de la astrología basada en las combinaciones secretas de tu carta.
+      Sin suscripción — crea tu cuenta gratis y guarda hasta 25 cartas: las tuyas, las de tu pareja, familia y amigos.
     </p>
     <div class="hero-cta">
       <a href="{{ url_for('public.chart') }}" class="btn btn-primary" style="font-size:1rem; padding:0.75rem 2rem;">
@@ -218,7 +239,7 @@
       </a>
       <a href="#sample" class="btn btn-outline">Leer un ejemplo</a>
     </div>
-    <p class="hero-footnote">Sin cuenta para la carta. €9.99 pago único por la lectura completa.</p>
+    <p class="hero-footnote">La carta es gratis, sin cuenta. Carta Natal: €9.99 · Pack Completo para dos: €17.99</p>
   </div>
   <div class="hero-image">
     <img src="{{ url_for('static', filename='image.png') }}"
@@ -233,7 +254,7 @@
 ════════════════════════════════════════ -->
 <section id="sample">
   <div class="sample-inner">
-    <p class="section-label">Ejemplo — Capítulo 1 / 11</p>
+    <p class="section-label">Ejemplo — Capítulo 1 / 13</p>
     <div class="fade-mask">
       <div class="prose">
         <h3>El Ascendente en Capricornio: la armadura que también es tú</h3>
@@ -295,7 +316,7 @@
     </div>
     <div class="sample-cta">
       <p style="color:var(--text-muted); font-size:0.9rem; margin-bottom:1.25rem;">
-        Este es el inicio del Capítulo 1. La lectura completa tiene 11 capítulos — ~40 páginas — escritos para tu carta específica.
+        Este es el inicio del Capítulo 1. La lectura completa tiene 13 capítulos — ~30 páginas — escritos para tu carta específica.
       </p>
       <a href="{{ url_for('auth.register') }}" class="btn btn-primary" style="font-size:1rem; padding:0.75rem 2rem;">
         Obtener tu lectura completa — €9.99 →
@@ -312,88 +333,102 @@
 <section id="contents">
   <div class="section">
     <p class="section-label">Qué incluye</p>
-    <h2>Once capítulos. Cada uno sobre una capa diferente de quién eres.</h2>
+    <h2>Trece capítulos. Un recorrido completo por cada área de tu vida.</h2>
     <p style="color:var(--text-muted); font-size:0.95rem; max-width:580px; line-height:1.7;">
       No es una lista de rasgos. Es una interpretación de cómo los planetas de tu carta
-      interactúan con las áreas de tu vida — escrita en prosa fluida, en español,
+      activan cada área concreta de tu vida — escrita en prosa fluida, en español,
       como si un astrólogo experimentado tuviera tu carta delante.
     </p>
     <div class="chapters-grid">
       <div class="chapter-card">
         <span class="chapter-num">01</span>
         <div>
-          <div class="chapter-title">La cara que muestras antes de hablar</div>
-          <div class="chapter-desc">Ascendente, primeras impresiones, presencia física</div>
+          <div class="chapter-title">Tu esencia</div>
+          <div class="chapter-desc">Sol, Luna y Ascendente combinados — la persona completa que eres</div>
         </div>
       </div>
       <div class="chapter-card">
         <span class="chapter-num">02</span>
         <div>
-          <div class="chapter-title">El motor interior</div>
-          <div class="chapter-desc">Signo solar, estructura del ego, impulso de identidad central</div>
+          <div class="chapter-title">La cara que muestras al mundo</div>
+          <div class="chapter-desc">Casa 1 — identidad, presencia, cuerpo y primeras impresiones</div>
         </div>
       </div>
       <div class="chapter-card">
         <span class="chapter-num">03</span>
         <div>
-          <div class="chapter-title">Lo que necesitas para sentirte en casa</div>
-          <div class="chapter-desc">Signo lunar, patrones emocionales, mundo interior</div>
+          <div class="chapter-title">Tu relación con el dinero y lo que valoras</div>
+          <div class="chapter-desc">Casa 2 — recursos, posesiones, autoestima material</div>
         </div>
       </div>
       <div class="chapter-card">
         <span class="chapter-num">04</span>
         <div>
           <div class="chapter-title">Cómo funciona tu mente</div>
-          <div class="chapter-desc">Mercurio, estilo de comunicación, cómo piensas y aprendes</div>
+          <div class="chapter-desc">Casa 3 — comunicación, aprendizaje y entorno cercano</div>
         </div>
       </div>
       <div class="chapter-card">
         <span class="chapter-num">05</span>
         <div>
-          <div class="chapter-title">Amor, deseo y lo que encuentras bello</div>
-          <div class="chapter-desc">Venus, estilo relacional, estética, autoestima</div>
+          <div class="chapter-title">Tus raíces y el mundo interior</div>
+          <div class="chapter-desc">Casa 4 — hogar, familia y fundamentos emocionales</div>
         </div>
       </div>
       <div class="chapter-card">
         <span class="chapter-num">06</span>
         <div>
-          <div class="chapter-title">Cómo persigues lo que quieres</div>
-          <div class="chapter-desc">Marte, ambición, ira, impulso y patrones de energía</div>
+          <div class="chapter-title">Amor, creatividad y lo que te da vida</div>
+          <div class="chapter-desc">Casa 5 — expresión personal, romance y placer</div>
         </div>
       </div>
       <div class="chapter-card">
         <span class="chapter-num">07</span>
         <div>
-          <div class="chapter-title">Dónde vive tu suerte</div>
-          <div class="chapter-desc">Casa de Júpiter, expansión, oportunidad, áreas de crecimiento</div>
+          <div class="chapter-title">Salud, rutina y el trabajo de cada día</div>
+          <div class="chapter-desc">Casa 6 — hábitos, servicio, bienestar y disciplina cotidiana</div>
         </div>
       </div>
       <div class="chapter-card">
         <span class="chapter-num">08</span>
         <div>
-          <div class="chapter-title">Lo que estás aquí para dominar</div>
-          <div class="chapter-desc">Casa de Saturno, disciplina, lecciones de vida, trayectoria a largo plazo</div>
+          <div class="chapter-title">Tus relaciones y lo que buscas en el otro</div>
+          <div class="chapter-desc">Casa 7 — pareja, asociaciones y la imagen del otro</div>
         </div>
       </div>
       <div class="chapter-card">
         <span class="chapter-num">09</span>
         <div>
-          <div class="chapter-title">Donde rompes con la tradición</div>
-          <div class="chapter-desc">Urano, Neptuno, Plutón — fuerzas generacionales y tu carta</div>
+          <div class="chapter-title">Transformación, intimidad y lo que compartes</div>
+          <div class="chapter-desc">Casa 8 — poder, profundidad, herencias y renacimiento</div>
         </div>
       </div>
       <div class="chapter-card">
         <span class="chapter-num">10</span>
         <div>
-          <div class="chapter-title">Las tensiones que te hacen crecer</div>
-          <div class="chapter-desc">Aspectos clave — conjunciones, cuadraturas, oposiciones, trígonos</div>
+          <div class="chapter-title">Tu búsqueda de sentido</div>
+          <div class="chapter-desc">Casa 9 — filosofía, creencias, viajes y expansión</div>
         </div>
       </div>
       <div class="chapter-card">
         <span class="chapter-num">11</span>
         <div>
-          <div class="chapter-title">El hilo que recorre todo</div>
-          <div class="chapter-desc">Síntesis de la carta — patrones dominantes, temas dominantes</div>
+          <div class="chapter-title">Tu vocación y el lugar que ocupas en el mundo</div>
+          <div class="chapter-desc">Casa 10 — carrera, reputación y legado</div>
+        </div>
+      </div>
+      <div class="chapter-card">
+        <span class="chapter-num">12</span>
+        <div>
+          <div class="chapter-title">Comunidad, ideales y el futuro que imaginas</div>
+          <div class="chapter-desc">Casa 11 — redes, grupos y visión de largo plazo</div>
+        </div>
+      </div>
+      <div class="chapter-card">
+        <span class="chapter-num">13</span>
+        <div>
+          <div class="chapter-title">Lo que suelta, lo que trasciende</div>
+          <div class="chapter-desc">Casa 12 — inconsciente, karma, soledad y disolución</div>
         </div>
       </div>
     </div>
@@ -426,24 +461,43 @@
         <p>El modelo escribe en español directamente — no traducido. El resultado se lee como un ensayo reflexivo, no como una lista de palabras clave ni una traducción de plantillas astrológicas en inglés.</p>
       </div>
     </div>
-    <div class="price-block">
-      <div class="price"><sup>€</sup>9.99</div>
-      <div class="price-label">Pago único. Sin suscripción. Entrega inmediata.</div>
-      <ul class="price-includes">
-        <li>Carta natal gratuita (SVG, sin cuenta necesaria)</li>
-        <li>Interpretación escrita de 40 páginas</li>
-        <li>11 capítulos que cubren cada posición principal</li>
-        <li>Enviada a tu email en PDF</li>
-        <li>En español, adaptada a tu carta</li>
-        <li>Guardada en tu cuenta para releer cuando quieras</li>
-      </ul>
-      <a href="{{ url_for('auth.register') }}" class="btn btn-primary" style="font-size:1rem; padding:0.8rem 2.5rem;">
-        Calcular mi carta y obtener la lectura →
-      </a>
-      <p style="margin-top:1rem; font-size:0.8rem; color:var(--text-muted);">
-        La carta es gratis. El pago es por la interpretación escrita de 40 páginas.
-      </p>
+    <div class="pricing-grid">
+      <div class="pricing-card basic">
+        <div class="price-title">Carta Natal</div>
+        <div class="price"><sup>€</sup>9.99</div>
+        <div class="price-label">Pago único. Entrega inmediata.</div>
+        <ul class="price-includes">
+          <li>13 capítulos sobre toda tu carta</li>
+          <li>~30 páginas en prosa fluida</li>
+          <li>PDF por email + guardada en tu cuenta</li>
+          <li>En español, específica para ti</li>
+        </ul>
+        <a href="{{ url_for('auth.register') }}" class="btn btn-outline" style="font-size:0.95rem; padding:0.7rem 1.75rem; display:block;">
+          Obtener mi lectura natal →
+        </a>
+      </div>
+      <div class="pricing-card featured">
+        <div class="pricing-badge">Más completo</div>
+        <div class="price-title">Pack Astrología Completa</div>
+        <div class="price"><sup>€</sup>17.99</div>
+        <div class="price-label">Pago único. Todo incluido. Para dos personas.</div>
+        <ul class="price-includes">
+          <li>Carta Natal completa (13 capítulos)</li>
+          <li>Carta Kármica</li>
+          <li>10 Revoluciones Solares</li>
+          <li>12 Revoluciones Lunares</li>
+          <li>Todo lo anterior para una segunda persona</li>
+          <li>Sinastría entre vosotros</li>
+          <li>Carta Davison</li>
+        </ul>
+        <a href="{{ url_for('auth.register') }}" class="btn btn-primary" style="font-size:0.95rem; padding:0.7rem 1.75rem; display:block;">
+          Obtener el pack completo →
+        </a>
+      </div>
     </div>
+    <p style="margin-top:1rem; font-size:0.8rem; color:var(--text-muted); text-align:center;">
+      La carta natal SVG es siempre gratuita, sin cuenta necesaria.
+    </p>
   </div>
 </section>
 
@@ -470,9 +524,15 @@
         </div>
       </details>
       <details class="faq">
-        <summary>¿Por qué €9.99 y no una suscripción?</summary>
+        <summary>¿Cuánto cuesta y qué opciones hay?</summary>
         <div class="faq-body">
-          Porque tu carta natal no cambia. No necesitas una lectura nueva cada mes — necesitas una buena. Preferimos cobrar una cantidad justa y única por algo genuinamente útil en lugar de atarte a una suscripción por algo que quedaría obsoleto. Si en el futuro quieres lecturas de tránsitos o sinastría, serán aparte y opcionales.
+          Dos opciones, ninguna suscripción. La <strong style="color:var(--text);">Carta Natal</strong> (€9.99) es una lectura de 13 capítulos en profundidad sobre tu carta completa. El <strong style="color:var(--text);">Pack Astrología Completa</strong> (€17.99) incluye todo lo que la plataforma puede generar para dos personas — carta natal, kármica, revoluciones solares y lunares para cada una, más sinastría y carta Davison entre vosotros. Pagas una vez, tienes acceso para siempre.
+        </div>
+      </details>
+      <details class="faq">
+        <summary>¿Qué incluye exactamente el Pack Astrología Completa?</summary>
+        <div class="faq-body">
+          Para cada persona: Carta Natal completa (13 capítulos, ~30 páginas), Carta Kármica (misión del alma, Nodo Norte, Quirón), 10 Revoluciones Solares (una por año, hasta diez años de previsión) y 12 Revoluciones Lunares (una por mes). Para la pareja: Sinastría entre las dos cartas y Carta Davison (la relación como entidad propia con su propio Sol, Luna y Ascendente). Todo generado con Swiss Ephemeris y escrito en español por IA específicamente para vuestras cartas.
         </div>
       </details>
       <details class="faq">
