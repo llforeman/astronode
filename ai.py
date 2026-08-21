@@ -1184,6 +1184,45 @@ def _find_return(natal_lon: float, body_id: int, start_jd: float,
     return jd
 
 
+def _find_all_passes(natal_lon: float, body_id: int,
+                     start_jd: float, end_jd: float) -> list:
+    """Return list of (jd, is_retrograde) for every exact conjunction with
+    natal_lon in [start_jd, end_jd]. Steps 1 day at a time, binary-searches
+    each sign-change in the angular difference."""
+    import swisseph as swe
+
+    def _diff(j):
+        lon = swe.calc_ut(j, body_id)[0][0]
+        d = (natal_lon - lon) % 360
+        return d - 360 if d > 180 else d
+
+    results = []
+    prev_diff = _diff(start_jd)
+    jd = start_jd + 1.0
+
+    while jd <= end_jd:
+        d = _diff(jd)
+        if prev_diff * d < 0:
+            # Binary-search the crossing
+            lo, hi = jd - 1.0, jd
+            for _ in range(60):
+                mid = (lo + hi) / 2
+                md = _diff(mid)
+                if abs(md) < 0.00003:
+                    break
+                if md * prev_diff > 0:
+                    lo = mid
+                else:
+                    hi = mid
+            exact_jd = (lo + hi) / 2
+            speed = swe.calc_ut(exact_jd, body_id)[0][3]
+            results.append((exact_jd, speed < 0))
+        prev_diff = d
+        jd += 1.0
+
+    return results
+
+
 def _jd_for_profile(profile) -> float:
     import swisseph as swe
     import datetime as _dt
@@ -1357,6 +1396,207 @@ def generate_lunar_return(profile, params: dict, reading_type) -> dict:
     return {'text': header + '\n\n'.join(parts), 'chart_image': chart_image}
 
 
+# ── Retorno de Saturno ────────────────────────────────────────────────────────
+
+def generate_saturn_return(profile, params: dict, reading_type) -> dict:
+    import prompts as P
+    import swisseph as swe
+    import datetime as _dt
+    from chart_analysis import build_dossier
+    from concurrent.futures import ThreadPoolExecutor
+
+    decade_start = int(params.get('decade_start', _dt.date.today().year))
+
+    positions_n, cusps_n, _, _, _, subj_n = _build_chart_kerykeion(
+        profile.birth_date, profile.birth_time or _dt.time(12, 0),
+        profile.birth_place or 'unknown',
+        lat=getattr(profile, 'birth_lat', None),
+        lng=getattr(profile, 'birth_lng', None))
+    natal_saturn_lon = positions_n['Saturn']['longitude']
+    carta_n = _chart_summary(
+        build_dossier(subj_n, positions_n, cusps_n,
+                      known_birth_time=profile.birth_time is not None)['posiciones'],
+        cusps_n)
+
+    start_jd = swe.julday(decade_start, 1, 1, 0.0)
+    end_jd   = swe.julday(decade_start + 10, 12, 31, 0.0)
+    passes   = _find_all_passes(natal_saturn_lon, swe.SATURN, start_jd, end_jd)
+
+    if not passes:
+        return {
+            'text': (f"No hay retorno de Saturno entre {decade_start} y {decade_start + 10}.\n"
+                     "Saturno tarda ~29.5 años en volver a su posición natal. "
+                     "Prueba con una ventana de diez años diferente."),
+            'chart_image': None,
+        }
+
+    # Which Saturn return is this?
+    first_year = int(swe.revjul(passes[0][0])[0])
+    age_at_return = first_year - profile.birth_date.year
+    return_number = ('Primer' if age_at_return < 40
+                     else 'Segundo' if age_at_return < 70
+                     else 'Tercer')
+
+    gender = getattr(profile, 'gender', None)
+    gnote  = _gender_note(gender)
+
+    # Build chart for each pass
+    pass_data = []   # (jd, is_retro, date, carta_str)
+    first_subj = None
+    for pjd, retro in passes:
+        parts = swe.revjul(pjd)
+        pdate = _dt.date(int(parts[0]), int(parts[1]), int(parts[2]))
+        hf    = parts[3]
+        ptime = _dt.time(int(hf), int((hf % 1) * 60))
+        pos_p, cusps_p, _, _, _, subj_p = _build_chart_kerykeion(
+            pdate, ptime, profile.birth_place or 'unknown',
+            lat=getattr(profile, 'birth_lat', None),
+            lng=getattr(profile, 'birth_lng', None))
+        carta_p = _chart_summary(
+            build_dossier(subj_p, pos_p, cusps_p, known_birth_time=True)['posiciones'],
+            cusps_p)
+        pass_data.append((pjd, retro, pdate, carta_p))
+        if first_subj is None:
+            first_subj = subj_p
+
+    pass_info = '\n'.join(
+        f"Paso {i}: {d.strftime('%d/%m/%Y')} ({'retrógrado' if r else 'directo'})"
+        for i, (_, r, d, _) in enumerate(pass_data, 1))
+
+    calls = [('arc', P.PROMPT_SATURN_ARC.format(
+        nombre=profile.name, return_number=return_number,
+        gender_note=gnote, carta_natal=carta_n, pass_info=pass_info))]
+    for i, (_, retro, pdate, carta_p) in enumerate(pass_data, 1):
+        calls.append((f'pass_{i}', P.PROMPT_SATURN_PASS.format(
+            nombre=profile.name,
+            pass_label=f"Paso {i}" + (" (retrógrado)" if retro else ""),
+            fecha_paso=pdate.strftime('%d/%m/%Y'),
+            direction='retrógrado' if retro else 'directo',
+            return_number=return_number, pass_info=pass_info,
+            gender_note=gnote, carta_natal=carta_n, carta_paso=carta_p)))
+
+    def _call(item):
+        key, msg = item
+        return key, _ask([{'role': 'user', 'content': msg}],
+                         model=_MODEL_PROSE, temperature=0.85)
+
+    with ThreadPoolExecutor(max_workers=5) as ex:
+        llm = dict(ex.map(_call, calls))
+
+    chart_image = None
+    if first_subj:
+        try:
+            chart_image = _generate_chart_svg(first_subj)
+        except Exception as e:
+            log.warning('Saturn return SVG failed: %s', e)
+
+    header = (f"{return_number} Retorno de Saturno — {decade_start}–{decade_start + 10}\n"
+              f"{pass_info}\n\n")
+    sections = [f"## La tarea de este retorno\n\n{llm.get('arc', '')}"]
+    for i, (_, retro, pdate, _) in enumerate(pass_data, 1):
+        tag = " — retrógrado" if retro else ""
+        sections.append(f"## Paso {i} — {pdate.strftime('%d/%m/%Y')}{tag}\n\n"
+                        f"{llm.get(f'pass_{i}', '')}")
+    return {'text': header + '\n\n'.join(sections), 'chart_image': chart_image}
+
+
+# ── Retorno de Júpiter ────────────────────────────────────────────────────────
+
+def generate_jupiter_return(profile, params: dict, reading_type) -> dict:
+    import prompts as P
+    import swisseph as swe
+    import datetime as _dt
+    from chart_analysis import build_dossier
+    from concurrent.futures import ThreadPoolExecutor
+
+    decade_start = int(params.get('decade_start', _dt.date.today().year))
+
+    positions_n, cusps_n, _, _, _, subj_n = _build_chart_kerykeion(
+        profile.birth_date, profile.birth_time or _dt.time(12, 0),
+        profile.birth_place or 'unknown',
+        lat=getattr(profile, 'birth_lat', None),
+        lng=getattr(profile, 'birth_lng', None))
+    natal_jupiter_lon = positions_n['Jupiter']['longitude']
+    carta_n = _chart_summary(
+        build_dossier(subj_n, positions_n, cusps_n,
+                      known_birth_time=profile.birth_time is not None)['posiciones'],
+        cusps_n)
+
+    start_jd = swe.julday(decade_start, 1, 1, 0.0)
+    end_jd   = swe.julday(decade_start + 10, 12, 31, 0.0)
+    passes   = _find_all_passes(natal_jupiter_lon, swe.JUPITER, start_jd, end_jd)
+
+    if not passes:
+        return {
+            'text': (f"No hay retorno de Júpiter entre {decade_start} y {decade_start + 10}.\n"
+                     "Júpiter tarda ~12 años en volver a su posición natal. "
+                     "Prueba con una ventana de diez años diferente."),
+            'chart_image': None,
+        }
+
+    gender = getattr(profile, 'gender', None)
+    gnote  = _gender_note(gender)
+
+    pass_data = []
+    first_subj = None
+    for pjd, retro in passes:
+        parts = swe.revjul(pjd)
+        pdate = _dt.date(int(parts[0]), int(parts[1]), int(parts[2]))
+        hf    = parts[3]
+        ptime = _dt.time(int(hf), int((hf % 1) * 60))
+        pos_p, cusps_p, _, _, _, subj_p = _build_chart_kerykeion(
+            pdate, ptime, profile.birth_place or 'unknown',
+            lat=getattr(profile, 'birth_lat', None),
+            lng=getattr(profile, 'birth_lng', None))
+        carta_p = _chart_summary(
+            build_dossier(subj_p, pos_p, cusps_p, known_birth_time=True)['posiciones'],
+            cusps_p)
+        pass_data.append((pjd, retro, pdate, carta_p))
+        if first_subj is None:
+            first_subj = subj_p
+
+    pass_info = '\n'.join(
+        f"Paso {i}: {d.strftime('%d/%m/%Y')} ({'retrógrado' if r else 'directo'})"
+        for i, (_, r, d, _) in enumerate(pass_data, 1))
+
+    calls = [('arc', P.PROMPT_JUPITER_ARC.format(
+        nombre=profile.name, decade_start=decade_start,
+        decade_end=decade_start + 10,
+        gender_note=gnote, carta_natal=carta_n, pass_info=pass_info))]
+    for i, (_, retro, pdate, carta_p) in enumerate(pass_data, 1):
+        calls.append((f'pass_{i}', P.PROMPT_JUPITER_PASS.format(
+            nombre=profile.name,
+            pass_label=f"Paso {i}" + (" (retrógrado)" if retro else ""),
+            fecha_paso=pdate.strftime('%d/%m/%Y'),
+            direction='retrógrado' if retro else 'directo',
+            pass_info=pass_info,
+            gender_note=gnote, carta_natal=carta_n, carta_paso=carta_p)))
+
+    def _call(item):
+        key, msg = item
+        return key, _ask([{'role': 'user', 'content': msg}],
+                         model=_MODEL_PROSE, temperature=0.85)
+
+    with ThreadPoolExecutor(max_workers=5) as ex:
+        llm = dict(ex.map(_call, calls))
+
+    chart_image = None
+    if first_subj:
+        try:
+            chart_image = _generate_chart_svg(first_subj)
+        except Exception as e:
+            log.warning('Jupiter return SVG failed: %s', e)
+
+    header = (f"Retorno de Júpiter — {decade_start}–{decade_start + 10}\n"
+              f"{pass_info}\n\n")
+    sections = [f"## El ciclo que se abre\n\n{llm.get('arc', '')}"]
+    for i, (_, retro, pdate, _) in enumerate(pass_data, 1):
+        tag = " — retrógrado" if retro else ""
+        sections.append(f"## Paso {i} — {pdate.strftime('%d/%m/%Y')}{tag}\n\n"
+                        f"{llm.get(f'pass_{i}', '')}")
+    return {'text': header + '\n\n'.join(sections), 'chart_image': chart_image}
+
+
 # ── Reading router ────────────────────────────────────────────────────────────
 
 def generate_reading(profile, reading_type, params: dict = None,
@@ -1379,6 +1619,10 @@ def generate_reading(profile, reading_type, params: dict = None,
         return generate_solar_return(profile, params, reading_type)
     if slug == 'lunar_return':
         return generate_lunar_return(profile, params, reading_type)
+    if slug == 'saturn_return':
+        return generate_saturn_return(profile, params, reading_type)
+    if slug == 'jupiter_return':
+        return generate_jupiter_return(profile, params, reading_type)
     # default: natal
     return generate_horoscope(profile, reading_type)
 

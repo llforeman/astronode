@@ -82,6 +82,13 @@ def request_reading(reading_type_id):
         params['lat']   = request.form.get('lr_lat', type=float)
         params['lng']   = request.form.get('lr_lng', type=float)
 
+    if slug in ('saturn_return', 'jupiter_return'):
+        decade_start = request.form.get('decade_start', type=int)
+        if not decade_start:
+            flash('Indica el año de inicio de la ventana de diez años.')
+            return redirect(url_for('main.profiles'))
+        params['decade_start'] = decade_start
+
     # Check payment / tier
     if not _DEV:
         if rtype.price_cents and rtype.min_tier == 'free':

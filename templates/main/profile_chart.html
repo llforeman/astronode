@@ -165,10 +165,12 @@
   {% endif %}
 
   {% if reading_types %}
-  {% set rt_natal  = reading_types | selectattr('slug','equalto','natal')        | first %}
-  {% set rt_karmic = reading_types | selectattr('slug','equalto','karmic')       | first %}
-  {% set rt_sol    = reading_types | selectattr('slug','equalto','solar_return') | first %}
-  {% set rt_lun    = reading_types | selectattr('slug','equalto','lunar_return') | first %}
+  {% set rt_natal  = reading_types | selectattr('slug','equalto','natal')          | first %}
+  {% set rt_karmic = reading_types | selectattr('slug','equalto','karmic')         | first %}
+  {% set rt_sol    = reading_types | selectattr('slug','equalto','solar_return')   | first %}
+  {% set rt_lun    = reading_types | selectattr('slug','equalto','lunar_return')   | first %}
+  {% set rt_sat    = reading_types | selectattr('slug','equalto','saturn_return')  | first %}
+  {% set rt_jup    = reading_types | selectattr('slug','equalto','jupiter_return') | first %}
 
   <div class="card" style="border-color:var(--accent);">
     <h3 style="color:var(--accent-light); margin-bottom:1.25rem;">Generar lectura para {{ p.name }}</h3>
@@ -262,6 +264,50 @@
             <div id="lr-dropdown" class="autocomplete-dropdown"></div>
           </div>
           <button type="submit" class="btn btn-primary">Calcular RL →</button>
+        </div>
+      </form>
+    </div>
+    {% endif %}
+
+    {# ── Retorno de Saturno ── #}
+    {% if rt_sat %}
+    <div style="background:var(--bg2); border:1px solid var(--border); border-radius:10px; padding:1rem; margin-top:1rem;">
+      <div style="font-weight:600; margin-bottom:0.3rem;">Retorno de Saturno</div>
+      <div style="color:var(--text-muted); font-size:0.83rem; margin-bottom:0.9rem;">
+        Saturno vuelve a su posición natal cada ~29.5 años. Cada paso exacto —directo y retrógrado— genera su propia lectura. Indica el inicio de la ventana de 10 años que quieres analizar.
+      </div>
+      <form method="POST" action="{{ url_for('readings.request_reading', reading_type_id=rt_sat.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="profile_id" value="{{ p.id }}">
+        <div style="display:flex; gap:0.75rem; flex-wrap:wrap; align-items:flex-end;">
+          <div style="display:flex; flex-direction:column; gap:0.25rem;">
+            <label style="font-size:0.75rem; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">Inicio de la ventana</label>
+            <input type="number" name="decade_start" min="1950" max="2080" value="{{ now.year }}"
+                   style="width:110px; padding:0.5rem 0.7rem; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text);">
+          </div>
+          <button type="submit" class="btn btn-primary">Calcular Saturno →</button>
+        </div>
+      </form>
+    </div>
+    {% endif %}
+
+    {# ── Retorno de Júpiter ── #}
+    {% if rt_jup %}
+    <div style="background:var(--bg2); border:1px solid var(--border); border-radius:10px; padding:1rem; margin-top:1rem;">
+      <div style="font-weight:600; margin-bottom:0.3rem;">Retorno de Júpiter</div>
+      <div style="color:var(--text-muted); font-size:0.83rem; margin-bottom:0.9rem;">
+        Júpiter vuelve a su posición natal cada ~12 años. Cada paso —incluyendo los retrógrados— genera su propia lectura sobre el ciclo de expansión que se abre.
+      </div>
+      <form method="POST" action="{{ url_for('readings.request_reading', reading_type_id=rt_jup.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="profile_id" value="{{ p.id }}">
+        <div style="display:flex; gap:0.75rem; flex-wrap:wrap; align-items:flex-end;">
+          <div style="display:flex; flex-direction:column; gap:0.25rem;">
+            <label style="font-size:0.75rem; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">Inicio de la ventana</label>
+            <input type="number" name="decade_start" min="1950" max="2080" value="{{ now.year }}"
+                   style="width:110px; padding:0.5rem 0.7rem; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text);">
+          </div>
+          <button type="submit" class="btn btn-primary">Calcular Júpiter →</button>
         </div>
       </form>
     </div>

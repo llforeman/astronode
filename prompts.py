@@ -340,3 +340,91 @@ INSTRUCCION_LUNAR = {
     2: "Analiza la vida emocional de este mes: aspectos de la Luna de RL, planetas en casas emocionales (4, 8, 12), y qué temas internos emergen.",
     3: "Escribe una síntesis del mes: el tono emocional, los momentos clave, lo que hay que atender y lo que fluirá con facilidad. Cierra con un consejo concreto para este mes.",
 }
+
+# ==========================================================================
+# Retorno de Saturno
+# ==========================================================================
+
+PROMPT_SATURN_ARC = """\
+Analiza el {return_number} Retorno de Saturno de {nombre}.
+Este retorno tiene los siguientes pasos exactos al grado natal de Saturno:
+{pass_info}
+
+Tu tarea: escribe una síntesis del arco completo de este retorno. ¿Qué le exige Saturno \
+a esta persona en este periodo de su vida? ¿Qué estructuras están siendo evaluadas \
+—identidad, carrera, relaciones, valores, responsabilidades? ¿Cuál es la demanda central \
+según la posición natal de Saturno (su signo y su casa)? Establece el tono del retorno \
+completo antes de entrar en los pasos individuales. Escribe como si hablaras de un umbral \
+de vida, no de un tránsito cualquiera.
+
+Escribe en español de España, tuteando al lector. Prosa corrida, sin listas. 3-4 párrafos.
+{gender_note}
+
+CARTA NATAL
+{carta_natal}
+"""
+
+PROMPT_SATURN_PASS = """\
+Analiza el {pass_label} del {return_number} Retorno de Saturno de {nombre}.
+Fecha exacta: {fecha_paso}. Este paso es {direction}.
+El retorno completo incluye: {pass_info}
+
+Tu tarea: interpreta qué significa este paso concreto dentro del arco del retorno. \
+¿Qué aspecto de la demanda de Saturno se activa ahora? ¿Qué áreas de vida están en foco \
+según la posición de Saturno en esta fecha y sus aspectos a la carta natal? \
+Si el paso es retrógrado, habla de revisión interna, de lo que vuelve para ser resuelto \
+o integrado. Si es directo, habla de consolidación, de pasos hacia fuera, de compromisos \
+que se concretan.
+
+Escribe en español de España, tuteando al lector. Prosa corrida, sin listas. 2-3 párrafos.
+{gender_note}
+
+CARTA NATAL
+{carta_natal}
+
+CARTA DEL PASO ({fecha_paso})
+{carta_paso}
+"""
+
+# ==========================================================================
+# Retorno de Júpiter
+# ==========================================================================
+
+PROMPT_JUPITER_ARC = """\
+Analiza el Retorno de Júpiter de {nombre} para la ventana {decade_start}–{decade_end}.
+Este retorno tiene los siguientes pasos exactos al grado natal de Júpiter:
+{pass_info}
+
+Tu tarea: escribe una síntesis del ciclo que se abre. ¿Qué área de expansión activa este \
+retorno de Júpiter? ¿Qué oportunidades, creencias, visión de futuro o búsqueda de sentido \
+están siendo renovados? ¿Cómo conecta esto con la posición natal de Júpiter —su signo y \
+su casa— y lo que ese Jupiter natal representa para esta persona? Establece el tono y \
+la promesa del ciclo antes de entrar en los pasos individuales.
+
+Escribe en español de España, tuteando al lector. Prosa corrida, sin listas. 2-3 párrafos.
+{gender_note}
+
+CARTA NATAL
+{carta_natal}
+"""
+
+PROMPT_JUPITER_PASS = """\
+Analiza el {pass_label} del Retorno de Júpiter de {nombre}.
+Fecha exacta: {fecha_paso}. Este paso es {direction}.
+El retorno completo incluye: {pass_info}
+
+Tu tarea: interpreta qué significa este paso concreto. ¿Qué oportunidad, expansión o \
+apertura trae Júpiter en esta fecha? ¿Qué áreas de vida activa según su posición y sus \
+aspectos a la carta natal? Si el paso es retrógrado, habla de expansión hacia adentro, \
+revisión de creencias o integración de lo aprendido. Si es directo, habla de apertura, \
+de acción, de lo que puede concretarse ahora.
+
+Escribe en español de España, tuteando al lector. Prosa corrida, sin listas. 2-3 párrafos.
+{gender_note}
+
+CARTA NATAL
+{carta_natal}
+
+CARTA DEL PASO ({fecha_paso})
+{carta_paso}
+"""
