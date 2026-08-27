@@ -214,24 +214,23 @@ def download(reading_id):
                 self.set_y(18)
 
         def footer(self):
+            _fy, _fh = 279, 10
             # Gold separator line
             self.set_draw_color(*C_GOLD)
             self.set_line_width(0.25)
             self.line(16, 275, 194, 275)
             # Purple logo (transparent background) — left
             if _has_logo_purple:
-                self.image(_logo_purple_path, x=16, y=279.5, w=44)
-            # Page number — centre
-            self.set_y(279)
-            self.set_x(16)
+                self.image(_logo_purple_path, x=16, y=_fy, w=44)
+            # Page number — centred in the space right of the logo (x=60..194 = 134 mm)
+            self.set_xy(60, _fy)
             self.set_font('Helvetica', '', 7.5)
             self.set_text_color(*C_MUTED)
-            self.cell(178, 9, f'Pagina {self.page_no()}', align='C')
-            # Reading title — right
-            self.set_y(279)
-            self.set_x(16)
+            self.cell(134, _fh, str(self.page_no()), align='C')
+            # Reading title — right-aligned in same space
+            self.set_xy(60, _fy)
             self.set_font('Helvetica', '', 7)
-            self.cell(178, 9, doc_title, align='R')
+            self.cell(134, _fh, doc_title, align='R')
 
     pdf = _PDF(orientation='P', unit='mm', format='A4')
     pdf.set_margins(16, 10, 16)
