@@ -51,11 +51,13 @@ def _send_password_reset_task(email, link):
 
 
 def send_reading_email(user, reading):
+    base_url = current_app.config.get('BASE_URL', 'http://localhost:5000').rstrip('/')
+    link = f"{base_url}/readings/{reading.id}"
     _send(
         user.email,
         'Your Astronode Horoscope Reading is Ready',
         'reading_ready',
         user=user,
         reading=reading,
-        link=url_for('readings.view', reading_id=reading.id, _external=True),
+        link=link,
     )

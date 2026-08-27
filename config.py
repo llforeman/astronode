@@ -52,3 +52,5 @@ class Config:
     STRIPE_LINK_READING = os.getenv('STRIPE_LINK_READING', '')
     STRIPE_LINK_BASIC   = os.getenv('STRIPE_LINK_BASIC', '')
     STRIPE_LINK_VIP     = os.getenv('STRIPE_LINK_VIP', '')
+
+    BASE_URL = os.getenv('BASE_URL', 'http://localhost:5000')
