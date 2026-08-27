@@ -1695,7 +1695,6 @@ def generate_reading(profile, reading_type, params: dict = None,
     else:
         result = generate_horoscope(profile, reading_type)
 
-    result['chart_png'] = _svg_to_wheel_png(result['chart_image']) if result.get('chart_image') else None
     return result
 
 

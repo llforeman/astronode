@@ -147,8 +147,14 @@ def download(reading_id):
     _logo_purple_path = _os.path.join(current_app.root_path, 'static', 'logopurple.png')
     _has_logo_purple  = _os.path.exists(_logo_purple_path)
 
-    # ── Chart PNG (pre-generated at reading creation time) ────────
-    _chart_png = bytes(reading.chart_png) if reading.chart_png else None
+    # ── SVG → PNG for cover page (cairosvg only — no kerykeion) ──
+    _chart_png = None
+    if reading.chart_image:
+        try:
+            from ai import _svg_to_wheel_png
+            _chart_png = _svg_to_wheel_png(reading.chart_image)
+        except Exception:
+            pass
 
     # ── document metadata ─────────────────────────────────────────
     doc_title = _s(reading.reading_type.name)
