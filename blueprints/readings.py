@@ -158,6 +158,19 @@ def download(reading_id):
     _meta_parts.append(_date_str)
     _profile_label = _s('  |  '.join(_meta_parts))
 
+    # Birth data lines for cover header
+    _birth_lines = []
+    if reading.profile:
+        _p = reading.profile
+        _bdate = _p.birth_date.strftime('%d/%m/%Y') if _p.birth_date else None
+        _btime = _p.birth_time.strftime('%H:%M') if _p.birth_time else None
+        if _bdate and _btime:
+            _birth_lines.append(_s(f'{_bdate}  {_btime}h'))
+        elif _bdate:
+            _birth_lines.append(_s(_bdate))
+        if _p.birth_place:
+            _birth_lines.append(_s(_p.birth_place))
+
     # ── colour palette ────────────────────────────────────────────
     C_PURPLE  = (53, 15, 76)
     C_GOLD    = (212, 175, 55)
@@ -183,7 +196,12 @@ def download(reading_id):
                 self.set_font('Helvetica', '', 8)
                 self.set_text_color(180, 155, 110)
                 self.set_x(110)
-                self.cell(84, 5, _profile_label, align='R')
+                self.cell(84, 5, _profile_label, align='R', ln=1)
+                self.set_font('Helvetica', '', 7.5)
+                self.set_text_color(160, 135, 100)
+                for _bl in _birth_lines:
+                    self.set_x(110)
+                    self.cell(84, 4.5, _bl, align='R', ln=1)
                 # Thin gold divider at base of band
                 self.set_draw_color(*C_GOLD)
                 self.set_line_width(0.4)
