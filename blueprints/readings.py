@@ -148,20 +148,30 @@ def download(reading_id):
     _has_logo_purple  = _os.path.exists(_logo_purple_path)
 
     # ── SVG helpers ───────────────────────────────────────────────
-    def _hide_svg_panel(svg, node_name):
-        """Inject display:none inline style on a panel <g> tag so cairosvg hides it."""
-        _esc = re.escape(node_name)
+    _PANELS = ['Top_Left_Text', 'Bottom_Left_Text', 'Elements_Percentages',
+               'Qualities_Percentages', 'Houses_And_Planets_Grid',
+               'Aspect_Grid', 'Aspect_List', 'Lunar_Phase']
+
+    def _hide_svg_panels(svg):
+        """Hide all panel <g> elements using both CSS injection and inline styles."""
+        # 1. Inject CSS id rules — cairosvg supports #id selectors
+        _css = ''.join(f'#{p}{{display:none!important}}' for p in _PANELS)
+        svg = re.sub(r'(<style\b[^>]*>)', r'\g<1>' + _css, svg, count=1)
+
+        # 2. Also inject inline style on every <g> that mentions a panel name
+        #    (catches both id="..." and kr:node="..." and any other attr format)
         def _inject(m):
             tag = m.group(0)
-            # If a style attribute already exists, prepend display:none to it
             if re.search(r'\bstyle=["\']', tag):
-                return re.sub(r'(style=["\'])([^"\']*)', r'\1display:none;\2', tag, count=1)
-            # Otherwise insert a new style attribute before the closing >
+                return re.sub(r'(style=["\'])', r'\1display:none;', tag, count=1)
             return tag[:-1] + ' style="display:none">'
-        return re.sub(
-            rf'<g\b[^>]*(?:[\s:]node="{_esc}"|id="{_esc}")[^>]*>',
-            _inject, svg, flags=re.IGNORECASE,
-        )
+
+        for _panel in _PANELS:
+            svg = re.sub(
+                rf'<g\b[^>]*"{re.escape(_panel)}"[^>]*>',
+                _inject, svg, flags=re.IGNORECASE,
+            )
+        return svg
 
     def _crop_svg_to_wheel(svg):
         """Shrink the SVG viewBox to the bounding box of the largest circle."""
@@ -217,11 +227,7 @@ def download(reading_id):
             _svg_resolved = re.sub(
                 r'var\(--([\w-]+)(?:\s*,\s*([^)]*))?\)',
                 _subst, reading.chart_image)
-            for _panel in ['Top_Left_Text', 'Bottom_Left_Text',
-                           'Elements_Percentages', 'Qualities_Percentages',
-                           'Houses_And_Planets_Grid', 'Aspect_Grid',
-                           'Aspect_List', 'Lunar_Phase']:
-                _svg_resolved = _hide_svg_panel(_svg_resolved, _panel)
+            _svg_resolved = _hide_svg_panels(_svg_resolved)
             _chart_png = cairosvg.svg2png(
                 bytestring=_svg_resolved.encode('utf-8'),
                 output_width=1400,
