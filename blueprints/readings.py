@@ -197,10 +197,10 @@ def download(reading_id):
         return svg
 
     # ── SVG → PNG for cover page (wheel only) ─────────────────────
-    _chart_png = None
+    _chart_svg = None
     if reading.chart_image:
         try:
-            import cairosvg
+            from fpdf.svg import SVGObject
             _style_m = re.search(r'<style[^>]*>(.*?)</style>',
                                  reading.chart_image, re.DOTALL)
             _css_vars = {}
@@ -217,20 +217,13 @@ def download(reading_id):
             _svg_resolved = re.sub(
                 r'var\(--([\w-]+)(?:\s*,\s*([^)]*))?\)',
                 _subst, reading.chart_image)
-            _svg_resolved = _svg_resolved.replace(
-                'text { fill: #e0e0e0; }',
-                'text { fill: #ffffff !important; }'
-            )
             for _panel in ['Top_Left_Text', 'Bottom_Left_Text',
                            'Elements_Percentages', 'Qualities_Percentages',
                            'Houses_And_Planets_Grid', 'Aspect_Grid',
                            'Aspect_List', 'Lunar_Phase']:
                 _svg_resolved = _hide_svg_panel(_svg_resolved, _panel)
             _svg_resolved = _crop_svg_to_wheel(_svg_resolved)
-            _chart_png = cairosvg.svg2png(
-                bytestring=_svg_resolved.encode('utf-8'),
-                output_width=900,
-            )
+            _chart_svg = SVGObject(_svg_resolved)
         except Exception:
             pass
 
@@ -319,10 +312,10 @@ def download(reading_id):
                 self.set_line_width(0.4)
                 self.line(0, 52, 210, 52)
                 # Chart image — centred below header band
-                if _chart_png:
+                if _chart_svg:
                     _cw = 178
                     _cx = (210 - _cw) / 2
-                    self.image(io.BytesIO(_chart_png), x=_cx, y=57, w=_cw)
+                    self.image(_chart_svg, x=_cx, y=57, w=_cw)
                 # Push cursor off-page so no body text bleeds onto cover
                 self.set_y(300)
             else:
