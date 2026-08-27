@@ -160,12 +160,21 @@ def download(reading_id):
                 for _vm in re.finditer(r'--([\w-]+)\s*:\s*([^;}\n]+)',
                                        _style_m.group(1)):
                     _css_vars[_vm.group(1).strip()] = _vm.group(2).strip()
+            # Override paper (background) colors to match the cover page
+            _page_hex = '#0f0623'
+            _css_vars['kerykeion-chart-color-paper-0'] = _page_hex
+            _css_vars['kerykeion-chart-color-paper-1'] = _page_hex
             def _subst(m):
                 v = _css_vars.get(m.group(1).strip(), '')
                 return v if v else ((m.group(2) or '').strip() or 'inherit')
             _svg_resolved = re.sub(
                 r'var\(--([\w-]+)(?:\s*,\s*([^)]*))?\)',
                 _subst, reading.chart_image)
+            # Force text to white — !important wins over inline style="fill:..."
+            _svg_resolved = _svg_resolved.replace(
+                'text { fill: #e0e0e0; }',
+                'text { fill: #ffffff !important; }'
+            )
             _chart_png = cairosvg.svg2png(
                 bytestring=_svg_resolved.encode('utf-8'),
                 output_width=1600,
@@ -197,7 +206,8 @@ def download(reading_id):
             _birth_lines.append(_s(_p.birth_place))
 
     # ── colour palette ────────────────────────────────────────────
-    C_PURPLE  = (53, 15, 76)
+    C_PURPLE    = (53, 15, 76)
+    C_COVER_BG  = (15, 6, 35)    # darker purple for the cover page background
     C_GOLD    = (212, 175, 55)
     C_TEXT    = (28, 22, 38)       # near-black body
     C_HEADING = (53, 15, 76)       # brand purple headings
@@ -231,7 +241,7 @@ def download(reading_id):
         def header(self):
             if self.page_no() == 1:
                 # ── Full dark purple cover page ──────────────────
-                self.set_fill_color(*C_PURPLE)
+                self.set_fill_color(*C_COVER_BG)
                 self.rect(0, 0, 210, 297, 'F')
                 # Logo (white) — top left
                 if _has_logo:
