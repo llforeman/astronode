@@ -150,7 +150,12 @@ def download(reading_id):
     # ── SVG helpers ───────────────────────────────────────────────
     def _remove_svg_panel(svg, node_name):
         """Remove a <g kr:node="node_name">…</g> block entirely."""
-        pat = re.compile(rf'<g\b[^>]*\bkr:node="{re.escape(node_name)}"[^>]*>')
+        # Try kr:node attribute (with optional namespace prefix variations) or id
+        _esc = re.escape(node_name)
+        pat = re.compile(
+            rf'<g\b[^>]*(?:[\s:]node="{_esc}"|id="{_esc}")[^>]*>',
+            re.IGNORECASE,
+        )
         m = pat.search(svg)
         if not m:
             return svg
@@ -195,6 +200,12 @@ def download(reading_id):
                      rf'\g<1>"{int(_sz)}"', svg)
         svg = re.sub(r'(<svg\b[^>]*\bheight=)["\'][^"\']*["\']',
                      rf'\g<1>"{int(_sz)}"', svg)
+        # Force-clip anything outside the viewBox
+        if re.search(r'<svg\b[^>]*\boverflow=', svg):
+            svg = re.sub(r'(<svg\b[^>]*\b)overflow=["\'][^"\']*["\']',
+                         r'\1overflow="hidden"', svg, count=1)
+        else:
+            svg = re.sub(r'(<svg\b)', r'\1 overflow="hidden"', svg, count=1)
         return svg
 
     # ── SVG → PNG for cover page (wheel only) ─────────────────────
