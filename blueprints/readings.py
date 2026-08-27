@@ -117,7 +117,7 @@ def request_reading(reading_type_id):
 def download(reading_id):
     from flask import Response
     from fpdf import FPDF
-    import io
+    import io, re
 
     reading = Reading.query.filter_by(id=reading_id, user_id=current_user.id).first_or_404()
     if reading.status != 'completed' or not reading.content:
