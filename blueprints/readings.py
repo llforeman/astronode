@@ -141,8 +141,10 @@ def download(reading_id):
     import os as _os
     from flask import current_app
 
-    _logo_path = _os.path.join(current_app.root_path, 'static', 'logo.png')
-    _has_logo  = _os.path.exists(_logo_path)
+    _logo_path        = _os.path.join(current_app.root_path, 'static', 'logo.png')
+    _has_logo         = _os.path.exists(_logo_path)
+    _logo_purple_path = _os.path.join(current_app.root_path, 'static', 'logopurple.png')
+    _has_logo_purple  = _os.path.exists(_logo_purple_path)
 
     # ── document metadata ─────────────────────────────────────────
     doc_title = _s(reading.reading_type.name)
@@ -200,11 +202,9 @@ def download(reading_id):
             self.set_draw_color(*C_GOLD)
             self.set_line_width(0.25)
             self.line(16, 275, 194, 275)
-            # Purple pill with white logo — left
-            self.set_fill_color(*C_PURPLE)
-            self.rect(16, 279, 44, 9, 'F')
-            if _has_logo:
-                self.image(_logo_path, x=17, y=279.1, w=42)
+            # Purple logo (transparent background) — left
+            if _has_logo_purple:
+                self.image(_logo_purple_path, x=16, y=279.5, w=44)
             # Page number — centre
             self.set_y(279)
             self.set_x(16)
