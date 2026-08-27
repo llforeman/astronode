@@ -222,7 +222,6 @@ def download(reading_id):
                            'Houses_And_Planets_Grid', 'Aspect_Grid',
                            'Aspect_List', 'Lunar_Phase']:
                 _svg_resolved = _hide_svg_panel(_svg_resolved, _panel)
-            _svg_resolved = _crop_svg_to_wheel(_svg_resolved)
             _chart_png = cairosvg.svg2png(
                 bytestring=_svg_resolved.encode('utf-8'),
                 output_width=1400,
