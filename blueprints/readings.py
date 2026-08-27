@@ -243,7 +243,7 @@ def download(reading_id):
                 # Chart image — centred below header band
                 if _chart_png:
                     _cw = 190
-                    _cx = (210 - _cw) / 2
+                    _cx = (210 - _cw) / 2 + _cw * 0.25
                     _w_px = int.from_bytes(_chart_png[16:20], 'big')
                     _h_px = int.from_bytes(_chart_png[20:24], 'big')
                     _ch = _cw * _h_px / _w_px
@@ -269,11 +269,11 @@ def download(reading_id):
             # Purple logo (transparent background) — left
             if _has_logo_purple:
                 self.image(_logo_purple_path, x=16, y=_fy, w=44)
-            # Page number — centred in the space right of the logo (x=60..194 = 134 mm)
-            self.set_xy(60, _fy)
+            # Page number — centred across full page width
+            self.set_xy(0, _fy)
             self.set_font('Helvetica', '', 7.5)
             self.set_text_color(*C_MUTED)
-            self.cell(134, _fh, str(self.page_no()), align='C')
+            self.cell(210, _fh, str(self.page_no()), align='C')
             # Reading title — right-aligned in same space
             self.set_xy(60, _fy)
             self.set_font('Helvetica', '', 7)
@@ -319,21 +319,18 @@ def download(reading_id):
             pdf.ln(5)
             pdf.set_font('Helvetica', 'B', 12)
             pdf.set_text_color(*C_HEADING)
-            pdf.multi_cell(0, 7, _s(text))
+            _hm = re.match(r'Casa\s+(\d+)', text)
+            if _hm:
+                _hdesc = _HOUSE_DESC.get(int(_hm.group(1)))
+                _heading_text = _s(f'{text}: {_hdesc}') if _hdesc else _s(text)
+            else:
+                _heading_text = _s(text)
+            pdf.multi_cell(0, 7, _heading_text)
             _y = pdf.get_y()
             pdf.set_draw_color(*C_GOLD)
             pdf.set_line_width(0.3)
             pdf.line(16, _y, 194, _y)
             pdf.ln(2)
-            # House description
-            _hm = re.match(r'Casa\s+(\d+)', text)
-            if _hm:
-                _hdesc = _HOUSE_DESC.get(int(_hm.group(1)))
-                if _hdesc:
-                    pdf.set_font('Helvetica', 'I', 8.5)
-                    pdf.set_text_color(*C_MUTED)
-                    pdf.multi_cell(0, 5, _hdesc)
-                    pdf.ln(1)
             pdf.set_font('Helvetica', '', 10.5)
             pdf.set_text_color(*C_TEXT)
         elif stripped and stripped.isupper() and len(stripped) > 4:
