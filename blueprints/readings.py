@@ -225,7 +225,7 @@ def download(reading_id):
             _svg_resolved = _crop_svg_to_wheel(_svg_resolved)
             _chart_png = cairosvg.svg2png(
                 bytestring=_svg_resolved.encode('utf-8'),
-                output_width=700,
+                output_width=1400,
             )
         except Exception:
             pass
@@ -316,7 +316,7 @@ def download(reading_id):
                 self.line(0, 52, 210, 52)
                 # Chart image — centred below header band
                 if _chart_png:
-                    _cw = 178
+                    _cw = 125
                     _cx = (210 - _cw) / 2
                     self.image(io.BytesIO(_chart_png), x=_cx, y=57, w=_cw)
                 # Push cursor off-page so no body text bleeds onto cover
