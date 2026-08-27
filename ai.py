@@ -417,7 +417,7 @@ _WHEEL_PANELS = [
 def _remove_panel_groups(svg: str) -> str:
     """Remove kerykeion panel <g> elements from the SVG string entirely."""
     for panel in _WHEEL_PANELS:
-        pat = re.compile(r'<g(?:\s[^>]*)?\skr:node="' + re.escape(panel) + r'"[^>]*>')
+        pat = re.compile(r"<g\b[^>]*\bkr:node=['\"]" + re.escape(panel) + r"['\"][^>]*>")
         while True:
             m = pat.search(svg)
             if not m:
