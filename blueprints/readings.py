@@ -154,8 +154,6 @@ def download(reading_id):
         if reading.profile.is_self:
             _lbl += ' (tu)'
         _meta_parts.append(_lbl)
-    _date_str = reading.created_at.strftime('%d/%m/%Y')
-    _meta_parts.append(_date_str)
     _profile_label = _s('  |  '.join(_meta_parts))
 
     # Birth data lines for cover header
