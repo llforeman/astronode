@@ -229,7 +229,7 @@ def download(reading_id):
             _svg_resolved = _crop_svg_to_wheel(_svg_resolved)
             _chart_png = cairosvg.svg2png(
                 bytestring=_svg_resolved.encode('utf-8'),
-                output_width=1600,
+                output_width=900,
             )
         except Exception:
             pass
@@ -256,27 +256,6 @@ def download(reading_id):
             _birth_lines.append(_s(_bdate))
         if _p.birth_place:
             _birth_lines.append(_s(_p.birth_place))
-
-    # ── Chart data (planets, houses, elements) ────────────────────
-    _dossier = None
-    _house_cusps_data = {}
-    if reading.profile and reading.profile.birth_date and reading.profile.birth_time:
-        try:
-            from ai import _build_chart_kerykeion
-            from chart_analysis import build_dossier, SIGNS, _deg_str
-            _cp = reading.profile
-            _pos_data, _cusps_data, _, _, _, _subj_data = _build_chart_kerykeion(
-                _cp.birth_date, _cp.birth_time, _cp.birth_place or 'unknown',
-                lat=getattr(_cp, 'birth_lat', None), lng=getattr(_cp, 'birth_lng', None),
-            )
-            _dossier = build_dossier(_subj_data, _pos_data, _cusps_data,
-                                     known_birth_time=True)
-            for _hn, _lon in _cusps_data.items():
-                _si = int(_lon // 30) % 12
-                _sg = SIGNS[_si]
-                _house_cusps_data[_hn] = _s(_deg_str(_lon, _sg))
-        except Exception:
-            pass
 
     # ── colour palette ────────────────────────────────────────────
     C_PURPLE    = (53, 15, 76)
@@ -381,118 +360,7 @@ def download(reading_id):
     # ── Page 1: Cover (header draws everything) ───────────────────
     pdf.add_page()
 
-    # ── Page 2: Planetary positions ───────────────────────────────
-    if _dossier is not None:
-        pdf.add_page()
-        pdf.set_font('Helvetica', 'B', 15)
-        pdf.set_text_color(*C_HEADING)
-        pdf.ln(4)
-        pdf.cell(0, 9, _s('Posiciones planetarias'), ln=1)
-        _ty = pdf.get_y()
-        pdf.set_draw_color(*C_GOLD)
-        pdf.set_line_width(0.35)
-        pdf.line(16, _ty, 194, _ty)
-        pdf.ln(5)
-
-        _PLANET_ORDER = ['Sun', 'Moon', 'Mercury', 'Venus', 'Mars', 'Jupiter',
-                         'Saturn', 'Uranus', 'Neptune', 'Pluto',
-                         'Ascendant', 'Medium_Coeli', 'North_Node', 'Chiron']
-        _PLANET_LABEL = {
-            'Sun': 'Sol', 'Moon': 'Luna', 'Mercury': 'Mercurio',
-            'Venus': 'Venus', 'Mars': 'Marte', 'Jupiter': 'Jupiter',
-            'Saturn': 'Saturno', 'Uranus': 'Urano', 'Neptune': 'Neptuno',
-            'Pluto': 'Pluton', 'Ascendant': 'Ascendente', 'Medium_Coeli': 'MC',
-            'North_Node': 'Nodo Norte', 'Chiron': 'Quiron',
-        }
-        _pos = _dossier.get('posiciones', {})
-        _lx, _rx, _row_h = 16, 114, 6
-
-        # Column headers
-        _y0 = pdf.get_y()
-        pdf.set_font('Helvetica', 'B', 8)
-        pdf.set_text_color(*C_MUTED)
-        pdf.set_xy(_lx, _y0)
-        pdf.cell(28, _row_h, _s('Planeta'))
-        pdf.cell(46, _row_h, _s('Signo / Grado'))
-        pdf.cell(10, _row_h, _s('Casa'), align='C')
-        pdf.cell(6,  _row_h, 'R', align='C')
-        pdf.set_xy(_rx, _y0)
-        pdf.cell(14, _row_h, _s('Casa'), align='C')
-        pdf.cell(66, _row_h, _s('Cuspide'))
-
-        _sep_y = _y0 + _row_h
-        pdf.set_draw_color(*C_GOLD)
-        pdf.set_line_width(0.2)
-        pdf.line(_lx, _sep_y, _lx + 90, _sep_y)
-        pdf.line(_rx, _sep_y, _rx + 80, _sep_y)
-
-        # Data rows
-        _py = _sep_y + 1.5
-        _ry = _sep_y + 1.5
-        for _pk in _PLANET_ORDER:
-            _pd = _pos.get(_pk)
-            if _pd is None:
-                continue
-            _label  = _s(_PLANET_LABEL.get(_pk, _pk))
-            _degree = _s(_pd.get('grado', ''))
-            _casa   = str(_pd.get('casa') or '')
-            _retro  = 'R' if _pd.get('retrogrado') else ''
-            pdf.set_xy(_lx, _py)
-            pdf.set_font('Helvetica', 'B', 8.5)
-            pdf.set_text_color(*C_TEXT)
-            pdf.cell(28, _row_h, _label)
-            pdf.set_font('Helvetica', '', 8.5)
-            pdf.cell(46, _row_h, _degree)
-            pdf.cell(10, _row_h, _s(_casa), align='C')
-            pdf.set_text_color(*C_GOLD)
-            pdf.set_font('Helvetica', 'B', 8)
-            pdf.cell(6,  _row_h, _retro, align='C')
-            _py += _row_h
-
-        for _hn in range(1, 13):
-            _hd = _house_cusps_data.get(_hn, '')
-            pdf.set_xy(_rx, _ry)
-            pdf.set_font('Helvetica', 'B', 8.5)
-            pdf.set_text_color(*C_MUTED)
-            pdf.cell(14, _row_h, _s(str(_hn)), align='C')
-            pdf.set_font('Helvetica', '', 8.5)
-            pdf.set_text_color(*C_TEXT)
-            pdf.cell(66, _row_h, _s(_hd))
-            _ry += _row_h
-
-        # Elements and modalities below both columns
-        _after_y = max(_py, _ry) + 6
-        pdf.set_y(_after_y)
-        _el_data = _dossier.get('elementos', {})
-        _md_data = _dossier.get('modalidades', {})
-        if _el_data or _md_data:
-            _ty2 = pdf.get_y()
-            pdf.set_draw_color(*C_GOLD)
-            pdf.set_line_width(0.2)
-            pdf.line(16, _ty2, 194, _ty2)
-            pdf.ln(4)
-        if _el_data:
-            pdf.set_font('Helvetica', 'B', 8)
-            pdf.set_text_color(*C_MUTED)
-            pdf.cell(26, 6, _s('Elementos:'))
-            pdf.set_font('Helvetica', '', 8.5)
-            pdf.set_text_color(*C_TEXT)
-            _el_str = '   |   '.join(
-                f'{k.capitalize()} {v}' for k, v in _el_data.items()
-            )
-            pdf.cell(0, 6, _s(_el_str), ln=1)
-        if _md_data:
-            pdf.set_font('Helvetica', 'B', 8)
-            pdf.set_text_color(*C_MUTED)
-            pdf.cell(26, 6, _s('Modalidades:'))
-            pdf.set_font('Helvetica', '', 8.5)
-            pdf.set_text_color(*C_TEXT)
-            _md_str = '   |   '.join(
-                f'{k.capitalize()} {v}' for k, v in _md_data.items()
-            )
-            pdf.cell(0, 6, _s(_md_str), ln=1)
-
-    # ── Page 3: Table of contents ─────────────────────────────────
+    # ── Page 2: Table of contents ─────────────────────────────────
     pdf.add_page()
     pdf.set_font('Helvetica', 'B', 15)
     pdf.set_text_color(*C_HEADING)
