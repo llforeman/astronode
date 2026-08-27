@@ -197,10 +197,10 @@ def download(reading_id):
         return svg
 
     # ── SVG → PNG for cover page (wheel only) ─────────────────────
-    _chart_svg = None
+    _chart_png = None
     if reading.chart_image:
         try:
-            from fpdf.svg import SVGObject
+            import cairosvg
             _style_m = re.search(r'<style[^>]*>(.*?)</style>',
                                  reading.chart_image, re.DOTALL)
             _css_vars = {}
@@ -223,7 +223,10 @@ def download(reading_id):
                            'Aspect_List', 'Lunar_Phase']:
                 _svg_resolved = _hide_svg_panel(_svg_resolved, _panel)
             _svg_resolved = _crop_svg_to_wheel(_svg_resolved)
-            _chart_svg = SVGObject(_svg_resolved)
+            _chart_png = cairosvg.svg2png(
+                bytestring=_svg_resolved.encode('utf-8'),
+                output_width=700,
+            )
         except Exception:
             pass
 
@@ -312,10 +315,10 @@ def download(reading_id):
                 self.set_line_width(0.4)
                 self.line(0, 52, 210, 52)
                 # Chart image — centred below header band
-                if _chart_svg:
+                if _chart_png:
                     _cw = 178
                     _cx = (210 - _cw) / 2
-                    self.image(_chart_svg, x=_cx, y=57, w=_cw)
+                    self.image(io.BytesIO(_chart_png), x=_cx, y=57, w=_cw)
                 # Push cursor off-page so no body text bleeds onto cover
                 self.set_y(300)
             else:
