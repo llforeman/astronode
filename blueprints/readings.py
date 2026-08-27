@@ -224,19 +224,19 @@ def download(reading_id):
                 # Logo (white) — top left
                 if _has_logo:
                     self.image(_logo_path, x=16, y=14, w=80)
-                # Reading type — top right, cream
+                # Reading type — top right, white
                 self.set_font('Helvetica', 'B', 9)
-                self.set_text_color(*C_CREAM)
+                self.set_text_color(255, 255, 255)
                 self.set_xy(100, 16)
                 self.cell(94, 5, doc_title, align='R', ln=1)
                 # Profile label
                 self.set_font('Helvetica', '', 8)
-                self.set_text_color(180, 155, 110)
+                self.set_text_color(255, 255, 255)
                 self.set_x(100)
                 self.cell(94, 5, _profile_label, align='R', ln=1)
                 # Birth data lines
                 self.set_font('Helvetica', '', 7.5)
-                self.set_text_color(160, 135, 100)
+                self.set_text_color(255, 255, 255)
                 for _bl in _birth_lines:
                     self.set_x(100)
                     self.cell(94, 4.5, _bl, align='R', ln=1)
