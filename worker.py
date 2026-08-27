@@ -113,4 +113,4 @@ def generate_reading_task(reading_id):
 
 
 def job_failure_callback(job, connection, type, value, traceback):
-    log.error("Job %s failed: %s", job.id, value, exc_info=(type, value, traceback))
+    log.error("Job %s failed: %s", job.id, value)
