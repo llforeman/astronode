@@ -85,6 +85,7 @@ def generate_reading_task(reading_id):
         reading = Reading.query.get(reading_id)
         reading.content      = result['text']
         reading.chart_image  = result.get('chart_image')
+        reading.chart_png    = result.get('chart_png')
         reading.status       = 'completed'
         reading.completed_at = datetime.utcnow()
         db.session.commit()

@@ -405,6 +405,75 @@ def _generate_chart_svg(subject) -> str | None:
     return svg_string
 
 
+# ── Wheel-only PNG (for PDF cover) ────────────────────────────────────────────
+
+_WHEEL_PANELS = [
+    'Top_Left_Text', 'Bottom_Left_Text', 'Elements_Percentages',
+    'Qualities_Percentages', 'Houses_And_Planets_Grid',
+    'Aspect_Grid', 'Aspect_List', 'Lunar_Phase',
+]
+
+
+def _remove_panel_groups(svg: str) -> str:
+    """Remove kerykeion panel <g> elements from the SVG string entirely."""
+    for panel in _WHEEL_PANELS:
+        pat = re.compile(r'<g(?:\s[^>]*)?\skr:node="' + re.escape(panel) + r'"[^>]*>')
+        while True:
+            m = pat.search(svg)
+            if not m:
+                break
+            start = m.start()
+            if m.group(0).rstrip().endswith('/>'):
+                svg = svg[:start] + svg[m.end():]
+                continue
+            depth, pos, n, removed = 1, m.end(), len(svg), False
+            while depth > 0 and pos < n:
+                o = svg.find('<g', pos)
+                c = svg.find('</g>', pos)
+                if c == -1:
+                    break
+                if o != -1 and o < c:
+                    if o + 2 < n and svg[o + 2] in ' \t\n\r>':
+                        depth += 1
+                    pos = o + 2
+                else:
+                    depth -= 1
+                    if depth == 0:
+                        svg = svg[:start] + svg[c + 4:]
+                        removed = True
+                        break
+                    pos = c + 4
+            if not removed:
+                break
+    return svg
+
+
+def _svg_to_wheel_png(svg: str) -> bytes | None:
+    """Resolve CSS vars, strip panel groups, render to PNG via cairosvg."""
+    try:
+        import cairosvg
+        # Resolve --kerykeion-* CSS custom properties
+        _style_m = re.search(r'<style[^>]*>(.*?)</style>', svg, re.DOTALL)
+        _css_vars: dict[str, str] = {}
+        if _style_m:
+            for _vm in re.finditer(r'--([\w-]+)\s*:\s*([^;}\n]+)', _style_m.group(1)):
+                _css_vars[_vm.group(1).strip()] = _vm.group(2).strip()
+        # Force paper background to match cover page
+        _css_vars['kerykeion-chart-color-paper-0'] = '#0f0623'
+        _css_vars['kerykeion-chart-color-paper-1'] = '#0f0623'
+
+        def _subst(m):
+            v = _css_vars.get(m.group(1).strip(), '')
+            return v if v else ((m.group(2) or '').strip() or 'inherit')
+
+        svg = re.sub(r'var\(--([\w-]+)(?:\s*,\s*([^)]*))?\)', _subst, svg)
+        svg = _remove_panel_groups(svg)
+        return cairosvg.svg2png(bytestring=svg.encode('utf-8'), output_width=1400)
+    except Exception as e:
+        log.warning('_svg_to_wheel_png failed: %s', e)
+        return None
+
+
 # ── Aspects for public chart (simple, no grading) ─────────────────────────────
 
 _ASPECT_TYPES = [
@@ -1606,25 +1675,28 @@ def generate_reading(profile, reading_type, params: dict = None,
     slug   = getattr(reading_type, 'slug', None) or 'natal'
 
     if slug == 'karmic':
-        return generate_karmic(profile, reading_type)
-    if slug == 'synastry':
+        result = generate_karmic(profile, reading_type)
+    elif slug == 'synastry':
         if not profile_b:
             raise ValueError('synastry requires profile_b')
-        return generate_synastry(profile, profile_b, reading_type)
-    if slug == 'davison':
+        result = generate_synastry(profile, profile_b, reading_type)
+    elif slug == 'davison':
         if not profile_b:
             raise ValueError('davison requires profile_b')
-        return generate_davison(profile, profile_b, reading_type)
-    if slug == 'solar_return':
-        return generate_solar_return(profile, params, reading_type)
-    if slug == 'lunar_return':
-        return generate_lunar_return(profile, params, reading_type)
-    if slug == 'saturn_return':
-        return generate_saturn_return(profile, params, reading_type)
-    if slug == 'jupiter_return':
-        return generate_jupiter_return(profile, params, reading_type)
-    # default: natal
-    return generate_horoscope(profile, reading_type)
+        result = generate_davison(profile, profile_b, reading_type)
+    elif slug == 'solar_return':
+        result = generate_solar_return(profile, params, reading_type)
+    elif slug == 'lunar_return':
+        result = generate_lunar_return(profile, params, reading_type)
+    elif slug == 'saturn_return':
+        result = generate_saturn_return(profile, params, reading_type)
+    elif slug == 'jupiter_return':
+        result = generate_jupiter_return(profile, params, reading_type)
+    else:
+        result = generate_horoscope(profile, reading_type)
+
+    result['chart_png'] = _svg_to_wheel_png(result['chart_image']) if result.get('chart_image') else None
+    return result
 
 
 # ── Main entry point ───────────────────────────────────────────────────────────

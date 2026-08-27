@@ -117,7 +117,7 @@ def request_reading(reading_type_id):
 def download(reading_id):
     from flask import Response
     from fpdf import FPDF
-    import io, re
+    import io
 
     reading = Reading.query.filter_by(id=reading_id, user_id=current_user.id).first_or_404()
     if reading.status != 'completed' or not reading.content:
@@ -147,93 +147,8 @@ def download(reading_id):
     _logo_purple_path = _os.path.join(current_app.root_path, 'static', 'logopurple.png')
     _has_logo_purple  = _os.path.exists(_logo_purple_path)
 
-    # ── SVG helpers ───────────────────────────────────────────────
-    _PANELS = ['Top_Left_Text', 'Bottom_Left_Text', 'Elements_Percentages',
-               'Qualities_Percentages', 'Houses_And_Planets_Grid',
-               'Aspect_Grid', 'Aspect_List', 'Lunar_Phase']
-
-    def _hide_svg_panels(svg):
-        """Hide all panel <g> elements using both CSS injection and inline styles."""
-        # 1. Inject CSS id rules — cairosvg supports #id selectors
-        _css = ''.join(f'#{p}{{display:none!important}}' for p in _PANELS)
-        svg = re.sub(r'(<style\b[^>]*>)', r'\g<1>' + _css, svg, count=1)
-
-        # 2. Also inject inline style on every <g> that mentions a panel name
-        #    (catches both id="..." and kr:node="..." and any other attr format)
-        def _inject(m):
-            tag = m.group(0)
-            if re.search(r'\bstyle=["\']', tag):
-                return re.sub(r'(style=["\'])', r'\1display:none;', tag, count=1)
-            return tag[:-1] + ' style="display:none">'
-
-        for _panel in _PANELS:
-            svg = re.sub(
-                rf'<g\b[^>]*"{re.escape(_panel)}"[^>]*>',
-                _inject, svg, flags=re.IGNORECASE,
-            )
-        return svg
-
-    def _crop_svg_to_wheel(svg):
-        """Shrink the SVG viewBox to the bounding box of the largest circle."""
-        max_r = cx = cy = 0.0
-        for _cm in re.finditer(r'<circle\b[^>]*>', svg):
-            _t = _cm.group(0)
-            _cx_m = re.search(r'\bcx=["\']([^"\']+)["\']', _t)
-            _cy_m = re.search(r'\bcy=["\']([^"\']+)["\']', _t)
-            _r_m  = re.search(r'\br=["\']([^"\']+)["\']',  _t)
-            if _cx_m and _cy_m and _r_m:
-                try:
-                    _rv = float(_r_m.group(1))
-                    if _rv > max_r:
-                        max_r, cx, cy = _rv, float(_cx_m.group(1)), float(_cy_m.group(1))
-                except ValueError:
-                    pass
-        if max_r == 0:
-            return svg
-        _pad = max_r * 0.06
-        _x0, _y0, _sz = cx - max_r - _pad, cy - max_r - _pad, (max_r + _pad) * 2
-        svg = re.sub(r'(<svg\b[^>]*\bviewBox=)["\'][^"\']*["\']',
-                     rf'\g<1>"{_x0:.1f} {_y0:.1f} {_sz:.1f} {_sz:.1f}"', svg)
-        svg = re.sub(r'(<svg\b[^>]*\bwidth=)["\'][^"\']*["\']',
-                     rf'\g<1>"{int(_sz)}"', svg)
-        svg = re.sub(r'(<svg\b[^>]*\bheight=)["\'][^"\']*["\']',
-                     rf'\g<1>"{int(_sz)}"', svg)
-        # Force-clip anything outside the viewBox
-        if re.search(r'<svg\b[^>]*\boverflow=', svg):
-            svg = re.sub(r'(<svg\b[^>]*\b)overflow=["\'][^"\']*["\']',
-                         r'\1overflow="hidden"', svg, count=1)
-        else:
-            svg = re.sub(r'(<svg\b)', r'\1 overflow="hidden"', svg, count=1)
-        return svg
-
-    # ── SVG → PNG for cover page (wheel only) ─────────────────────
-    _chart_png = None
-    if reading.chart_image:
-        try:
-            import cairosvg
-            _style_m = re.search(r'<style[^>]*>(.*?)</style>',
-                                 reading.chart_image, re.DOTALL)
-            _css_vars = {}
-            if _style_m:
-                for _vm in re.finditer(r'--([\w-]+)\s*:\s*([^;}\n]+)',
-                                       _style_m.group(1)):
-                    _css_vars[_vm.group(1).strip()] = _vm.group(2).strip()
-            _page_hex = '#0f0623'
-            _css_vars['kerykeion-chart-color-paper-0'] = _page_hex
-            _css_vars['kerykeion-chart-color-paper-1'] = _page_hex
-            def _subst(m):
-                v = _css_vars.get(m.group(1).strip(), '')
-                return v if v else ((m.group(2) or '').strip() or 'inherit')
-            _svg_resolved = re.sub(
-                r'var\(--([\w-]+)(?:\s*,\s*([^)]*))?\)',
-                _subst, reading.chart_image)
-            _svg_resolved = _hide_svg_panels(_svg_resolved)
-            _chart_png = cairosvg.svg2png(
-                bytestring=_svg_resolved.encode('utf-8'),
-                output_width=1400,
-            )
-        except Exception:
-            pass
+    # ── Chart PNG (pre-generated at reading creation time) ────────
+    _chart_png = bytes(reading.chart_png) if reading.chart_png else None
 
     # ── document metadata ─────────────────────────────────────────
     doc_title = _s(reading.reading_type.name)
