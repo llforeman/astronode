@@ -22,3 +22,4 @@ pytz>=2024.1
 kerykeion>=4.0.0
 fpdf2>=2.7.0
 markdown>=3.5
+cairosvg>=2.7.0

@@ -117,6 +117,7 @@ def request_reading(reading_type_id):
 def download(reading_id):
     from flask import Response
     from fpdf import FPDF
+    import io, re
 
     reading = Reading.query.filter_by(id=reading_id, user_id=current_user.id).first_or_404()
     if reading.status != 'completed' or not reading.content:
@@ -145,6 +146,20 @@ def download(reading_id):
     _has_logo         = _os.path.exists(_logo_path)
     _logo_purple_path = _os.path.join(current_app.root_path, 'static', 'logopurple.png')
     _has_logo_purple  = _os.path.exists(_logo_purple_path)
+
+    # ── SVG → PNG for cover page ──────────────────────────────────
+    _chart_png = None
+    if reading.chart_image:
+        try:
+            import cairosvg
+            _svg_clean = re.sub(r'<style[^>]*>.*?</style>', '',
+                                reading.chart_image, flags=re.DOTALL)
+            _chart_png = cairosvg.svg2png(
+                bytestring=_svg_clean.encode('utf-8'),
+                output_width=1600,
+            )
+        except Exception:
+            pass
 
     # ── document metadata ─────────────────────────────────────────
     doc_title = _s(reading.reading_type.name)
@@ -177,43 +192,75 @@ def download(reading_id):
     C_MUTED   = (120, 105, 140)
     C_CREAM   = (245, 235, 200)
 
+    # ── table of contents extraction ──────────────────────────────
+    _toc_entries = [
+        _s(ln.strip().lstrip('#').strip())
+        for ln in reading.content.split('\n')
+        if ln.strip().startswith('#')
+    ]
+
+    # ── house descriptions ────────────────────────────────────────
+    _HOUSE_DESC = {
+        1:  _s("Identidad, apariencia y la forma en que te presentas al mundo."),
+        2:  _s("Recursos materiales, valores personales y autoestima."),
+        3:  _s("Comunicacion, mente analitica, hermanos y entorno cercano."),
+        4:  _s("Hogar, familia, raices y base emocional."),
+        5:  _s("Creatividad, romance, hijos y expresion personal."),
+        6:  _s("Salud, rutina diaria, servicio y trabajo cotidiano."),
+        7:  _s("Relaciones intimas, asociaciones y el otro en tu vida."),
+        8:  _s("Transformacion, sexualidad, herencias y los misterios de la vida."),
+        9:  _s("Filosofia, viajes, educacion superior y busqueda de sentido."),
+        10: _s("Carrera, reputacion publica y vocacion de vida."),
+        11: _s("Amistades, comunidad, ideales y esperanzas futuras."),
+        12: _s("Inconsciente, espiritualidad, retiro y lo que esta oculto."),
+    }
+
     class _PDF(FPDF):
         def header(self):
             if self.page_no() == 1:
-                # Purple cover band — 52 mm tall
+                # ── Full dark purple cover page ──────────────────
                 self.set_fill_color(*C_PURPLE)
-                self.rect(0, 0, 210, 52, 'F')
-                # Logo: w=90 mm → h≈19.9 mm; vertically centred → y=(52−20)/2=16
+                self.rect(0, 0, 210, 297, 'F')
+                # Logo (white) — top left
                 if _has_logo:
-                    self.image(_logo_path, x=16, y=16, w=90)
-                # Right side — reading type + meta
+                    self.image(_logo_path, x=16, y=14, w=80)
+                # Reading type — top right, cream
                 self.set_font('Helvetica', 'B', 9)
                 self.set_text_color(*C_CREAM)
-                self.set_xy(110, 18)
-                self.cell(84, 5, doc_title, align='R', ln=1)
+                self.set_xy(100, 16)
+                self.cell(94, 5, doc_title, align='R', ln=1)
+                # Profile label
                 self.set_font('Helvetica', '', 8)
                 self.set_text_color(180, 155, 110)
-                self.set_x(110)
-                self.cell(84, 5, _profile_label, align='R', ln=1)
+                self.set_x(100)
+                self.cell(94, 5, _profile_label, align='R', ln=1)
+                # Birth data lines
                 self.set_font('Helvetica', '', 7.5)
                 self.set_text_color(160, 135, 100)
                 for _bl in _birth_lines:
-                    self.set_x(110)
-                    self.cell(84, 4.5, _bl, align='R', ln=1)
-                # Thin gold divider at base of band
+                    self.set_x(100)
+                    self.cell(94, 4.5, _bl, align='R', ln=1)
+                # Gold separator
                 self.set_draw_color(*C_GOLD)
                 self.set_line_width(0.4)
                 self.line(0, 52, 210, 52)
-                # Body starts below band
-                self.set_y(60)
+                # Chart image — centred below header band
+                if _chart_png:
+                    _cw = 178
+                    _cx = (210 - _cw) / 2
+                    self.image(io.BytesIO(_chart_png), x=_cx, y=57, w=_cw)
+                # Push cursor off-page so no body text bleeds onto cover
+                self.set_y(300)
             else:
-                # Continuation pages — thin gold top rule only
+                # Continuation pages — thin gold top rule
                 self.set_draw_color(*C_GOLD)
                 self.set_line_width(0.25)
                 self.line(16, 13, 194, 13)
                 self.set_y(18)
 
         def footer(self):
+            if self.page_no() == 1:
+                return
             _fy, _fh = 279, 10
             # Gold separator line
             self.set_draw_color(*C_GOLD)
@@ -235,16 +282,39 @@ def download(reading_id):
     pdf = _PDF(orientation='P', unit='mm', format='A4')
     pdf.set_margins(16, 10, 16)
     pdf.set_auto_page_break(auto=True, margin=24)
+
+    # ── Page 1: Cover (header draws everything) ───────────────────
     pdf.add_page()
 
-    # ── body text ────────────────────────────────────────────────
+    # ── Page 2: Table of contents ─────────────────────────────────
+    pdf.add_page()
+    pdf.set_font('Helvetica', 'B', 15)
+    pdf.set_text_color(*C_HEADING)
+    pdf.ln(4)
+    pdf.cell(0, 9, _s('Indice de contenidos'), ln=1)
+    _ty = pdf.get_y()
+    pdf.set_draw_color(*C_GOLD)
+    pdf.set_line_width(0.35)
+    pdf.line(16, _ty, 194, _ty)
+    pdf.ln(6)
+    for _i, _entry in enumerate(_toc_entries, 1):
+        pdf.set_font('Helvetica', 'B', 8.5)
+        pdf.set_text_color(*C_MUTED)
+        pdf.set_x(16)
+        pdf.cell(10, 7, f'{_i}.', align='R')
+        pdf.set_font('Helvetica', '', 10)
+        pdf.set_text_color(*C_TEXT)
+        pdf.set_x(28)
+        pdf.multi_cell(166, 7, _entry)
+
+    # ── Page 3+: Body content ─────────────────────────────────────
+    pdf.add_page()
     pdf.set_font('Helvetica', '', 10.5)
     pdf.set_text_color(*C_TEXT)
 
     for line in reading.content.split('\n'):
         stripped = line.strip()
         if stripped.startswith('#'):
-            # Markdown heading — strip # prefix, render as titled section
             text = stripped.lstrip('#').strip()
             pdf.ln(5)
             pdf.set_font('Helvetica', 'B', 12)
@@ -254,11 +324,19 @@ def download(reading_id):
             pdf.set_draw_color(*C_GOLD)
             pdf.set_line_width(0.3)
             pdf.line(16, _y, 194, _y)
-            pdf.ln(3)
+            pdf.ln(2)
+            # House description
+            _hm = re.match(r'Casa\s+(\d+)', text)
+            if _hm:
+                _hdesc = _HOUSE_DESC.get(int(_hm.group(1)))
+                if _hdesc:
+                    pdf.set_font('Helvetica', 'I', 8.5)
+                    pdf.set_text_color(*C_MUTED)
+                    pdf.multi_cell(0, 5, _hdesc)
+                    pdf.ln(1)
             pdf.set_font('Helvetica', '', 10.5)
             pdf.set_text_color(*C_TEXT)
         elif stripped and stripped.isupper() and len(stripped) > 4:
-            # ALL-CAPS section heading
             pdf.ln(5)
             pdf.set_font('Helvetica', 'B', 11)
             pdf.set_text_color(*C_HEADING)
