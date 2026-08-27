@@ -93,7 +93,8 @@ def generate_reading_task(reading_id):
         # 5. Send by email
         try:
             from emails import send_reading_email
-            send_reading_email(user, reading)
+            with app.test_request_context('/'):
+                send_reading_email(user, reading)
             reading = Reading.query.get(reading_id)
             reading.sent_by_email = True
             db.session.commit()

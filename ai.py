@@ -344,14 +344,14 @@ _PURPLE_THEME_CSS = """
   --kerykeion-chart-color-mutable-percentage:  #e8a08c;
 }
 
-[kr\:node="Top_Left_Text"],
-[kr\:node="Bottom_Left_Text"],
-[kr\:node="Elements_Percentages"],
-[kr\:node="Qualities_Percentages"],
-[kr\:node="Houses_And_Planets_Grid"],
-[kr\:node="Aspect_Grid"],
-[kr\:node="Aspect_List"],
-[kr\:node="Lunar_Phase"] { display: none; }
+[kr\\:node="Top_Left_Text"],
+[kr\\:node="Bottom_Left_Text"],
+[kr\\:node="Elements_Percentages"],
+[kr\\:node="Qualities_Percentages"],
+[kr\\:node="Houses_And_Planets_Grid"],
+[kr\\:node="Aspect_Grid"],
+[kr\\:node="Aspect_List"],
+[kr\\:node="Lunar_Phase"] { display: none; }
 
 text { fill: #e0e0e0; }
 line { stroke-dasharray: none; }
