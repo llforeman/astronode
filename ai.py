@@ -468,7 +468,7 @@ def _svg_to_wheel_png(svg: str) -> bytes | None:
 
         svg = re.sub(r'var\(--([\w-]+)(?:\s*,\s*([^)]*))?\)', _subst, svg)
         svg = _remove_panel_groups(svg)
-        return cairosvg.svg2png(bytestring=svg.encode('utf-8'), output_width=1000)
+        return cairosvg.svg2png(bytestring=svg.encode('utf-8'), output_width=2100)
     except Exception as e:
         log.warning('_svg_to_wheel_png failed: %s', e)
         return None
