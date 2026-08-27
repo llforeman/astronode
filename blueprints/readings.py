@@ -152,10 +152,22 @@ def download(reading_id):
     if reading.chart_image:
         try:
             import cairosvg
-            _svg_clean = re.sub(r'<style[^>]*>.*?</style>', '',
-                                reading.chart_image, flags=re.DOTALL)
+            # Resolve CSS custom properties inline so cairosvg renders them
+            _style_m = re.search(r'<style[^>]*>(.*?)</style>',
+                                 reading.chart_image, re.DOTALL)
+            _css_vars = {}
+            if _style_m:
+                for _vm in re.finditer(r'--([\w-]+)\s*:\s*([^;}\n]+)',
+                                       _style_m.group(1)):
+                    _css_vars[_vm.group(1).strip()] = _vm.group(2).strip()
+            def _subst(m):
+                v = _css_vars.get(m.group(1).strip(), '')
+                return v if v else ((m.group(2) or '').strip() or 'inherit')
+            _svg_resolved = re.sub(
+                r'var\(--([\w-]+)(?:\s*,\s*([^)]*))?\)',
+                _subst, reading.chart_image)
             _chart_png = cairosvg.svg2png(
-                bytestring=_svg_clean.encode('utf-8'),
+                bytestring=_svg_resolved.encode('utf-8'),
                 output_width=1600,
             )
         except Exception:
