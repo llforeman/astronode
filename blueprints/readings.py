@@ -188,13 +188,6 @@ def download(reading_id):
     C_MUTED   = (120, 105, 140)
     C_CREAM   = (245, 235, 200)
 
-    # ── table of contents extraction ──────────────────────────────
-    _toc_entries = [
-        _s(ln.strip().lstrip('#').strip())
-        for ln in reading.content.split('\n')
-        if ln.strip().startswith('#')
-    ]
-
     # ── house descriptions ────────────────────────────────────────
     _HOUSE_DESC = {
         1:  _s("Identidad, apariencia y la forma en que te presentas al mundo."),
@@ -210,6 +203,17 @@ def download(reading_id):
         11: _s("Amistades, comunidad, ideales y esperanzas futuras."),
         12: _s("Inconsciente, espiritualidad, retiro y lo que esta oculto."),
     }
+
+    # ── table of contents extraction ──────────────────────────────
+    _toc_entries = []
+    for _ln in reading.content.split('\n'):
+        if _ln.strip().startswith('#'):
+            _t = _ln.strip().lstrip('#').strip()
+            _hm_t = re.match(r'Casa\s+(\d+)', _t)
+            if _hm_t:
+                _d = _HOUSE_DESC.get(int(_hm_t.group(1)))
+                _t = f'{_t}: {_d}' if _d else _t
+            _toc_entries.append(_s(_t))
 
     class _PDF(FPDF):
         def header(self):
@@ -242,8 +246,8 @@ def download(reading_id):
                 self.line(0, 52, 210, 52)
                 # Chart image — centred below header band
                 if _chart_png:
-                    _cw = 190
-                    _cx = (210 - _cw) / 2 + _cw * 0.25
+                    _cw = 228
+                    _cx = (210 - _cw) / 2 + _cw * 0.125
                     _w_px = int.from_bytes(_chart_png[16:20], 'big')
                     _h_px = int.from_bytes(_chart_png[20:24], 'big')
                     _ch = _cw * _h_px / _w_px
@@ -269,15 +273,14 @@ def download(reading_id):
             # Purple logo (transparent background) — left
             if _has_logo_purple:
                 self.image(_logo_purple_path, x=16, y=_fy, w=44)
-            # Page number — centred across full page width
-            self.set_xy(0, _fy)
+            # Three-column footer: logo | page number | title
+            self.set_xy(70, _fy)
             self.set_font('Helvetica', '', 7.5)
             self.set_text_color(*C_MUTED)
-            self.cell(210, _fh, str(self.page_no()), align='C')
-            # Reading title — right-aligned in same space
-            self.set_xy(60, _fy)
+            self.cell(70, _fh, str(self.page_no()), align='C')
+            self.set_xy(140, _fy)
             self.set_font('Helvetica', '', 7)
-            self.cell(134, _fh, doc_title, align='R')
+            self.cell(54, _fh, doc_title, align='R')
 
     pdf = _PDF(orientation='P', unit='mm', format='A4')
     pdf.set_margins(16, 10, 16)
