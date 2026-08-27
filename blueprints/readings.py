@@ -148,32 +148,20 @@ def download(reading_id):
     _has_logo_purple  = _os.path.exists(_logo_purple_path)
 
     # ── SVG helpers ───────────────────────────────────────────────
-    def _remove_svg_panel(svg, node_name):
-        """Remove a <g kr:node="node_name">…</g> block entirely."""
-        # Try kr:node attribute (with optional namespace prefix variations) or id
+    def _hide_svg_panel(svg, node_name):
+        """Inject display:none inline style on a panel <g> tag so cairosvg hides it."""
         _esc = re.escape(node_name)
-        pat = re.compile(
+        def _inject(m):
+            tag = m.group(0)
+            # If a style attribute already exists, prepend display:none to it
+            if re.search(r'\bstyle=["\']', tag):
+                return re.sub(r'(style=["\'])([^"\']*)', r'\1display:none;\2', tag, count=1)
+            # Otherwise insert a new style attribute before the closing >
+            return tag[:-1] + ' style="display:none">'
+        return re.sub(
             rf'<g\b[^>]*(?:[\s:]node="{_esc}"|id="{_esc}")[^>]*>',
-            re.IGNORECASE,
+            _inject, svg, flags=re.IGNORECASE,
         )
-        m = pat.search(svg)
-        if not m:
-            return svg
-        start, pos, depth = m.start(), m.end(), 1
-        while pos < len(svg) and depth > 0:
-            no = svg.find('<g', pos)
-            nc = svg.find('</g>', pos)
-            if nc == -1:
-                break
-            if no != -1 and no < nc and len(svg) > no + 2 and svg[no + 2] in (' ', '\t', '\n', '>'):
-                depth += 1
-                pos = no + 2
-            else:
-                depth -= 1
-                if depth == 0:
-                    return svg[:start] + svg[nc + 4:]
-                pos = nc + 4
-        return svg
 
     def _crop_svg_to_wheel(svg):
         """Shrink the SVG viewBox to the bounding box of the largest circle."""
@@ -237,7 +225,7 @@ def download(reading_id):
                            'Elements_Percentages', 'Qualities_Percentages',
                            'Houses_And_Planets_Grid', 'Aspect_Grid',
                            'Aspect_List', 'Lunar_Phase']:
-                _svg_resolved = _remove_svg_panel(_svg_resolved, _panel)
+                _svg_resolved = _hide_svg_panel(_svg_resolved, _panel)
             _svg_resolved = _crop_svg_to_wheel(_svg_resolved)
             _chart_png = cairosvg.svg2png(
                 bytestring=_svg_resolved.encode('utf-8'),
