@@ -242,9 +242,13 @@ def download(reading_id):
                 self.line(0, 52, 210, 52)
                 # Chart image — centred below header band
                 if _chart_png:
-                    _cw = 125
+                    _cw = 190
                     _cx = (210 - _cw) / 2
-                    self.image(io.BytesIO(_chart_png), x=_cx, y=57, w=_cw)
+                    _w_px = int.from_bytes(_chart_png[16:20], 'big')
+                    _h_px = int.from_bytes(_chart_png[20:24], 'big')
+                    _ch = _cw * _h_px / _w_px
+                    _cy = 52 + (297 - 52 - _ch) / 2
+                    self.image(io.BytesIO(_chart_png), x=_cx, y=_cy, w=_cw)
                 # Push cursor off-page so no body text bleeds onto cover
                 self.set_y(300)
             else:
