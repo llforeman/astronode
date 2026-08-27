@@ -14,7 +14,9 @@ _DEV = os.environ.get('DEV_SKIP_PAYMENT', '').lower() in ('1', 'true', 'yes')
 @readings_bp.route('/')
 @login_required
 def index():
+    from sqlalchemy.orm import defer
     readings = Reading.query.filter_by(user_id=current_user.id)\
+                            .options(defer(Reading.chart_image), defer(Reading.chart_png))\
                             .order_by(Reading.created_at.desc()).all()
     return render_template('readings/index.html', readings=readings)
 
@@ -22,7 +24,10 @@ def index():
 @readings_bp.route('/<int:reading_id>')
 @login_required
 def view(reading_id):
-    reading = Reading.query.filter_by(id=reading_id, user_id=current_user.id).first_or_404()
+    from sqlalchemy.orm import defer
+    reading = Reading.query.filter_by(id=reading_id, user_id=current_user.id)\
+                           .options(defer(Reading.chart_png))\
+                           .first_or_404()
     return render_template('readings/view.html', reading=reading)
 
 
