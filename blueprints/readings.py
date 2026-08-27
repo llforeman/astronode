@@ -137,6 +137,8 @@ def download(reading_id):
     })
 
     def _s(text):
+        import unicodedata
+        text = unicodedata.normalize('NFC', text)
         return text.translate(_UNICODE_MAP).encode('latin-1', errors='replace').decode('latin-1')
 
     import os as _os
@@ -192,16 +194,16 @@ def download(reading_id):
     _HOUSE_DESC = {
         1:  _s("Identidad, apariencia y la forma en que te presentas al mundo."),
         2:  _s("Recursos materiales, valores personales y autoestima."),
-        3:  _s("Comunicacion, mente analitica, hermanos y entorno cercano."),
-        4:  _s("Hogar, familia, raices y base emocional."),
-        5:  _s("Creatividad, romance, hijos y expresion personal."),
+        3:  _s("Comunicación, mente analítica, hermanos y entorno cercano."),
+        4:  _s("Hogar, familia, raíces y base emocional."),
+        5:  _s("Creatividad, romance, hijos y expresión personal."),
         6:  _s("Salud, rutina diaria, servicio y trabajo cotidiano."),
-        7:  _s("Relaciones intimas, asociaciones y el otro en tu vida."),
-        8:  _s("Transformacion, sexualidad, herencias y los misterios de la vida."),
-        9:  _s("Filosofia, viajes, educacion superior y busqueda de sentido."),
-        10: _s("Carrera, reputacion publica y vocacion de vida."),
+        7:  _s("Relaciones íntimas, asociaciones y el otro en tu vida."),
+        8:  _s("Transformación, sexualidad, herencias y los misterios de la vida."),
+        9:  _s("Filosofía, viajes, educación superior y búsqueda de sentido."),
+        10: _s("Carrera, reputación pública y vocación de vida."),
         11: _s("Amistades, comunidad, ideales y esperanzas futuras."),
-        12: _s("Inconsciente, espiritualidad, retiro y lo que esta oculto."),
+        12: _s("Inconsciente, espiritualidad, retiro y lo que está oculto."),
     }
 
     # ── table of contents extraction ──────────────────────────────
@@ -294,7 +296,7 @@ def download(reading_id):
     pdf.set_font('Helvetica', 'B', 15)
     pdf.set_text_color(*C_HEADING)
     pdf.ln(4)
-    pdf.cell(0, 9, _s('Indice de contenidos'), ln=1)
+    pdf.cell(0, 9, _s('Índice de contenidos'), ln=1)
     _ty = pdf.get_y()
     pdf.set_draw_color(*C_GOLD)
     pdf.set_line_width(0.35)
