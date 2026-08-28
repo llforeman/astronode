@@ -93,7 +93,7 @@ def generate_reading_task(reading_id):
                 log.warning("PNG generation failed for reading %s: %s", reading_id, e)
 
         # 5. Merge chart data into reading.params for PDF use
-        chart_data = {k: result[k] for k in ('positions', 'elementos', 'modalidades', 'aspectos', 'regente') if k in result}
+        chart_data = {k: result[k] for k in ('positions', 'elementos', 'modalidades', 'aspectos', 'regente', 'cusps') if k in result}
 
         # 6. Generate PDF
         pdf_bytes = None

@@ -1766,6 +1766,8 @@ def generate_horoscope(user, reading_type) -> dict:
     documento = _assemble(results)
     log.info('Document assembled: ~%d words', len(documento.split()))
 
+    cusps_sign = {h: _SIGNS_ES[int(lon // 30) % 12] for h, lon in house_cusps.items()}
+
     return {
         'text':        documento,
         'chart_image': chart_image,
@@ -1774,4 +1776,5 @@ def generate_horoscope(user, reading_type) -> dict:
         'modalidades': dossier.get('modalidades', {}),
         'aspectos':    dossier.get('aspectos', [])[:12],
         'regente':     dossier.get('regente_carta', {}),
+        'cusps':       cusps_sign,
     }

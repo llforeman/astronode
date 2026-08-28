@@ -44,6 +44,31 @@ _HOUSE_DESC = {
     12: "Inconsciente, espiritualidad, retiro y lo que está oculto.",
 }
 
+_HOUSE_TITLE = {
+    1: 'La Puerta del Ser',          2: 'El Jardín de los Recursos',
+    3: 'El Mensajero',               4: 'El Nido',
+    5: 'El Escenario Creativo',      6: 'El Taller',
+    7: 'El Espejo',                  8: 'La Cámara de las Sombras',
+    9: 'El Horizonte',              10: 'La Cima',
+    11: 'La Tribu',                 12: 'El Santuario',
+}
+
+# Modern rulers (keyed on full Spanish sign name from _SIGNS_ES in ai.py)
+_SIGN_RULER = {
+    'Aries': 'Mars', 'Tauro': 'Venus', 'Géminis': 'Mercury', 'Cáncer': 'Moon',
+    'Leo': 'Sun', 'Virgo': 'Mercury', 'Libra': 'Venus', 'Escorpio': 'Pluto',
+    'Sagitario': 'Jupiter', 'Capricornio': 'Saturn', 'Acuario': 'Uranus', 'Piscis': 'Neptune',
+}
+
+# Short names without Spanish articles for compact card display
+_PLANET_CARD = {
+    'Sun': 'Sol', 'Moon': 'Luna', 'Mercury': 'Mercurio',
+    'Venus': 'Venus', 'Mars': 'Marte', 'Jupiter': 'Júpiter',
+    'Saturn': 'Saturno', 'Uranus': 'Urano', 'Neptune': 'Neptuno',
+    'Pluto': 'Plutón', 'North_Node': 'Nodo Norte', 'South_Node': 'Nodo Sur',
+    'Chiron': 'Quirón',
+}
+
 
 def generate_reading_pdf(reading, static_dir, chart_png=None):
     """
@@ -169,6 +194,7 @@ def generate_reading_pdf(reading, static_dir, chart_png=None):
     _elementos = _params.get('elementos', {})
     _modalidades = _params.get('modalidades', {})
     _aspectos  = _params.get('aspectos', [])
+    _casa_cusps = {int(k): v for k, v in (_params.get('cusps') or {}).items()}
 
     # ── planet order for Ficha Técnica ─────────────────────────────
     _PLANET_ORDER = [
@@ -202,6 +228,61 @@ def generate_reading_pdf(reading, static_dir, chart_png=None):
         pdf.set_line_width(0.35)
         pdf.line(16, _y, 194, _y)
         pdf.ln(6)
+
+    _ANGLES = {'Ascendant', 'MC', 'Medium_Coeli', 'Descendant', 'Imum_Coeli'}
+
+    def _render_casa_card(casa_num):
+        cusp_sign = _casa_cusps.get(casa_num, '')
+        # Collect planets in this house (exclude chart angles)
+        planets_here = []
+        for _pk, _pp in _positions.items():
+            if _pp.get('casa') == casa_num and _pk not in _ANGLES:
+                _deg = _pp.get('grado', '').split()[0] if _pp.get('grado') else ''
+                _pname = _s(_PLANET_CARD.get(_pk, _pp.get('planeta_es', _pk)))
+                planets_here.append(f'{_pname} ({_s(_deg)})' if _deg else _pname)
+        # Ruler of cusp sign
+        ruler_txt = ''
+        _rkey = _SIGN_RULER.get(cusp_sign, '')
+        if _rkey:
+            _rp    = _positions.get(_rkey, {})
+            _rname = _s(_PLANET_CARD.get(_rkey, _rkey))
+            _rdig  = _s(_rp.get('dignidad', '') or '')
+            _rcasa = _rp.get('casa')
+            ruler_txt = _rname
+            if _rdig:
+                ruler_txt += f' ({_rdig})'
+            if _rcasa:
+                ruler_txt += f' -- Casa {_rcasa}'
+        rows = []
+        if cusp_sign:
+            rows.append(('Signo en Cuspide', _s(cusp_sign)))
+        rows.append(('Planetas Presentes',
+                     ', '.join(planets_here) if planets_here else '(ninguno)'))
+        if ruler_txt:
+            rows.append(('Regente de la Casa', ruler_txt))
+        if _hd.get(casa_num):
+            rows.append(('Foco Principal', _hd[casa_num]))
+        # Render header row
+        pdf.ln(4)
+        pdf.set_fill_color(*C_HEADING)
+        pdf.set_text_color(255, 255, 255)
+        pdf.set_font('Helvetica', 'B', 9)
+        pdf.set_x(16)
+        pdf.cell(178, 7, _s(f'CASA {casa_num}: {_HOUSE_TITLE.get(casa_num, "")}'),
+                 fill=True, ln=1)
+        # Render body rows
+        pdf.set_fill_color(240, 236, 248)
+        for _lbl, _val in rows:
+            pdf.set_x(16)
+            pdf.set_font('Helvetica', 'B', 7.5)
+            pdf.set_text_color(*C_HEADING)
+            pdf.cell(44, 5.5, _s(_lbl + ':'), fill=True, border=0)
+            pdf.set_font('Helvetica', '', 7.5)
+            pdf.set_text_color(*C_TEXT)
+            pdf.cell(134, 5.5, _val, fill=True, border=0, ln=1)
+        pdf.ln(3)
+        pdf.set_font('Helvetica', '', 10.5)
+        pdf.set_text_color(*C_TEXT)
 
     pdf = _PDF(orientation='P', unit='mm', format='A4')
     pdf.set_margins(16, 10, 16)
@@ -376,10 +457,13 @@ def generate_reading_pdf(reading, static_dir, chart_png=None):
                 pdf.set_font('Helvetica', '', 10.5)
                 pdf.set_text_color(*C_TEXT)
                 continue
+            _hm = re.match(r'Casa\s+(\d+)', text)
+            if _hm and _casa_cusps:
+                _render_casa_card(int(_hm.group(1)))
+                continue
             pdf.ln(5)
             pdf.set_font('Helvetica', 'B', 12)
             pdf.set_text_color(*C_HEADING)
-            _hm = re.match(r'Casa\s+(\d+)', text)
             if _hm:
                 _hdesc = _hd.get(int(_hm.group(1)))
                 _heading_text = _s(f'{text}: {_hdesc}') if _hdesc else _s(text)
