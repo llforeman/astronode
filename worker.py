@@ -92,24 +92,29 @@ def generate_reading_task(reading_id):
             except Exception as e:
                 log.warning("PNG generation failed for reading %s: %s", reading_id, e)
 
-        # 5. Generate PDF
+        # 5. Merge chart data into reading.params for PDF use
+        chart_data = {k: result[k] for k in ('positions', 'elementos', 'modalidades', 'aspectos', 'regente') if k in result}
+
+        # 6. Generate PDF
         pdf_bytes = None
         try:
             from pdf import generate_reading_pdf
             reading_tmp = Reading.query.get(reading_id)
-            reading_tmp.content         = result['text']
-            reading_tmp.chart_image     = result.get('chart_image')
+            reading_tmp.content     = result['text']
+            reading_tmp.chart_image = result.get('chart_image')
+            reading_tmp.params      = {**(reading_tmp.params or {}), **chart_data}
             static_dir = os.path.join(os.path.dirname(__file__), 'static')
             pdf_bytes = generate_reading_pdf(reading_tmp, static_dir, chart_png=chart_png)
         except Exception as e:
             log.warning("PDF generation failed for reading %s: %s", reading_id, e)
 
-        # 6. Re-fetch and write
+        # 7. Re-fetch and write
         reading = Reading.query.get(reading_id)
         reading.content      = result['text']
         reading.chart_image  = result.get('chart_image')
         reading.chart_png    = chart_png
         reading.pdf_content  = pdf_bytes
+        reading.params       = {**(reading.params or {}), **chart_data}
         reading.status       = 'completed'
         reading.completed_at = datetime.utcnow()
         db.session.commit()

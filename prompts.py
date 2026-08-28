@@ -14,9 +14,11 @@ from __future__ import annotations
 
 # n=1  → personality snapshot (Sun / Moon / ASC)
 # n=2-13 → one call per house (casa = house number 1-12)
-SECCIONES = [{"n": 1, "titulo": "Quién eres", "casa": None}] + [
-    {"n": h + 1, "titulo": f"Casa {h}", "casa": h} for h in range(1, 13)
-]
+SECCIONES = (
+    [{"n": 1, "titulo": "Quién eres", "casa": None}]
+    + [{"n": h + 1, "titulo": f"Casa {h}", "casa": h} for h in range(1, 13)]
+    + [{"n": 14, "titulo": "Síntesis Evolutiva", "casa": None, "synthesis": True}]
+)
 
 CAPITULOS = SECCIONES  # backward-compat alias
 
@@ -47,6 +49,31 @@ POSICIONES PLANETARIAS GLOBALES Y CÚSPIDES
 
 CASA {n}
 {breakdown}
+"""
+
+PROMPT_SINTESIS = """\
+Escribe la síntesis evolutiva final de esta carta natal. Entre 5 y 7 párrafos bien \
+desarrollados, en prosa corrida, sin listas ni viñetas, en español de España, tuteando al lector.
+{gender_note}
+
+Cubre en orden:
+1. Cómo el Sol, la Luna y el Ascendente trabajan juntos y qué tensión creativa generan.
+2. El elemento dominante ({elemento_dominante}) y la modalidad predominante: cómo moldean \
+el carácter y los patrones de comportamiento.
+3. El eje nodal — camino evolutivo desde el Nodo Sur en {ns_signo} (Casa {ns_casa}) \
+hacia el Nodo Norte en {nn_signo} (Casa {nn_casa}): qué hábitos del pasado debe soltar \
+y hacia dónde debe crecer.
+4. El regente de la carta — {regente_planeta} en {regente_signo} (Casa {regente_casa}) — \
+y el papel que juega como director de la carta.
+5. Entre 3 y 4 hitos de integración concretos y accionables: pasos prácticos que esta \
+persona puede dar para vivir su carta con más conciencia.
+6. Un párrafo de cierre inspirador que afirme su potencial único.
+
+POSICIONES CLAVE:
+{data}
+
+BALANCE ELEMENTAL: {elementos}
+BALANCE MODAL: {modalidades}
 """
 
 # ==========================================================================

@@ -738,13 +738,45 @@ def _gender_note(gender: str | None) -> str:
 
 
 def _call_section(sec: dict, pos_es: dict, aspects: list,
-                  house_cusps: dict, gender: str | None = None) -> tuple[int, str]:
+                  house_cusps: dict, gender: str | None = None,
+                  dossier: dict | None = None) -> tuple[int, str]:
     import prompts as P
     n    = sec['n']
-    casa = sec['casa']
+    casa = sec.get('casa')
     gnote = _gender_note(gender)
 
-    if casa is None:
+    if sec.get('synthesis'):
+        # Section 14: evolutionary synthesis
+        d = dossier or {}
+        reg   = d.get('regente_carta', {})
+        nn    = pos_es.get('North_Node', {})
+        sn    = pos_es.get('South_Node', {})
+        data_lines = []
+        for name in ['Sun', 'Moon', 'Ascendant', 'North_Node', 'South_Node']:
+            p = pos_es.get(name)
+            if p:
+                retro = ' (retrógrado)' if p.get('retrogrado') else ''
+                data_lines.append(
+                    f"  {p['planeta_es']}: {p['grado']} — {p['signo']} — Casa {p['casa']}{retro}")
+        els  = d.get('elementos',   {})
+        mods = d.get('modalidades', {})
+        msg = P.PROMPT_SINTESIS.format(
+            gender_note      = gnote,
+            elemento_dominante = d.get('elemento_dominante', ''),
+            ns_signo         = sn.get('signo', ''),
+            ns_casa          = sn.get('casa', ''),
+            nn_signo         = nn.get('signo', ''),
+            nn_casa          = nn.get('casa', ''),
+            regente_planeta  = reg.get('planeta_es', ''),
+            regente_signo    = reg.get('signo', ''),
+            regente_casa     = reg.get('casa', ''),
+            data             = '\n'.join(data_lines),
+            elementos        = ', '.join(f"{k}: {v}" for k, v in els.items()),
+            modalidades      = ', '.join(f"{k}: {v}" for k, v in mods.items()),
+        )
+        raw = _ask([{'role': 'user', 'content': msg}],
+                   model=_MODEL_PROSE, temperature=0.85)
+    elif casa is None:
         # Section 1: personality snapshot — Sun, Moon, Ascendant
         data_lines = []
         for name in ['Sun', 'Moon', 'Ascendant']:
@@ -1725,9 +1757,9 @@ def generate_horoscope(user, reading_type) -> dict:
     log.info('Dossier built, %d aspects', len(aspects))
 
     gender = getattr(user, 'gender', None)
-    with ThreadPoolExecutor(max_workers=13) as ex:
+    with ThreadPoolExecutor(max_workers=14) as ex:
         results = list(ex.map(
-            lambda sec: _call_section(sec, pos_es, aspects, house_cusps, gender),
+            lambda sec: _call_section(sec, pos_es, aspects, house_cusps, gender, dossier),
             P.SECCIONES))
     log.info('Sections written: %d', len(results))
 
@@ -1737,4 +1769,9 @@ def generate_horoscope(user, reading_type) -> dict:
     return {
         'text':        documento,
         'chart_image': chart_image,
+        'positions':   pos_es,
+        'elementos':   dossier.get('elementos', {}),
+        'modalidades': dossier.get('modalidades', {}),
+        'aspectos':    dossier.get('aspectos', [])[:12],
+        'regente':     dossier.get('regente_carta', {}),
     }

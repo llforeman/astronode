@@ -88,8 +88,8 @@ def generate_reading_pdf(reading, static_dir, chart_png=None):
             _birth_lines.append(_s(_p.birth_place))
 
     # ── colour palette ─────────────────────────────────────────────
-    C_PURPLE   = (53, 15, 76)
     C_COVER_BG = (15, 6, 35)
+    C_PURPLE   = (53, 15, 76)
     C_GOLD     = (212, 175, 55)
     C_TEXT     = (28, 22, 38)
     C_HEADING  = (53, 15, 76)
@@ -163,24 +163,186 @@ def generate_reading_pdf(reading, static_dir, chart_png=None):
             self.set_font('Helvetica', '', 7)
             self.cell(54, 10, doc_title, align='R')
 
+    # ── chart data from reading.params ────────────────────────────
+    _params    = reading.params or {}
+    _positions = _params.get('positions', {})
+    _elementos = _params.get('elementos', {})
+    _modalidades = _params.get('modalidades', {})
+    _aspectos  = _params.get('aspectos', [])
+
+    # ── planet order for Ficha Técnica ─────────────────────────────
+    _PLANET_ORDER = [
+        'Sun', 'Moon', 'Mercury', 'Venus', 'Mars',
+        'Jupiter', 'Saturn', 'Uranus', 'Neptune', 'Pluto',
+        'Chiron', 'North_Node', 'South_Node', 'Ascendant', 'MC',
+    ]
+
+    # ── element / modality colours (RGB) ──────────────────────────
+    _EL_COLOR  = {'fuego': (200, 60, 40), 'tierra': (130, 100, 60),
+                  'aire': (80, 160, 200), 'agua': (50, 100, 180)}
+    _MOD_COLOR = {'cardinal': (150, 50, 150), 'fijo': (50, 130, 80),
+                  'mutable': (200, 140, 30)}
+
+    # ── aspect type colours ────────────────────────────────────────
+    _ASP_COLOR = {
+        'conjunción': C_HEADING, 'trígono': (40, 140, 80),
+        'sextil': (60, 160, 120), 'cuadratura': (180, 50, 50),
+        'oposición': (180, 80, 30),
+    }
+
+    def _section_header(title, *, new_page=True):
+        if new_page:
+            pdf.add_page()
+        pdf.set_font('Helvetica', 'B', 15)
+        pdf.set_text_color(*C_HEADING)
+        pdf.ln(4)
+        pdf.cell(0, 9, _s(title), ln=1)
+        _y = pdf.get_y()
+        pdf.set_draw_color(*C_GOLD)
+        pdf.set_line_width(0.35)
+        pdf.line(16, _y, 194, _y)
+        pdf.ln(6)
+
     pdf = _PDF(orientation='P', unit='mm', format='A4')
     pdf.set_margins(16, 10, 16)
     pdf.set_auto_page_break(auto=True, margin=24)
 
-    # Page 1: cover
+    # ── Page 1: cover ─────────────────────────────────────────────
     pdf.add_page()
 
-    # Page 2: table of contents
-    pdf.add_page()
-    pdf.set_font('Helvetica', 'B', 15)
-    pdf.set_text_color(*C_HEADING)
-    pdf.ln(4)
-    pdf.cell(0, 9, _s('Índice de contenidos'), ln=1)
-    _ty = pdf.get_y()
-    pdf.set_draw_color(*C_GOLD)
-    pdf.set_line_width(0.35)
-    pdf.line(16, _ty, 194, _ty)
-    pdf.ln(6)
+    # ── Page 2: Ficha Técnica ─────────────────────────────────────
+    if _positions:
+        _section_header('Ficha Técnica')
+
+        # Table header
+        _cols = [38, 32, 16, 46, 10, 32]  # widths mm
+        _hdrs = ['Planeta', 'Signo', 'Casa', 'Grado', 'R', 'Dignidad']
+        pdf.set_fill_color(*C_HEADING)
+        pdf.set_text_color(255, 255, 255)
+        pdf.set_font('Helvetica', 'B', 8)
+        for _w, _h in zip(_cols, _hdrs):
+            pdf.cell(_w, 6, _h, border=0, align='C', fill=True)
+        pdf.ln()
+
+        # Table rows
+        _row_alt = False
+        for _pname in _PLANET_ORDER:
+            _p = _positions.get(_pname)
+            if not _p:
+                continue
+            _row_alt = not _row_alt
+            if _row_alt:
+                pdf.set_fill_color(240, 236, 248)
+            else:
+                pdf.set_fill_color(255, 255, 255)
+            pdf.set_text_color(*C_TEXT)
+            pdf.set_font('Helvetica', 'B' if _pname in ('Sun', 'Moon', 'Ascendant') else '', 8)
+            _vals = [
+                _s(_p.get('planeta_es', _pname)),
+                _s(_p.get('signo', '')),
+                str(_p.get('casa', '')),
+                _s(_p.get('grado', '')),
+                'R' if _p.get('retrogrado') else '',
+                _s(_p.get('dignidad', '') or ''),
+            ]
+            for _w, _v in zip(_cols, _vals):
+                pdf.cell(_w, 5.5, _v, border=0, align='C', fill=True)
+            pdf.ln()
+
+        pdf.ln(8)
+
+        # ── Elements & Modalities side by side ────────────────────
+        if _elementos or _modalidades:
+            _bx = 16     # left x
+            _mid = 110   # mid x for modalities
+            _bar_max = 70
+            _total_el  = sum(_elementos.values())  or 1
+            _total_mod = sum(_modalidades.values()) or 1
+
+            pdf.set_font('Helvetica', 'B', 9)
+            pdf.set_text_color(*C_HEADING)
+            pdf.set_x(_bx)
+            pdf.cell(80, 6, _s('Elementos'), ln=0)
+            pdf.set_x(_mid)
+            pdf.cell(80, 6, _s('Modalidades'), ln=1)
+            pdf.ln(1)
+
+            _el_items  = list(_elementos.items())
+            _mod_items = list(_modalidades.items())
+            _nrows = max(len(_el_items), len(_mod_items))
+
+            for _i in range(_nrows):
+                _y0 = pdf.get_y()
+
+                # Element bar
+                if _i < len(_el_items):
+                    _el_name, _el_cnt = _el_items[_i]
+                    _bw = _bar_max * _el_cnt / _total_el
+                    _col = _EL_COLOR.get(_el_name, C_MUTED)
+                    pdf.set_fill_color(*_col)
+                    pdf.rect(_bx, _y0 + 1, _bw, 4, 'F')
+                    pdf.set_xy(_bx + _bw + 2, _y0)
+                    pdf.set_font('Helvetica', '', 7.5)
+                    pdf.set_text_color(*C_TEXT)
+                    pdf.cell(30, 6, _s(f'{_el_name.capitalize()} ({_el_cnt})'))
+
+                # Modality bar
+                if _i < len(_mod_items):
+                    _mod_name, _mod_cnt = _mod_items[_i]
+                    _bw = _bar_max * _mod_cnt / _total_mod
+                    _col = _MOD_COLOR.get(_mod_name, C_MUTED)
+                    pdf.set_fill_color(*_col)
+                    pdf.rect(_mid, _y0 + 1, _bw, 4, 'F')
+                    pdf.set_xy(_mid + _bw + 2, _y0)
+                    pdf.set_font('Helvetica', '', 7.5)
+                    pdf.set_text_color(*C_TEXT)
+                    pdf.cell(30, 6, _s(f'{_mod_name.capitalize()} ({_mod_cnt})'))
+
+                pdf.set_y(_y0 + 7)
+
+        # ── Top aspects ───────────────────────────────────────────
+        if _aspectos:
+            pdf.ln(6)
+            pdf.set_font('Helvetica', 'B', 9)
+            pdf.set_text_color(*C_HEADING)
+            pdf.cell(0, 6, _s('Aspectos principales'), ln=1)
+            _ay = pdf.get_y()
+            pdf.set_draw_color(*C_GOLD)
+            pdf.set_line_width(0.25)
+            pdf.line(16, _ay, 194, _ay)
+            pdf.ln(3)
+
+            _asp_shown = [a for a in _aspectos if a.get('tier', 9) <= 2][:10]
+            _acols = [42, 28, 42, 62]  # Planeta A | Aspecto | Planeta B | Casas
+            _ahdrs = ['Planeta A', 'Aspecto', 'Planeta B', 'Casas']
+            pdf.set_fill_color(*C_HEADING)
+            pdf.set_text_color(255, 255, 255)
+            pdf.set_font('Helvetica', 'B', 7.5)
+            for _w, _h in zip(_acols, _ahdrs):
+                pdf.cell(_w, 5.5, _h, border=0, align='C', fill=True)
+            pdf.ln()
+
+            _arow_alt = False
+            for _asp in _asp_shown:
+                _arow_alt = not _arow_alt
+                pdf.set_fill_color(240, 236, 248) if _arow_alt else pdf.set_fill_color(255, 255, 255)
+                pdf.set_text_color(*C_TEXT)
+                pdf.set_font('Helvetica', '', 7.5)
+                _asp_name = _asp.get('aspecto', '')
+                _asp_col  = _ASP_COLOR.get(_asp_name, C_TEXT)
+                _casa_txt = ''
+                if _asp.get('casa_a') and _asp.get('casa_b'):
+                    _casa_txt = _s(f"Casa {_asp['casa_a']} — Casa {_asp['casa_b']}")
+                pdf.cell(_acols[0], 5, _s(_asp.get('a_es', '')), border=0, align='C', fill=True)
+                pdf.set_text_color(*_asp_col)
+                pdf.cell(_acols[1], 5, _s(_asp_name), border=0, align='C', fill=True)
+                pdf.set_text_color(*C_TEXT)
+                pdf.cell(_acols[2], 5, _s(_asp.get('b_es', '')), border=0, align='C', fill=True)
+                pdf.cell(_acols[3], 5, _casa_txt, border=0, align='C', fill=True)
+                pdf.ln()
+
+    # ── Page 3: Table of contents ──────────────────────────────────
+    _section_header('Índice de contenidos')
     for _i, _entry in enumerate(_toc_entries, 1):
         pdf.set_font('Helvetica', 'B', 8.5)
         pdf.set_text_color(*C_MUTED)
@@ -191,7 +353,7 @@ def generate_reading_pdf(reading, static_dir, chart_png=None):
         pdf.set_x(28)
         pdf.multi_cell(166, 7, _entry)
 
-    # Page 3+: body
+    # ── Page 4+: body ─────────────────────────────────────────────
     pdf.add_page()
     pdf.set_font('Helvetica', '', 10.5)
     pdf.set_text_color(*C_TEXT)
@@ -200,6 +362,20 @@ def generate_reading_pdf(reading, static_dir, chart_png=None):
         stripped = line.strip()
         if stripped.startswith('#'):
             text = stripped.lstrip('#').strip()
+            _is_synthesis = 'ntesis' in text  # Síntesis Evolutiva
+            if _is_synthesis:
+                # Styled break for synthesis conclusion
+                pdf.add_page()
+                pdf.set_fill_color(*C_COVER_BG)
+                pdf.rect(16, pdf.get_y(), 178, 14, 'F')
+                pdf.set_font('Helvetica', 'B', 13)
+                pdf.set_text_color(255, 255, 255)
+                pdf.set_xy(16, pdf.get_y() + 3)
+                pdf.cell(178, 8, _s(text), align='C', ln=1)
+                pdf.ln(4)
+                pdf.set_font('Helvetica', '', 10.5)
+                pdf.set_text_color(*C_TEXT)
+                continue
             pdf.ln(5)
             pdf.set_font('Helvetica', 'B', 12)
             pdf.set_text_color(*C_HEADING)
