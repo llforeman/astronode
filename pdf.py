@@ -44,15 +44,6 @@ _HOUSE_DESC = {
     12: "Inconsciente, espiritualidad, retiro y lo que está oculto.",
 }
 
-_HOUSE_TITLE = {
-    1: 'La Puerta del Ser',          2: 'El Jardín de los Recursos',
-    3: 'El Mensajero',               4: 'El Nido',
-    5: 'El Escenario Creativo',      6: 'El Taller',
-    7: 'El Espejo',                  8: 'La Cámara de las Sombras',
-    9: 'El Horizonte',              10: 'La Cima',
-    11: 'La Tribu',                 12: 'El Santuario',
-}
-
 # Modern rulers (keyed on full Spanish sign name from _SIGNS_ES in ai.py)
 _SIGN_RULER = {
     'Aries': 'Mars', 'Tauro': 'Venus', 'Géminis': 'Mercury', 'Cáncer': 'Moon',
@@ -232,8 +223,9 @@ def generate_reading_pdf(reading, static_dir, chart_png=None):
     _ANGLES = {'Ascendant', 'MC', 'Medium_Coeli', 'Descendant', 'Imum_Coeli'}
 
     def _render_casa_card(casa_num):
+        pdf.add_page()
         cusp_sign = _casa_cusps.get(casa_num, '')
-        # Collect planets in this house (exclude chart angles)
+        # Planets in this house (exclude chart angles)
         planets_here = []
         for _pk, _pp in _positions.items():
             if _pp.get('casa') == casa_num and _pk not in _ANGLES:
@@ -262,25 +254,31 @@ def generate_reading_pdf(reading, static_dir, chart_png=None):
             rows.append(('Regente de la Casa', ruler_txt))
         if _hd.get(casa_num):
             rows.append(('Foco Principal', _hd[casa_num]))
-        # Render header row
-        pdf.ln(4)
+        # Title bar
         pdf.set_fill_color(*C_HEADING)
         pdf.set_text_color(255, 255, 255)
-        pdf.set_font('Helvetica', 'B', 9)
+        pdf.set_font('Helvetica', 'B', 15)
         pdf.set_x(16)
-        pdf.cell(178, 7, _s(f'CASA {casa_num}: {_HOUSE_TITLE.get(casa_num, "")}'),
-                 fill=True, ln=1)
-        # Render body rows
-        pdf.set_fill_color(240, 236, 248)
+        pdf.cell(178, 11, _s(f'Casa {casa_num}'), fill=True, ln=1)
+        pdf.ln(6)
+        # Info rows — label above value, no table
         for _lbl, _val in rows:
             pdf.set_x(16)
-            pdf.set_font('Helvetica', 'B', 7.5)
+            pdf.set_font('Helvetica', 'B', 8)
             pdf.set_text_color(*C_HEADING)
-            pdf.cell(44, 5.5, _s(_lbl + ':'), fill=True, border=0)
-            pdf.set_font('Helvetica', '', 7.5)
+            pdf.cell(0, 5, _s(_lbl), ln=1)
+            pdf.set_x(16)
+            pdf.set_font('Helvetica', '', 10)
             pdf.set_text_color(*C_TEXT)
-            pdf.cell(134, 5.5, _val, fill=True, border=0, ln=1)
+            pdf.multi_cell(0, 5.5, _val)
+            pdf.ln(3)
+        # Gold rule before body text
         pdf.ln(3)
+        _y = pdf.get_y()
+        pdf.set_draw_color(*C_GOLD)
+        pdf.set_line_width(0.35)
+        pdf.line(16, _y, 194, _y)
+        pdf.ln(6)
         pdf.set_font('Helvetica', '', 10.5)
         pdf.set_text_color(*C_TEXT)
 
