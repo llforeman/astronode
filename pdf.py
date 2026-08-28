@@ -263,14 +263,6 @@ def generate_reading_pdf(reading, static_dir, chart_png=None):
         _bg    = _theme.get('bg',     (255, 255, 255))
         _acc   = _theme.get('accent', C_HEADING)
 
-        # Tint the full page, then redraw the header rule in accent colour
-        pdf.set_fill_color(*_bg)
-        pdf.rect(0, 0, 210, 297, 'F')
-        pdf.set_draw_color(*_acc)
-        pdf.set_line_width(0.25)
-        pdf.line(16, 13, 194, 13)
-        pdf.set_y(18)
-
         # Planets in this house (exclude chart angles)
         planets_here = []
         for _pk, _pp in _positions.items():
@@ -301,7 +293,7 @@ def generate_reading_pdf(reading, static_dir, chart_png=None):
         if _hd.get(casa_num):
             rows.append(('Foco Principal', _hd[casa_num]))
 
-        # Header bar — accent colour, white bold centred title
+        # Header bar — element accent colour, white bold centred title
         _title = _s(f'Casa {casa_num}: {_HOUSE_TITLE.get(casa_num, "")}')
         _y0 = pdf.get_y()
         pdf.set_fill_color(*_acc)
@@ -312,11 +304,11 @@ def generate_reading_pdf(reading, static_dir, chart_png=None):
         pdf.cell(178, 8, _title, align='C', ln=1)
         pdf.ln(10)
 
-        # Info rows — small accent label above normal dark value, centred
+        # Info rows — centered, small muted label above normal value
         for _lbl, _val in rows:
             pdf.set_x(16)
             pdf.set_font('Helvetica', 'B', 7.5)
-            pdf.set_text_color(*_acc)
+            pdf.set_text_color(*C_MUTED)
             pdf.cell(178, 5, _s(_lbl.upper()), align='C', ln=1)
             pdf.set_x(16)
             pdf.set_font('Helvetica', '', 10.5)
@@ -324,10 +316,10 @@ def generate_reading_pdf(reading, static_dir, chart_png=None):
             pdf.multi_cell(178, 5.5, _val, align='C')
             pdf.ln(4)
 
-        # Accent rule before body text
+        # Gold rule before body text
         pdf.ln(2)
         _y = pdf.get_y()
-        pdf.set_draw_color(*_acc)
+        pdf.set_draw_color(*C_GOLD)
         pdf.set_line_width(0.35)
         pdf.line(16, _y, 194, _y)
         pdf.ln(6)
