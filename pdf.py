@@ -284,7 +284,7 @@ def generate_reading_pdf(reading, static_dir, chart_png=None):
                     pdf.set_xy(_bx + _bw + 2, _y0)
                     pdf.set_font('Helvetica', '', 7.5)
                     pdf.set_text_color(*C_TEXT)
-                    pdf.cell(30, 6, _s(f'{_el_name.capitalize()} ({_el_cnt})'))
+                    pdf.cell(30, 6, _s(f'{_el_name.capitalize()} {round(100*_el_cnt/_total_el)}%'))
 
                 # Modality bar
                 if _i < len(_mod_items):
@@ -296,7 +296,7 @@ def generate_reading_pdf(reading, static_dir, chart_png=None):
                     pdf.set_xy(_mid + _bw + 2, _y0)
                     pdf.set_font('Helvetica', '', 7.5)
                     pdf.set_text_color(*C_TEXT)
-                    pdf.cell(30, 6, _s(f'{_mod_name.capitalize()} ({_mod_cnt})'))
+                    pdf.cell(30, 6, _s(f'{_mod_name.capitalize()} {round(100*_mod_cnt/_total_mod)}%'))
 
                 pdf.set_y(_y0 + 7)
 
