@@ -81,15 +81,27 @@ def generate_reading_task(reading_id):
             db.session.commit()
             return
 
-        # 4. Re-fetch and write
+        # 4. Generate wheel PNG — kerykeion is done, collect before loading cairosvg
+        import gc
+        gc.collect()
+        chart_png = None
+        if result.get('chart_image'):
+            try:
+                from ai import _svg_to_wheel_png
+                chart_png = _svg_to_wheel_png(result['chart_image'])
+            except Exception as e:
+                log.warning("PNG generation failed for reading %s: %s", reading_id, e)
+
+        # 5. Re-fetch and write
         reading = Reading.query.get(reading_id)
         reading.content      = result['text']
         reading.chart_image  = result.get('chart_image')
+        reading.chart_png    = chart_png
         reading.status       = 'completed'
         reading.completed_at = datetime.utcnow()
         db.session.commit()
 
-        # 5. Send by email
+        # 6. Send by email
         try:
             from emails import send_reading_email
             with app.test_request_context('/'):
@@ -100,7 +112,7 @@ def generate_reading_task(reading_id):
         except Exception as e:
             log.error("Failed to send reading email for reading %s: %s", reading_id, e)
 
-        # 6. Notify user
+        # 7. Notify user
         from models import Notification
         notif = Notification(
             user_id=user.id,
