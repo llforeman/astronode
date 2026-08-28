@@ -59,6 +59,22 @@ _HOUSE_TITLE = {
     12: 'Inconsciente, Karma y Retiro',
 }
 
+# Element of each sign (Spanish full names from _SIGNS_ES)
+_SIGN_ELEMENT = {
+    'Aries': 'fuego', 'Leo': 'fuego', 'Sagitario': 'fuego',
+    'Tauro': 'tierra', 'Virgo': 'tierra', 'Capricornio': 'tierra',
+    'Géminis': 'aire', 'Libra': 'aire', 'Acuario': 'aire',
+    'Cáncer': 'agua', 'Escorpio': 'agua', 'Piscis': 'agua',
+}
+
+# Soft bg + accent per element (bg is a page tint; accent is used for the header bar, rule, labels)
+_ELEMENT_THEME = {
+    'fuego':  {'bg': (250, 244, 242), 'accent': (200, 90, 50)},   # warm ivory / rust
+    'tierra': {'bg': (244, 247, 244), 'accent': (59, 94, 67)},    # sage tint / forest green
+    'aire':   {'bg': (250, 248, 242), 'accent': (209, 161, 83)},  # amber cream / golden bronze
+    'agua':   {'bg': (242, 246, 248), 'accent': (46, 90, 112)},   # misty blue / deep teal
+}
+
 # Modern rulers (keyed on full Spanish sign name from _SIGNS_ES in ai.py)
 _SIGN_RULER = {
     'Aries': 'Mars', 'Tauro': 'Venus', 'Géminis': 'Mercury', 'Cáncer': 'Moon',
@@ -240,6 +256,21 @@ def generate_reading_pdf(reading, static_dir, chart_png=None):
     def _render_casa_card(casa_num):
         pdf.add_page()
         cusp_sign = _casa_cusps.get(casa_num, '')
+
+        # Resolve element theme from cusp sign
+        _elem  = _SIGN_ELEMENT.get(cusp_sign, '')
+        _theme = _ELEMENT_THEME.get(_elem, {})
+        _bg    = _theme.get('bg',     (255, 255, 255))
+        _acc   = _theme.get('accent', C_HEADING)
+
+        # Tint the full page, then redraw the header rule in accent colour
+        pdf.set_fill_color(*_bg)
+        pdf.rect(0, 0, 210, 297, 'F')
+        pdf.set_draw_color(*_acc)
+        pdf.set_line_width(0.25)
+        pdf.line(16, 13, 194, 13)
+        pdf.set_y(18)
+
         # Planets in this house (exclude chart angles)
         planets_here = []
         for _pk, _pp in _positions.items():
@@ -269,31 +300,34 @@ def generate_reading_pdf(reading, static_dir, chart_png=None):
             rows.append(('Regente de la Casa', ruler_txt))
         if _hd.get(casa_num):
             rows.append(('Foco Principal', _hd[casa_num]))
-        # Header — same dark style as Síntesis Evolutiva
+
+        # Header bar — accent colour, white bold centred title
         _title = _s(f'Casa {casa_num}: {_HOUSE_TITLE.get(casa_num, "")}')
         _y0 = pdf.get_y()
-        pdf.set_fill_color(*C_COVER_BG)
+        pdf.set_fill_color(*_acc)
         pdf.rect(16, _y0, 178, 16, 'F')
         pdf.set_font('Helvetica', 'B', 13)
         pdf.set_text_color(255, 255, 255)
         pdf.set_xy(16, _y0 + 4)
         pdf.cell(178, 8, _title, align='C', ln=1)
         pdf.ln(10)
-        # Info rows — centered, small muted label above normal value
+
+        # Info rows — small accent label above normal dark value, centred
         for _lbl, _val in rows:
             pdf.set_x(16)
             pdf.set_font('Helvetica', 'B', 7.5)
-            pdf.set_text_color(*C_MUTED)
+            pdf.set_text_color(*_acc)
             pdf.cell(178, 5, _s(_lbl.upper()), align='C', ln=1)
             pdf.set_x(16)
             pdf.set_font('Helvetica', '', 10.5)
             pdf.set_text_color(*C_TEXT)
             pdf.multi_cell(178, 5.5, _val, align='C')
             pdf.ln(4)
-        # Gold rule before body text
+
+        # Accent rule before body text
         pdf.ln(2)
         _y = pdf.get_y()
-        pdf.set_draw_color(*C_GOLD)
+        pdf.set_draw_color(*_acc)
         pdf.set_line_width(0.35)
         pdf.line(16, _y, 194, _y)
         pdf.ln(6)
