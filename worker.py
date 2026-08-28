@@ -145,3 +145,18 @@ def generate_reading_task(reading_id):
 
 def job_failure_callback(job, connection, type, value, traceback):
     log.error("Job %s failed: %s", job.id, value)
+    try:
+        reading_id = job.args[0] if job.args else None
+        if reading_id:
+            from app import create_app
+            app = create_app()
+            with app.app_context():
+                from extensions import db
+                from models import Reading
+                reading = Reading.query.get(reading_id)
+                if reading and reading.status not in ('completed', 'failed'):
+                    reading.status = 'failed'
+                    db.session.commit()
+                    log.info("Reading %s marked as failed", reading_id)
+    except Exception as e:
+        log.error("Could not mark reading %s as failed: %s", job.args, e)
