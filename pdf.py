@@ -44,6 +44,21 @@ _HOUSE_DESC = {
     12: "Inconsciente, espiritualidad, retiro y lo que está oculto.",
 }
 
+_HOUSE_TITLE = {
+    1:  'Identidad, Cuerpo y Presencia',
+    2:  'Recursos, Dinero y Valores',
+    3:  'Comunicación, Mente y Hermanos',
+    4:  'Hogar, Familia y Raíces',
+    5:  'Creatividad, Romance e Hijos',
+    6:  'Salud, Trabajo y Rutina',
+    7:  'Pareja, Relaciones y Asociaciones',
+    8:  'Sexualidad, Transformación y Recursos Compartidos',
+    9:  'Filosofía, Viajes y Espiritualidad',
+    10: 'Carrera, Reputación y Vocación',
+    11: 'Amigos, Comunidad e Ideales',
+    12: 'Inconsciente, Karma y Retiro',
+}
+
 # Modern rulers (keyed on full Spanish sign name from _SIGNS_ES in ai.py)
 _SIGN_RULER = {
     'Aries': 'Mars', 'Tauro': 'Venus', 'Géminis': 'Mercury', 'Cáncer': 'Moon',
@@ -254,26 +269,29 @@ def generate_reading_pdf(reading, static_dir, chart_png=None):
             rows.append(('Regente de la Casa', ruler_txt))
         if _hd.get(casa_num):
             rows.append(('Foco Principal', _hd[casa_num]))
-        # Title bar
-        pdf.set_fill_color(*C_HEADING)
+        # Header — same dark style as Síntesis Evolutiva
+        _title = _s(f'Casa {casa_num}: {_HOUSE_TITLE.get(casa_num, "")}')
+        _y0 = pdf.get_y()
+        pdf.set_fill_color(*C_COVER_BG)
+        pdf.rect(16, _y0, 178, 16, 'F')
+        pdf.set_font('Helvetica', 'B', 13)
         pdf.set_text_color(255, 255, 255)
-        pdf.set_font('Helvetica', 'B', 15)
-        pdf.set_x(16)
-        pdf.cell(178, 11, _s(f'Casa {casa_num}'), fill=True, ln=1)
-        pdf.ln(6)
-        # Info rows — label above value, no table
+        pdf.set_xy(16, _y0 + 4)
+        pdf.cell(178, 8, _title, align='C', ln=1)
+        pdf.ln(10)
+        # Info rows — centered, small muted label above normal value
         for _lbl, _val in rows:
             pdf.set_x(16)
-            pdf.set_font('Helvetica', 'B', 8)
-            pdf.set_text_color(*C_HEADING)
-            pdf.cell(0, 5, _s(_lbl), ln=1)
+            pdf.set_font('Helvetica', 'B', 7.5)
+            pdf.set_text_color(*C_MUTED)
+            pdf.cell(178, 5, _s(_lbl.upper()), align='C', ln=1)
             pdf.set_x(16)
-            pdf.set_font('Helvetica', '', 10)
+            pdf.set_font('Helvetica', '', 10.5)
             pdf.set_text_color(*C_TEXT)
-            pdf.multi_cell(0, 5.5, _val)
-            pdf.ln(3)
+            pdf.multi_cell(178, 5.5, _val, align='C')
+            pdf.ln(4)
         # Gold rule before body text
-        pdf.ln(3)
+        pdf.ln(2)
         _y = pdf.get_y()
         pdf.set_draw_color(*C_GOLD)
         pdf.set_line_width(0.35)
