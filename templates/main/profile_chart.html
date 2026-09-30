@@ -3,13 +3,8 @@
 
 {% block extra_css %}
 <style>
-  .person-hero { display:flex; align-items:center; gap:1.1rem; margin-bottom:1.75rem; flex-wrap:wrap; }
+  .person-hero { display:flex; align-items:center; gap:1.1rem; margin-bottom:1.5rem; flex-wrap:wrap; }
   .person-hero .p-avatar { width:64px; height:64px; font-size:1.7rem; }
-  .ai-cta {
-    background: linear-gradient(135deg, rgba(139,92,246,0.16) 0%, rgba(124,58,237,0.07) 100%);
-    border: 1px solid rgba(139,92,246,0.45);
-    border-radius: var(--radius); padding: 1.5rem 1.75rem; margin-bottom: 2rem;
-  }
   .mini-form { background: var(--bg2); border: 1px solid var(--border-soft); border-radius: 10px; padding: 1rem 1.1rem; margin-bottom: 0.9rem; }
   .mini-form:last-child { margin-bottom: 0; }
   .mini-form .title { font-weight: 600; font-size: 0.92rem; margin-bottom: 0.15rem; }
@@ -19,6 +14,13 @@
 {% endblock %}
 
 {% block content %}
+
+{% set rt_natal  = reading_types | selectattr('slug','equalto','natal')          | first %}
+{% set rt_karmic = reading_types | selectattr('slug','equalto','karmic')         | first %}
+{% set rt_sol    = reading_types | selectattr('slug','equalto','solar_return')   | first %}
+{% set rt_lun    = reading_types | selectattr('slug','equalto','lunar_return')   | first %}
+{% set rt_sat    = reading_types | selectattr('slug','equalto','saturn_return')  | first %}
+{% set rt_jup    = reading_types | selectattr('slug','equalto','jupiter_return') | first %}
 
 <a href="{{ url_for('main.dashboard') }}" class="muted" style="font-size:0.85rem;">← Tus personas</a>
 
@@ -30,65 +32,25 @@
       {% if p.birth_date %}{{ p.birth_date.strftime('%d/%m/%Y') }}{% if p.birth_time %} · {{ p.birth_time.strftime('%H:%M') }}{% endif %}{% if p.birth_place %} · {{ p.birth_place }}{% endif %}{% endif %}
     </p>
   </div>
-  <div style="display:flex; gap:0.6rem;">
-    {% if p.birth_date %}<span class="sign-pill" style="align-self:center;">☉ {{ p.sun_sign }}</span>{% endif %}
+  <div style="display:flex; gap:0.6rem; align-items:center; flex-wrap:wrap;">
+    {% if p.birth_date %}
+    <span class="sign-pill" style="align-self:center;">☉ {{ p.sun_display or '—' }}</span>
+    <span class="sign-pill" style="align-self:center;">☽ {{ p.moon_display or '—' }}</span>
+    <span class="sign-pill" style="align-self:center;">ASC {{ p.asc_display or '—' }}</span>
+    {% endif %}
     <a href="{{ url_for('main.profile_edit', profile_id=p.id) }}" class="btn btn-subtle btn-sm">Editar</a>
   </div>
 </div>
 
-{# ── AI reading CTA ── #}
-<div class="ai-cta">
-  <div style="display:flex; justify-content:space-between; align-items:center; gap:1.25rem; flex-wrap:wrap;">
-    <div style="flex:1; min-width:240px;">
-      <h3 style="font-size:1.25rem; margin-bottom:0.25rem;">Lectura natal de {{ p.name }}</h3>
-      <p class="muted" style="font-size:0.88rem;">
-        13 capítulos · ~30 páginas en español · planetas, casas y aspectos interpretados · PDF incluido.
-        {% if covered_natal %}Incluida en tu acceso.{% elif credit_natal %}Usa tu crédito disponible.{% endif %}
-      </p>
-    </div>
-    {% if covered_natal or credit_natal %}
-    <form method="POST" action="{{ url_for('readings.request_reading', reading_type_id=rt_natal.id) if rt_natal else '#' }}">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <input type="hidden" name="profile_id" value="{{ p.id }}">
-      <button type="submit" class="btn btn-primary" style="font-size:0.95rem; padding:0.75rem 1.6rem;">✦ Generar lectura</button>
-    </form>
-    {% else %}
-    <form method="POST" action="{{ url_for('billing.checkout', product='natal') }}">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <button type="submit" class="btn btn-gold" style="font-size:0.95rem; padding:0.75rem 1.6rem;">Generar lectura — $7.99</button>
-    </form>
-    {% endif %}
-  </div>
-</div>
-
-{# ── Existing readings for this person ── #}
-{% if readings %}
-<div class="section-label" style="margin-top:0;">Lecturas de {{ p.name }}</div>
-{% for r in readings %}
-<div class="card" style="display:flex; justify-content:space-between; align-items:center; gap:1rem; padding:1rem 1.3rem;">
-  <div>
-    <strong style="font-size:0.92rem;">{{ r.reading_type.name }}</strong>
-    <div class="muted" style="font-size:0.78rem; margin-top:0.1rem;">{{ r.created_at.strftime('%d/%m/%Y') }}</div>
-  </div>
-  <div style="display:flex; align-items:center; gap:0.7rem;">
-    <span class="status-pill status-{{ r.status }}">{{ {'completed':'Lista','generating':'Generando','failed':'Error','pending':'En cola'}.get(r.status, r.status) }}</span>
-    {% if r.status == 'completed' %}<a href="{{ url_for('readings.view', reading_id=r.id) }}" class="btn btn-outline btn-sm">Leer</a>{% endif %}
-  </div>
-</div>
-{% endfor %}
-{% endif %}
-
 {% if error %}
-<div class="card" style="border-color:rgba(224,86,107,0.5); margin-top:1.5rem;">
+<div class="card" style="border-color:rgba(224,86,107,0.5);">
   <p>{{ error }}</p>
   <a href="{{ url_for('main.profile_edit', profile_id=p.id) }}" class="btn btn-gold" style="margin-top:0.9rem;">Completar datos de nacimiento →</a>
 </div>
 
 {% elif result %}
 
-{# ── Documented chart (free) ── #}
-<div class="section-label">Su carta — documentada, sin IA</div>
-
+{# ── Chart on top ── #}
 <div class="card" style="padding:1.25rem;">
   {% if result.chart_image %}
   <div class="chart-img-wrap">{{ result.chart_image | safe }}</div>
@@ -101,7 +63,7 @@
     <table class="planets">
       <thead><tr><th>Planeta</th><th>Signo</th><th>Grado</th><th>Casa</th></tr></thead>
       <tbody>
-        {% set planet_names = {'Sun':'☉ Sol','Moon':'☽ Luna','Mercury':'☿ Mercurio','Venus':'♀ Venus','Mars':'♂ Marte','Jupiter':'♃ Júpiter','Saturn':'♄ Saturno','Uranus':'♅ Urano','Neptune':'♆ Neptuno','Pluto':'♇ Plutón','Chiron':'⚷ Quirón','Ascendant':'Asc','MC':'MC'} %}
+        {% set planet_names = {'Sun':'☉ Sol','Moon':'☽ Luna','Mercury':'☿ Mercurio','Venus':'♀ Venus','Mars':'♂ Marte','Jupiter':'♃ Júpiter','Saturn':'♄ Saturno','Uranus':'♅ Urano','Neptune':'♆ Neptuno','Pluto':'♇ Plutón','Chiron':'⚷ Quirón','Ascendant':'ASC','MC':'MC'} %}
         {% for name in ['Sun','Moon','Mercury','Venus','Mars','Jupiter','Saturn','Uranus','Neptune','Pluto','Chiron','Ascendant','MC'] %}
           {% if name in result.positions %}
           {% set p2 = result.positions[name] %}
@@ -149,7 +111,7 @@
 </div>
 
 {% if age_point %}
-{% set planet_es = {'Sun':'☉ Sol','Moon':'☽ Luna','Mercury':'☿ Mercurio','Venus':'♀ Venus','Mars':'♂ Marte','Jupiter':'♃ Júpiter','Saturn':'♄ Saturno','Uranus':'♅ Urano','Neptune':'♆ Neptuno','Pluto':'♇ Plutón','Chiron':'⚷ Quirón','Ascendant':'Asc','North_Node':'☊ N.Norte','South_Node':'☋ N.Sur'} %}
+{% set planet_es = {'Sun':'☉ Sol','Moon':'☽ Luna','Mercury':'☿ Mercurio','Venus':'♀ Venus','Mars':'♂ Marte','Jupiter':'♃ Júpiter','Saturn':'♄ Saturno','Uranus':'♅ Urano','Neptune':'♆ Neptuno','Pluto':'♇ Plutón','Chiron':'⚷ Quirón','Ascendant':'ASC','North_Node':'☊ N.Norte','South_Node':'☋ N.Sur'} %}
 <div class="card gold" style="margin-top:1.1rem;">
   <h3 style="font-size:0.78rem; text-transform:uppercase; letter-spacing:1.8px; color:var(--gold); margin-bottom:1.25rem;">✦ Punto de Edad · Método Huber</h3>
   <div style="display:flex; gap:0.75rem; flex-wrap:wrap; margin-bottom:1.25rem;">
@@ -198,6 +160,91 @@
   <p class="muted" style="font-size:0.72rem; margin-top:1rem; border-top:1px solid var(--border-soft); padding-top:0.75rem;">
     El Punto de Edad (Huber) se desplaza por las 12 casas en ciclos de 72 años, señalando procesos internos de crecimiento en cada etapa de la vida.
   </p>
+</div>
+{% endif %}
+
+{# ── Lecturas de esta persona (individuales + de pareja) ── #}
+<div class="section-label" style="display:flex; justify-content:space-between; align-items:baseline; gap:1rem; flex-wrap:wrap;">
+  <span>Lecturas de {{ p.name }}</span>
+  {% set rt_natal = reading_types | selectattr('slug','equalto','natal') | first %}
+  {% if rt_natal %}
+    {% if covered_natal or credit_natal %}
+    <form method="POST" action="{{ url_for('readings.request_reading', reading_type_id=rt_natal.id) }}" style="margin:0;">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="profile_id" value="{{ p.id }}">
+      <button type="submit" class="btn btn-primary btn-sm">✦ Generar lectura natal</button>
+    </form>
+    {% else %}
+    <form method="POST" action="{{ url_for('billing.checkout', product='natal') }}" style="margin:0;">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit" class="btn btn-gold btn-sm">Generar lectura — $7.99</button>
+    </form>
+    {% endif %}
+  {% endif %}
+</div>
+
+{% if reading_items %}
+{% for item in reading_items %}
+{% set r = item.reading %}
+<div class="card" style="display:flex; justify-content:space-between; align-items:center; gap:1rem; padding:1rem 1.3rem;">
+  <div>
+    <strong style="font-size:0.92rem;">{{ r.reading_type.name }}</strong>
+    {% if item.other %}
+    <span class="muted" style="font-size:0.84rem; margin-left:0.3rem;">— con {{ item.other.name }}</span>
+    {% elif r.profile and r.profile.id != p.id %}
+    <span class="muted" style="font-size:0.84rem; margin-left:0.3rem;">— {{ r.profile.name }}</span>
+    {% endif %}
+    <div class="muted" style="font-size:0.78rem; margin-top:0.1rem;">{{ r.created_at.strftime('%d/%m/%Y') }}</div>
+  </div>
+  <div style="display:flex; align-items:center; gap:0.7rem;">
+    <span class="status-pill status-{{ r.status }}">{{ {'completed':'Lista','generating':'Generando','failed':'Error','pending':'En cola'}.get(r.status, r.status) }}</span>
+    {% if r.status == 'completed' %}<a href="{{ url_for('readings.view', reading_id=r.id) }}" class="btn btn-outline btn-sm">Leer</a>{% endif %}
+  </div>
+</div>
+{% endfor %}
+{% else %}
+<div class="card" style="padding:1.1rem 1.3rem;">
+  <p class="muted" style="font-size:0.88rem; margin:0;">Aún no hay lecturas para {{ p.name }}. Genera la lectura natal arriba, o compara con otra persona abajo.</p>
+</div>
+{% endif %}
+
+{# ── Comparar con otra persona ── #}
+{% set rt_syn = reading_types | selectattr('slug','equalto','synastry') | first %}
+{% set rt_dav = reading_types | selectattr('slug','equalto','davison') | first %}
+{% if others_complete and (rt_syn or rt_dav) %}
+<div class="section-label">Comparar con otra persona</div>
+<div class="card">
+  {% set rt_pair = rt_syn or rt_dav %}
+  <form method="POST" action="{{ url_for('readings.request_reading', reading_type_id=rt_pair.id) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="profile_id" value="{{ p.id }}">
+    <div class="form-row" style="align-items:flex-end;">
+      <div class="form-group" style="flex:2;">
+        <label>Persona</label>
+        <select name="profile_id_b" required>
+          <option value="">— Elige —</option>
+          {% for q in others_complete %}
+          <option value="{{ q.id }}">{{ q.name }} · ☉ {{ q.sun_sign or '—' }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      {% if rt_syn %}<button type="submit" class="btn btn-outline" formaction="{{ url_for('readings.request_reading', reading_type_id=rt_syn.id) }}">Sinastría →</button>{% endif %}
+      {% if rt_dav %}<button type="submit" class="btn btn-outline" formaction="{{ url_for('readings.request_reading', reading_type_id=rt_dav.id) }}" style="margin-left:0.5rem;">Carta Davison →</button>{% endif %}
+    </div>
+  </form>
+  {% if not covered_pack %}
+    {% if credit_pack %}
+    <p class="muted" style="font-size:0.8rem; margin:0.75rem 0 0;">✦ Tienes un pack completo sin asignar — al generar, se te llevará a asignarlo a las dos personas.</p>
+    {% else %}
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-wrap:wrap; margin-top:0.9rem; border-top:1px solid var(--border-soft); padding-top:0.9rem;">
+      <p class="muted" style="font-size:0.82rem; margin:0;">Las comparaciones forman parte del pack completo — dos personas, todas las lecturas.</p>
+      <form method="POST" action="{{ url_for('billing.checkout', product='complete') }}" style="margin:0;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-gold btn-sm">Desbloquear pack — $17.99</button>
+      </form>
+    </div>
+    {% endif %}
+  {% endif %}
 </div>
 {% endif %}
 

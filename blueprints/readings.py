@@ -56,11 +56,8 @@ def first_unassigned(user, product):
 @readings_bp.route('/')
 @login_required
 def index():
-    from sqlalchemy.orm import defer
-    readings = Reading.query.filter_by(user_id=current_user.id)\
-                            .options(defer(Reading.chart_image), defer(Reading.chart_png))\
-                            .order_by(Reading.created_at.desc()).all()
-    return render_template('readings/index.html', readings=readings)
+    # The readings index is gone — every reading lives on its person's page.
+    return redirect(url_for('main.dashboard'))
 
 
 @readings_bp.route('/<int:reading_id>')
@@ -147,7 +144,7 @@ def request_reading(reading_type_id):
                     db.session.commit()
                 else:
                     flash(f'La lectura natal completa de {profile.name} cuesta $7.99 — pago único.')
-                    return redirect(url_for('billing.pricing'))
+                    return redirect(url_for('main.profile_chart', profile_id=profile.id))
 
         elif slug in ('synastry', 'davison'):
             if not pair_has_pack(current_user, profile.id, pb.id):
@@ -157,7 +154,7 @@ def request_reading(reading_type_id):
                     return redirect(url_for('main.assign_entitlement', eid=pack.id,
                                             profile_a=profile.id, profile_b=pb.id))
                 flash('La comparación entre dos personas forma parte del pack completo ($17.99).')
-                return redirect(url_for('main.compare'))
+                return redirect(url_for('main.profile_chart', profile_id=profile.id))
 
         else:  # karmic, solar/lunar returns, planet returns
             if not person_has_pack(current_user, profile.id):
@@ -167,7 +164,7 @@ def request_reading(reading_type_id):
                     return redirect(url_for('main.assign_entitlement', eid=pack.id,
                                             profile_a=profile.id))
                 flash('Esta lectura forma parte del pack completo ($17.99, dos personas).')
-                return redirect(url_for('billing.pricing'))
+                return redirect(url_for('main.profile_chart', profile_id=profile.id))
 
     reading = Reading(user_id=current_user.id, reading_type_id=rtype.id,
                       profile_id=profile.id, params=params or None)

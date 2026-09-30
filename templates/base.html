@@ -280,10 +280,7 @@
         <img src="{{ url_for('static', filename='logolowres.png') }}" alt="Astronode">
       </a>
       <div class="nav-tabs">
-        <a href="{{ url_for('main.dashboard') }}" class="{{ 'active' if request.endpoint in ('main.dashboard','main.profiles','main.profile_chart','main.profile_edit') }}">Personas</a>
-        <a href="{{ url_for('main.compare') }}" class="{{ 'active' if request.endpoint and request.endpoint.startswith('main.compare') or request.endpoint == 'main.compatibility' }}">Comparar</a>
-        <a href="{{ url_for('readings.index') }}" class="{{ 'active' if request.endpoint and request.endpoint.startswith('readings.') }}">Lecturas</a>
-        <a href="{{ url_for('billing.pricing') }}" class="{{ 'active' if request.endpoint and request.endpoint.startswith('billing.') }}">Plan</a>
+        <a href="{{ url_for('main.dashboard') }}" class="{{ 'active' if request.endpoint and request.endpoint.startswith('main.') and not request.endpoint.startswith('main.assign') }}">Personas</a>
         {% if current_user.role == 'superadmin' %}
         <a href="{{ url_for('admin.index') }}" class="{{ 'active' if request.endpoint and request.endpoint.startswith('admin.') }}">Admin</a>
         {% endif %}

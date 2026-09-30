@@ -140,6 +140,52 @@ def _house_num(val) -> int:
     return _HOUSE_NAME_MAP.get(str(val), 1)
 
 
+def compute_key_signs(birth_date, birth_time, birth_place, lat=None, lng=None) -> dict:
+    """Fast Sun/Moon/Ascendant signs only — no chart subject, no SVG.
+
+    Uses swisseph directly (milliseconds instead of the full kerykeion
+    chart build). Returns English sign names, e.g. {'sun': 'Pisces', ...}.
+    """
+    import datetime as _dt
+    import pytz
+    import swisseph as swe
+    from timezonefinder import TimezoneFinder
+
+    if lat is None or lng is None:
+        lat, lng = _geocode(birth_place)
+
+    global _tz_finder
+    try:
+        tf = _tz_finder
+    except NameError:
+        tf = _tz_finder = TimezoneFinder()
+
+    tz_str = tf.timezone_at(lng=lng, lat=lat)
+    if not tz_str:
+        raise ValueError(f'Could not find timezone for {birth_place}')
+
+    local_dt = pytz.timezone(tz_str).localize(_dt.datetime(
+        birth_date.year, birth_date.month, birth_date.day,
+        birth_time.hour, birth_time.minute,
+    ))
+    utc_dt = local_dt.astimezone(pytz.utc)
+    jd = swe.julday(utc_dt.year, utc_dt.month, utc_dt.day,
+                    utc_dt.hour + utc_dt.minute / 60.0)
+
+    def _sign(lon):
+        return _SIGN_NAMES[int(lon // 30) % 12]
+
+    sun_lon  = swe.calc_ut(jd, swe.SUN)[0][0]
+    moon_lon = swe.calc_ut(jd, swe.MOON)[0][0]
+    _, ascmc = swe.houses(jd, lat, lng, b'P')
+
+    return {'sun': _sign(sun_lon), 'moon': _sign(moon_lon), 'asc': _sign(ascmc[0])}
+
+
+_SIGN_NAMES = ['Aries', 'Taurus', 'Gemini', 'Cancer', 'Leo', 'Virgo',
+               'Libra', 'Scorpio', 'Sagittarius', 'Capricorn', 'Aquarius', 'Pisces']
+
+
 def _build_chart_kerykeion(birth_date, birth_time, birth_place,
                             lat=None, lng=None):
     import pytz

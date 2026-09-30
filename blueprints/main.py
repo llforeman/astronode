@@ -15,11 +15,8 @@ MAX_PROFILES = 25
 @main_bp.route('/dashboard')
 @login_required
 def dashboard():
-    from models import Reading, Profile
+    from models import Profile
     from blueprints.readings import _coverage_sets
-    readings = Reading.query.filter_by(user_id=current_user.id)\
-                            .options(defer_blobs())\
-                            .order_by(Reading.created_at.desc()).limit(5).all()
     profiles = Profile.query.filter_by(user_id=current_user.id)\
                             .order_by(Profile.is_self.desc(), Profile.created_at.asc()).all()
     unassigned = _unassigned_entitlements()
@@ -32,7 +29,7 @@ def dashboard():
             coverage[p.id] = 'natal'
         else:
             coverage[p.id] = None
-    return render_template('main/dashboard.html', readings=readings, profiles=profiles,
+    return render_template('main/dashboard.html', profiles=profiles,
                            unassigned=unassigned, coverage=coverage)
 
 
@@ -116,6 +113,25 @@ def profiles():
                            now=_dt.date.today())
 
 
+def _refresh_profile_signs(profile):
+    """Best-effort cache of Sun/Moon/Ascendant signs (fast swisseph path)."""
+    if not (profile.birth_date and profile.birth_place):
+        return
+    try:
+        from ai import compute_key_signs
+        signs = compute_key_signs(
+            profile.birth_date,
+            profile.birth_time or dt.time(12, 0),
+            profile.birth_place,
+            lat=profile.birth_lat, lng=profile.birth_lng,
+        )
+        profile.sun_sign  = signs['sun']
+        profile.moon_sign = signs['moon']
+        profile.asc_sign  = signs['asc']
+    except Exception as e:
+        log.warning('key-signs cache failed for profile %s: %s', profile.id, e)
+
+
 @main_bp.route('/profiles/add', methods=['POST'])
 @login_required
 def profile_add():
@@ -168,6 +184,7 @@ def profile_add():
         p.birth_lat = p.birth_lng = None
     p.gender = gender if gender in ('masculino', 'femenino') else None
 
+    _refresh_profile_signs(p)
     db.session.add(p)
     db.session.commit()
     flash(f'Perfil "{p.name}" añadido.')
@@ -219,6 +236,7 @@ def profile_edit(profile_id):
             p.birth_lat = p.birth_lng = None
         p.gender = gender if gender in ('masculino', 'femenino') else None
 
+        _refresh_profile_signs(p)
         db.session.commit()
         flash(f'"{p.name}" actualizado.')
         return redirect(url_for('main.profiles'))
@@ -261,6 +279,26 @@ def profile_chart(profile_id):
             result['birth_date']  = p.birth_date
             result['birth_time']  = p.birth_time
 
+            # Refresh the cached key signs from the real chart (most accurate).
+            try:
+                def _full(s):
+                    if not s:
+                        return None
+                    s = str(s)
+                    if len(s) == 3:
+                        m = {'Ari': 'Aries', 'Tau': 'Taurus', 'Gem': 'Gemini',
+                             'Can': 'Cancer', 'Leo': 'Leo', 'Vir': 'Virgo',
+                             'Lib': 'Libra', 'Sco': 'Scorpio', 'Sag': 'Sagittarius',
+                             'Cap': 'Capricorn', 'Aqu': 'Aquarius', 'Pis': 'Pisces'}
+                        return m.get(s, s)
+                    return s
+                p.sun_sign  = _full(result['positions'].get('Sun', {}).get('sign'))
+                p.moon_sign = _full(result['positions'].get('Moon', {}).get('sign'))
+                p.asc_sign  = _full(result['positions'].get('Ascendant', {}).get('sign'))
+                db.session.commit()
+            except Exception:
+                pass
+
             try:
                 age_point = compute_age_point(
                     result['house_cusps'],
@@ -280,81 +318,57 @@ def profile_chart(profile_id):
     from blueprints.readings import person_has_natal, person_has_pack
 
     reading_types = ReadingType.query.filter_by(active=True).all()
-    readings = Reading.query.filter_by(profile_id=p.id, user_id=current_user.id)\
-                            .options(defer_blobs())\
-                            .order_by(Reading.created_at.desc()).limit(6).all()
+
+    # All readings that involve this person: their individual readings plus
+    # pair readings (synastry / davison) where they are either person.
+    others = [q for q in Profile.query.filter(Profile.user_id == current_user.id,
+                                              Profile.id != p.id)\
+                                      .order_by(Profile.is_self.desc(),
+                                                Profile.created_at.asc()).all()
+              if q.birth_date and q.birth_place]
+    prof_map = {q.id: q for q in others} | {p.id: p}
+
+    reading_items = []
+    rows = Reading.query.filter_by(user_id=current_user.id)\
+                        .options(defer_blobs())\
+                        .order_by(Reading.created_at.desc()).limit(60).all()
+    for r in rows:
+        if r.reading_type is None:
+            continue
+        params  = r.params or {}
+        other   = None
+        if r.profile_id == p.id:
+            pid_b = params.get('profile_id_b')
+            if pid_b:
+                other = prof_map.get(pid_b)
+        elif params.get('profile_id_b') == p.id:
+            other = prof_map.get(r.profile_id)
+        else:
+            continue
+        reading_items.append({'reading': r, 'other': other})
+
     return render_template('main/profile_chart.html', p=p, result=result, error=error,
                            age_point=age_point,
                            covered_natal=person_has_natal(current_user, p.id),
                            covered_pack=person_has_pack(current_user, p.id),
-                           readings=readings,
+                           others_complete=others,
+                           reading_items=reading_items,
                            reading_types=reading_types, now=_dt.date.today())
 
 
-# ── Comparar (synastry / davison) ────────────────────────────────────────────
-
-@main_bp.route('/comparar', methods=['GET', 'POST'])
-@login_required
-def compare():
-    from models import Profile
-    profiles = Profile.query.filter_by(user_id=current_user.id)\
-                            .order_by(Profile.is_self.desc(), Profile.created_at.asc()).all()
-    complete = [p for p in profiles if p.birth_date and p.birth_place]
-
-    if request.method == 'POST':
-        a_id = request.form.get('profile_a', type=int)
-        b_id = request.form.get('profile_b', type=int)
-        pa = Profile.query.filter_by(id=a_id, user_id=current_user.id).first()
-        pb = Profile.query.filter_by(id=b_id, user_id=current_user.id).first()
-        if not pa or not pb or pa.id == pb.id:
-            flash('Elige dos personas distintas con datos de nacimiento completos.')
-        elif not (pa.birth_date and pa.birth_place and pb.birth_date and pb.birth_place):
-            flash('Ambas personas necesitan fecha y lugar de nacimiento completos.')
-        else:
-            return redirect(url_for('main.compare_result',
-                                    profile_a_id=pa.id, profile_b_id=pb.id))
-    return render_template('main/compare.html', profiles=complete, all_profiles=profiles)
-
-
-@main_bp.route('/comparar/<int:profile_a_id>/<int:profile_b_id>')
-@login_required
-def compare_result(profile_a_id, profile_b_id):
-    from models import Profile, ReadingType
-    from blueprints.readings import pair_has_pack, first_unassigned
-    from ai import compute_chart
-    import datetime as _dt
-
-    pa = Profile.query.filter_by(id=profile_a_id, user_id=current_user.id).first_or_404()
-    pb = Profile.query.filter_by(id=profile_b_id, user_id=current_user.id).first_or_404()
-    if not (pa.birth_date and pa.birth_place and pb.birth_date and pb.birth_place):
-        flash('Ambas personas necesitan fecha y lugar de nacimiento completos.')
-        return redirect(url_for('main.compare'))
-
-    unlocked = pair_has_pack(current_user, pa.id, pb.id)
-    pack     = None if unlocked else first_unassigned(current_user, 'complete')
-
-    charts = {}
-    for p in (pa, pb):
-        try:
-            charts[p.id] = compute_chart(
-                p.birth_date, p.birth_time or _dt.time(12, 0), p.birth_place,
-                lat=p.birth_lat, lng=p.birth_lng)
-        except Exception as e:
-            log.warning('compare chart failed for profile %s: %s', p.id, e)
-
-    rtypes = {rt.slug: rt for rt in ReadingType.query.filter_by(active=True).all()
-              if rt.slug in ('synastry', 'davison')}
-
-    return render_template('main/compare_result.html', pa=pa, pb=pb,
-                           charts=charts, unlocked=unlocked, pack=pack, rtypes=rtypes)
-
-
-# ── Legacy redirect ──────────────────────────────────────────────────────────
+# ── Legacy redirects (compare/compat pages removed; pair readings live on
+#    each person's page) ─────────────────────────────────────────────────────
 
 @main_bp.route('/compatibilidad')
 @login_required
 def compatibility():
-    return redirect(url_for('main.compare'))
+    return redirect(url_for('main.dashboard'))
+
+
+@main_bp.route('/comparar')
+@login_required
+def compare():
+    return redirect(url_for('main.dashboard'))
 
 
 # ── Legacy redirect ───────────────────────────────────────────────────────────

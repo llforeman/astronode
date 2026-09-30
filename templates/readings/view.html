@@ -2,7 +2,11 @@
 {% block title %}{{ reading.reading_type.name }} — Astronode{% endblock %}
 {% block content %}
 <div style="max-width: 720px;">
-  <a href="{{ url_for('readings.index') }}" style="color:var(--text-muted); font-size:0.9rem;">← Volver a lecturas</a>
+  {% if reading.profile %}
+  <a href="{{ url_for('main.profile_chart', profile_id=reading.profile_id) }}" style="color:var(--text-muted); font-size:0.9rem;">← Volver a {{ reading.profile.name }}</a>
+  {% else %}
+  <a href="{{ url_for('main.dashboard') }}" style="color:var(--text-muted); font-size:0.9rem;">← Tus personas</a>
+  {% endif %}
   <h2 style="margin: 1rem 0 0.25rem; color: var(--accent-light)">{{ reading.reading_type.name }}</h2>
   <p style="color:var(--text-muted); font-size:0.85rem; margin-bottom: 2rem;">
     {% if reading.profile %}

@@ -63,27 +63,46 @@ class Profile(db.Model):
     birth_lng   = db.Column(db.Float, nullable=True)
     gender      = db.Column(db.String(20), nullable=True)
     is_self     = db.Column(db.Boolean, default=False, nullable=False)
+    # Cached key signs (English full names, e.g. 'Pisces'), filled lazily
+    # from the chart engine and reused everywhere for display.
+    sun_sign    = db.Column(db.String(20), nullable=True)
+    moon_sign   = db.Column(db.String(20), nullable=True)
+    asc_sign    = db.Column(db.String(20), nullable=True)
     created_at  = db.Column(db.DateTime, default=datetime.utcnow)
 
     readings    = db.relationship('Reading', backref='profile', lazy='dynamic',
                                   foreign_keys='Reading.profile_id')
 
-    @property
-    def sun_sign(self):
-        if not self.birth_date:
+    SIGN_ES = {
+        'Aries': 'Aries', 'Taurus': 'Tauro', 'Gemini': 'Géminis', 'Cancer': 'Cáncer',
+        'Leo': 'Leo', 'Virgo': 'Virgo', 'Libra': 'Libra', 'Scorpio': 'Escorpio',
+        'Sagittarius': 'Sagitario', 'Capricorn': 'Capricornio',
+        'Aquarius': 'Acuario', 'Pisces': 'Piscis',
+    }
+    SIGN_SYM = {
+        'Aries': '♈', 'Taurus': '♉', 'Gemini': '♊', 'Cancer': '♋',
+        'Leo': '♌', 'Virgo': '♍', 'Libra': '♎', 'Scorpio': '♏',
+        'Sagittarius': '♐', 'Capricorn': '♑', 'Aquarius': '♒', 'Pisces': '♓',
+    }
+
+    def _sign_display(self, sign):
+        if not sign:
             return None
-        m, d = self.birth_date.month, self.birth_date.day
-        signs = [
-            (1, 20, 'Capricorn'), (2, 19, 'Aquarius'), (3, 20, 'Pisces'),
-            (4, 20, 'Aries'), (5, 21, 'Taurus'), (6, 21, 'Gemini'),
-            (7, 22, 'Cancer'), (8, 23, 'Leo'), (9, 23, 'Virgo'),
-            (10, 23, 'Libra'), (11, 22, 'Scorpio'), (12, 22, 'Sagittarius'),
-            (12, 31, 'Capricorn'),
-        ]
-        for month, day, sign in signs:
-            if m < month or (m == month and d <= day):
-                return sign
-        return 'Capricorn'
+        sym  = self.SIGN_SYM.get(sign, '')
+        name = self.SIGN_ES.get(sign, sign)
+        return f'{sym} {name}' if sym else name
+
+    @property
+    def sun_display(self):
+        return self._sign_display(self.sun_sign)
+
+    @property
+    def moon_display(self):
+        return self._sign_display(self.moon_sign)
+
+    @property
+    def asc_display(self):
+        return self._sign_display(self.asc_sign)
 
 
 class ReadingType(db.Model):

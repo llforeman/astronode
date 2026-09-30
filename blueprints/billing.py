@@ -35,13 +35,10 @@ def _stripe():
 
 @billing_bp.route('/pricing')
 def pricing():
-    credits = {'natal': 0, 'complete': 0}
+    # The in-app pricing page is gone — purchases happen via CTAs.
     if current_user.is_authenticated:
-        from models import Entitlement
-        for e in Entitlement.query.filter_by(user_id=current_user.id,
-                                             profile_a_id=None).all():
-            credits[e.product] = credits.get(e.product, 0) + 1
-    return render_template('billing/pricing.html', credits=credits)
+        return redirect(url_for('main.dashboard', _anchor='credits'))
+    return redirect(url_for('public.pricing'))
 
 
 # ── Checkout redirects (Stripe Payment Links — no API call at checkout) ─────
@@ -75,7 +72,7 @@ def success():
 @billing_bp.route('/cancelled')
 def cancelled():
     flash('Pago cancelado.')
-    return redirect(url_for('billing.pricing'))
+    return redirect(url_for('main.dashboard') if current_user.is_authenticated else url_for('public.landing'))
 
 
 # ── Webhook ──────────────────────────────────────────────────────────────────

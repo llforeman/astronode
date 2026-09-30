@@ -49,8 +49,8 @@
       {{ p.name }}
       {% if p.is_self %}<span class="self-badge">TÚ</span>{% endif %}
     </div>
-    {% if p.sun_sign %}
-    <div class="profile-meta">☉ {{ p.sun_sign }}</div>
+    {% if p.sun_display %}
+    <div class="profile-meta">{{ p.sun_display }}</div>
     {% endif %}
     {% if p.birth_date %}
     <div class="profile-meta">{{ p.birth_date.strftime('%b %d, %Y') }}</div>

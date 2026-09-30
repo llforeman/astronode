@@ -27,29 +27,32 @@
 {% endif %}
 
 {% if profiles %}
-<div class="profile-grid">
+<div style="display:flex; flex-direction:column; gap:0.9rem;">
   {% for p in profiles %}
-  <div class="profile-card {% if p.is_self %}is-self{% endif %}">
-    <div class="profile-top">
-      <div class="p-avatar">{{ p.name[0]|upper }}</div>
-      <div>
-        <div class="profile-name">{{ p.name }}{% if p.is_self %}<span class="self-badge">TÚ</span>{% endif %}</div>
-        {% if p.birth_date %}<div class="profile-meta">{{ p.birth_date.strftime('%d %b %Y') }}{% if p.birth_place %} · {{ p.birth_place }}{% endif %}</div>
-        {% else %}<div class="profile-meta" style="color:var(--danger);">Faltan datos de nacimiento</div>{% endif %}
+  <div class="card person-row {% if p.is_self %}is-self{% endif %}" style="margin-bottom:0; display:flex; align-items:center; gap:1.1rem; flex-wrap:wrap; padding:1.15rem 1.4rem;">
+    <div class="p-avatar" style="width:52px; height:52px; font-size:1.4rem;">{{ p.name[0]|upper }}</div>
+
+    <div style="flex:1; min-width:220px;">
+      <div class="profile-name" style="font-size:1.05rem;">
+        {{ p.name }}{% if p.is_self %}<span class="self-badge" style="margin-left:0.45rem;">TÚ</span>{% endif %}
       </div>
+      {% if p.birth_date %}
+      <div class="profile-meta" style="margin-top:0.1rem;">{{ p.birth_date.strftime('%d %b %Y') }}{% if p.birth_place %} · {{ p.birth_place }}{% endif %}</div>
+      <div style="display:flex; gap:0.4rem; flex-wrap:wrap; margin-top:0.45rem;">
+        <span class="sign-pill">☉ {{ p.sun_display or '—' }}</span>
+        <span class="sign-pill">☽ {{ p.moon_display or '—' }}</span>
+        <span class="sign-pill">ASC {{ p.asc_display or '—' }}</span>
+        {% if coverage.get(p.id) == 'pack' %}<span class="coverage-tag pack">PACK COMPLETO</span>
+        {% elif coverage.get(p.id) == 'natal' %}<span class="coverage-tag natal">LECTURA LISTA</span>{% endif %}
+      </div>
+      {% else %}
+      <div class="profile-meta" style="color:var(--danger); margin-top:0.2rem;">Faltan datos de nacimiento</div>
+      {% endif %}
     </div>
 
-    {% if p.birth_date %}
-    <div style="margin-bottom:0.4rem;">
-      <span class="sign-pill">☉ {{ p.sun_sign }}</span>
-      {% if coverage.get(p.id) == 'pack' %}<span class="coverage-tag pack" style="margin-left:0.35rem;">PACK COMPLETO</span>
-      {% elif coverage.get(p.id) == 'natal' %}<span class="coverage-tag natal" style="margin-left:0.35rem;">LECTURA LISTA</span>{% endif %}
-    </div>
-    {% endif %}
-
-    <div class="profile-actions">
+    <div class="profile-actions" style="margin-top:0; gap:0.5rem;">
       {% if p.birth_date and p.birth_place %}
-      <a href="{{ url_for('main.profile_chart', profile_id=p.id) }}" class="btn btn-primary btn-sm">Abrir carta →</a>
+      <a href="{{ url_for('main.profile_chart', profile_id=p.id) }}" class="btn btn-primary btn-sm">Ver carta →</a>
       {% else %}
       <a href="{{ url_for('main.profile_edit', profile_id=p.id) }}" class="btn btn-gold btn-sm">Completar datos</a>
       {% endif %}
@@ -72,26 +75,6 @@
   <p>Puede seas tú o cualquier persona: madre, pareja, un amigo. Su carta natal se calcula al instante y es gratis — solo pagas si quieres la lectura escrita por IA.</p>
   <a href="{{ url_for('main.profiles') }}" class="btn btn-primary">Añadir persona</a>
 </div>
-{% endif %}
-
-{% if readings %}
-<div class="section-label">Lecturas recientes</div>
-{% for r in readings %}
-<div class="card" style="display:flex; justify-content:space-between; align-items:center; gap:1rem; padding:1.1rem 1.4rem;">
-  <div>
-    <strong>{{ r.reading_type.name }}</strong>
-    {% if r.profile %}<span class="muted" style="font-size:0.84rem; margin-left:0.4rem;">— {{ r.profile.name }}</span>{% endif %}
-    <div class="muted" style="font-size:0.8rem; margin-top:0.15rem;">{{ r.created_at.strftime('%d/%m/%Y') }}</div>
-  </div>
-  <div style="display:flex; align-items:center; gap:0.75rem;">
-    <span class="status-pill status-{{ r.status }}">{{ {'completed':'Lista','generating':'Generando','failed':'Error','pending':'En cola'}.get(r.status, r.status) }}</span>
-    {% if r.status == 'completed' %}
-    <a href="{{ url_for('readings.view', reading_id=r.id) }}" class="btn btn-outline btn-sm">Leer</a>
-    {% endif %}
-  </div>
-</div>
-{% endfor %}
-<a href="{{ url_for('readings.index') }}" class="muted" style="font-size:0.88rem;">Todas las lecturas →</a>
 {% endif %}
 
 {% endblock %}
