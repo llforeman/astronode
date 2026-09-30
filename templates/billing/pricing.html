@@ -1,53 +1,56 @@
 {% extends "base.html" %}
 {% block title %}Planes — Astronode{% endblock %}
 {% block content %}
-<h2 style="margin-bottom: 0.5rem; color: var(--accent-light)">Planes y Precios</h2>
+<h2 style="margin-bottom: 0.5rem; color: var(--accent-light)">Elige tu lectura</h2>
 <p style="color: var(--text-muted); margin-bottom: 2rem;">Tu plan actual: <strong style="color:var(--accent-light); text-transform:uppercase">{{ current_user.tier }}</strong></p>
 
 <div style="display: flex; gap: 1.5rem; flex-wrap: wrap;">
-  <!-- Single reading -->
-  <div class="card" style="width: 240px;">
-    <h3 style="margin-bottom: 0.5rem;">Lectura Individual</h3>
-    <div style="font-size: 1.8rem; font-weight: 700; color: var(--accent-light); margin: 0.75rem 0;">€9.99</div>
-    <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.25rem;">Una lectura completa de carta natal enviada a tu email.</p>
-    {% if current_user.birth_date and current_user.birth_place %}
-    <form method="POST" action="{{ url_for('billing.checkout_reading', reading_type_id=1) }}">
+  <!-- Carta Natal -->
+  <div class="card" style="width: 280px;">
+    <h3 style="margin-bottom: 0.5rem;">Tu Carta Natal como nunca antes</h3>
+    <div style="font-size: 1.8rem; font-weight: 700; color: var(--accent-light); margin: 0.75rem 0;">$7.99</div>
+    <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">Pago único · Entrega inmediata</p>
+    <ul style="color: var(--text-muted); font-size: 0.88rem; line-height: 1.8; margin-bottom: 1.25rem; padding-left: 1.2rem;">
+      <li>13 capítulos sobre tu carta completa</li>
+      <li>~30 páginas en prosa fluida, en español</li>
+      <li>PDF por email + guardada en tu cuenta</li>
+    </ul>
+    {% if current_user.tier == 'free' %}
+    <form method="POST" action="{{ url_for('billing.checkout', product='natal') }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <button type="submit" class="btn btn-outline" style="width:100%;">Comprar lectura</button>
+      <button type="submit" class="btn btn-outline" style="width:100%;">Comprar mi Carta Natal</button>
     </form>
+    {% elif current_user.tier == 'natal' %}
+    <span style="color: var(--text-muted); font-size: 0.9rem;">✓ Ya tienes la Carta Natal</span>
     {% else %}
-    <a href="{{ url_for('main.profile') }}" class="btn btn-outline" style="width:100%; text-align:center;">Primero añade tus datos de nacimiento</a>
+    <span style="color: var(--text-muted); font-size: 0.9rem;">✓ Incluida en tu pack</span>
     {% endif %}
   </div>
 
-  <!-- Basic -->
-  <div class="card" style="width: 240px; border-color: var(--accent);">
-    <h3 style="margin-bottom: 0.5rem;">Básico</h3>
-    <div style="font-size: 1.8rem; font-weight: 700; color: var(--accent-light); margin: 0.75rem 0;">€4.99<span style="font-size: 1rem; color: var(--text-muted)">/mes</span></div>
-    <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.25rem;">Lecturas mensuales + acceso al panel.</p>
-    {% if current_user.tier != 'basic' and current_user.tier != 'vip' %}
-    <form method="POST" action="{{ url_for('billing.checkout_subscribe', tier='basic') }}">
+  <!-- Astrología Completa -->
+  <div class="card" style="width: 280px; border-color: var(--accent);">
+    <h3 style="margin-bottom: 0.5rem;">Tu Astrología Completa como nunca antes</h3>
+    <div style="font-size: 1.8rem; font-weight: 700; color: var(--accent-light); margin: 0.75rem 0;">$17.99</div>
+    <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">Pago único · Todo incluido · Para dos personas</p>
+    <ul style="color: var(--text-muted); font-size: 0.88rem; line-height: 1.8; margin-bottom: 1.25rem; padding-left: 1.2rem;">
+      <li><strong>Carta Natal completa</strong> — 13 capítulos</li>
+      <li><strong>Carta Kármica</strong> — misión del alma</li>
+      <li><strong>10 Revoluciones Solares</strong> + <strong>12 Lunares</strong></li>
+      <li>Todo lo anterior <strong>para una segunda persona</strong></li>
+      <li><strong>Sinastría</strong> y <strong>Carta Davison</strong> entre vosotros</li>
+    </ul>
+    {% if current_user.tier != 'complete' %}
+    <form method="POST" action="{{ url_for('billing.checkout', product='complete') }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <button type="submit" class="btn btn-primary" style="width:100%;">Suscribirse</button>
+      <button type="submit" class="btn btn-primary" style="width:100%;">Obtener el pack completo</button>
     </form>
     {% else %}
-    <span style="color: var(--text-muted); font-size: 0.9rem;">Plan actual</span>
-    {% endif %}
-  </div>
-
-  <!-- VIP -->
-  <div class="card" style="width: 240px;">
-    <h3 style="margin-bottom: 0.5rem;">VIP ✦</h3>
-    <div style="font-size: 1.8rem; font-weight: 700; color: var(--accent-light); margin: 0.75rem 0;">€9.99<span style="font-size: 1rem; color: var(--text-muted)">/mes</span></div>
-    <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.25rem;">Lecturas semanales, informes de compatibilidad y todas las funciones futuras.</p>
-    {% if current_user.tier != 'vip' %}
-    <form method="POST" action="{{ url_for('billing.checkout_subscribe', tier='vip') }}">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <button type="submit" class="btn btn-outline" style="width:100%;">Hacerse VIP</button>
-    </form>
-    {% else %}
-    <span style="color: var(--text-muted); font-size: 0.9rem;">Plan actual</span>
+    <span style="color: var(--text-muted); font-size: 0.9rem;">✓ Plan actual</span>
     {% endif %}
   </div>
 </div>
+
+<p style="color: var(--text-muted); font-size: 0.82rem; margin-top: 2rem;">
+  Sin suscripción. Pagas una vez y las lecturas son tuyas para siempre. Pago seguro vía Stripe.
+</p>
 {% endblock %}

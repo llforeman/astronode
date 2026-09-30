@@ -51,7 +51,7 @@ def readings():
 def set_tier(user_id):
     user = User.query.get_or_404(user_id)
     tier = request.form.get('tier')
-    if tier in ('free', 'basic', 'vip'):
+    if tier in ('free', 'natal', 'complete'):
         user.tier = tier
         db.session.commit()
         flash(f'User tier updated to {tier}.')

@@ -13,7 +13,7 @@ class User(UserMixin, db.Model):
     email_hash    = db.Column(db.String(255), unique=True, index=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
     role          = db.Column(db.String(20), nullable=False, default='user')  # user | superadmin
-    tier          = db.Column(db.String(20), nullable=False, default='free')  # free | basic | vip
+    tier          = db.Column(db.String(20), nullable=False, default='free')  # free | natal | complete
 
     # Legacy birth data columns kept for backward compat (not used by new code)
     birth_date    = db.Column(db.Date, nullable=True)
@@ -131,9 +131,10 @@ class Payment(db.Model):
     id                  = db.Column(db.Integer, primary_key=True)
     user_id             = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
     stripe_payment_id   = db.Column(db.String(255), nullable=True, index=True)
-    stripe_session_id   = db.Column(db.String(255), nullable=True, index=True)
+    stripe_session_id   = db.Column(db.String(255), nullable=True, unique=True, index=True)
+    product             = db.Column(db.String(20), nullable=True, index=True)  # natal | complete
     amount_cents        = db.Column(db.Integer, nullable=False)
-    currency            = db.Column(db.String(10), default='eur')
+    currency            = db.Column(db.String(10), default='usd')
     payment_type        = db.Column(db.String(20), nullable=False)  # one_time | subscription
     status              = db.Column(db.String(20), default='pending')  # pending | completed | failed | refunded
     reading_id          = db.Column(db.Integer, db.ForeignKey('reading.id'), nullable=True)
@@ -146,7 +147,7 @@ class Subscription(db.Model):
     id                       = db.Column(db.Integer, primary_key=True)
     user_id                  = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
     stripe_subscription_id   = db.Column(db.String(255), nullable=True, unique=True, index=True)
-    tier                     = db.Column(db.String(20), nullable=False)  # basic | vip
+    tier                     = db.Column(db.String(20), nullable=False)  # legacy: natal | complete
     status                   = db.Column(db.String(20), default='active')  # active | cancelled | past_due
     current_period_end       = db.Column(db.DateTime, nullable=True)
     created_at               = db.Column(db.DateTime, default=datetime.utcnow)

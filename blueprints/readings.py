@@ -94,16 +94,13 @@ def request_reading(reading_type_id):
             return redirect(url_for('main.profiles'))
         params['decade_start'] = decade_start
 
-    # Check payment / tier
-    if not _DEV:
-        if rtype.price_cents and rtype.min_tier == 'free':
-            return redirect(url_for('billing.checkout_reading', reading_type_id=reading_type_id))
-
-        tier_order    = ['free', 'basic', 'vip']
-        user_tier_idx = tier_order.index(current_user.tier) if current_user.tier in tier_order else 0
-        min_tier_idx  = tier_order.index(rtype.min_tier) if rtype.min_tier in tier_order else 0
-        if user_tier_idx < min_tier_idx:
+    # Entitlements: 'complete' unlocks every reading type (for the main
+    # person and a second one); 'natal' unlocks the natal reading only.
+    if not _DEV and current_user.tier != 'complete':
+        if slug != 'natal':
             return redirect(url_for('billing.pricing'))
+        if current_user.tier != 'natal':
+            return redirect(url_for('billing.checkout', product='natal'))
 
     reading = Reading(user_id=current_user.id, reading_type_id=rtype.id,
                       profile_id=profile.id, params=params or None)
@@ -196,7 +193,7 @@ def dev_generate():
         rtype = ReadingType(
             name='Carta Natal Completa',
             description='Interpretacion completa de tu carta natal con IA.',
-            price_cents=999,
+            price_cents=799,
             min_tier='free',
             active=True,
         )

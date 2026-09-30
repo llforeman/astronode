@@ -41,8 +41,11 @@
 <div class="card">
   <h3 style="margin-bottom: 1rem;">Tu plan: <span style="color: var(--accent-light); text-transform: uppercase;">{{ current_user.tier }}</span></h3>
   {% if current_user.tier == 'free' %}
-  <p style="color: var(--text-muted); margin-bottom: 1rem;">Mejora tu plan para obtener lecturas mensuales y acceso completo.</p>
-  <a href="{{ url_for('billing.pricing') }}" class="btn btn-primary">Ver planes</a>
+  <p style="color: var(--text-muted); margin-bottom: 1rem;">Desbloquea tu Carta Natal completa por $7.99, o todo el pack para dos personas por $17.99. Pago único, sin suscripción.</p>
+  <a href="{{ url_for('billing.pricing') }}" class="btn btn-primary">Ver opciones</a>
+  {% elif current_user.tier == 'natal' %}
+  <p style="color: var(--text-muted); margin-bottom: 1rem;">¿Quieres más? El pack completo añade la Carta Kármica, las revoluciones solares y lunares, y todo ello también para una segunda persona.</p>
+  <a href="{{ url_for('billing.pricing') }}" class="btn btn-outline">Completar mi astrología — $17.99</a>
   {% endif %}
 </div>
 

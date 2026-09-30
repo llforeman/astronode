@@ -49,8 +49,8 @@ class Config:
     STRIPE_PUBLISHABLE_KEY = _require_env('STRIPE_PUBLISHABLE_KEY')
     STRIPE_WEBHOOK_SECRET  = _require_env('STRIPE_WEBHOOK_SECRET')
 
-    STRIPE_LINK_READING = os.getenv('STRIPE_LINK_READING', '')
-    STRIPE_LINK_BASIC   = os.getenv('STRIPE_LINK_BASIC', '')
-    STRIPE_LINK_VIP     = os.getenv('STRIPE_LINK_VIP', '')
+    # One-time products (Stripe Payment Links, USD)
+    STRIPE_LINK_NATAL    = os.getenv('STRIPE_LINK_NATAL', '')
+    STRIPE_LINK_COMPLETE = os.getenv('STRIPE_LINK_COMPLETE', '')
 
     BASE_URL = os.getenv('BASE_URL', 'http://localhost:5000')
