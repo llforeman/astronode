@@ -182,7 +182,7 @@ def _demote_user(user):
 # ── Webhook handlers ─────────────────────────────────────────────────────────
 
 def _handle_checkout_completed(session):
-    from models import Entitlement, Notification, Profile
+    from models import Entitlement, Notification
 
     # Idempotency: unique stripe_session_id — webhook replays are no-ops.
     if Payment.query.filter_by(stripe_session_id=session.get('id', '')).first():
@@ -234,33 +234,23 @@ def _handle_checkout_completed(session):
     entitlement = Entitlement(user_id=user.id, payment_id=payment.id,
                               product=product)
     db.session.add(entitlement)
+    db.session.commit()
 
     if product == 'natal':
-        # Nice default: buying for yourself delivers immediately.
-        self_profile = Profile.query.filter_by(user_id=user.id, is_self=True).first()
-        if self_profile and self_profile.birth_date and self_profile.birth_place:
-            entitlement.profile_a_id = self_profile.id
-            entitlement.assigned_at  = datetime.utcnow()
-            db.session.commit()
-            _deliver_natal(user, self_profile, payment)
-            return
-
-        db.session.commit()
-        _send_complete_profile_email(user)
+        _send_welcome_email(user, 'natal')
         db.session.add(Notification(
             user_id=user.id,
             message='¡Pago confirmado! Tienes 1 lectura natal lista para asignar a cualquier persona desde tu panel.',
-            link='/dashboard'))
+            link='/dashboard#credits'))
         db.session.commit()
         return
 
-    # complete pack — needs two people, always assigned from the dashboard.
-    db.session.commit()
+    # complete pack — needs two people, assigned from the dashboard.
     _send_welcome_email(user, 'complete')
     db.session.add(Notification(
         user_id=user.id,
         message='¡Pago confirmado! Tienes 1 pack completo para asignar a dos personas desde tu panel.',
-        link='/dashboard'))
+        link='/dashboard#credits'))
     db.session.commit()
 
 
@@ -326,7 +316,7 @@ def _send_welcome_email(user, tier):
         from emails import _send
         _send(
             user.email,
-            f'Welcome to Astronode {tier.upper()}!',
+            f'Bienvenido a Astronode — {tier.upper()}',
             'welcome_subscription',
             user=user,
             tier=tier,
@@ -334,17 +324,3 @@ def _send_welcome_email(user, tier):
         )
     except Exception as e:
         current_app.logger.error('Failed to send welcome email: %s', e)
-
-
-def _send_complete_profile_email(user):
-    try:
-        from emails import _send
-        _send(
-            user.email,
-            'Completa tu perfil para recibir tu lectura',
-            'complete_profile',
-            user=user,
-            link=url_for('main.profile', _external=True),
-        )
-    except Exception as e:
-        current_app.logger.error('Failed to send complete_profile email: %s', e)

@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Comparar personas — Astronode{% endblock %}
+{% block content %}
+
+<div class="page-head narrow">
+  <div class="eyebrow">Sinastría · Carta Davison</div>
+  <h2>Compara dos personas</h2>
+  <p>Descubre la dinámica entre dos cartas: atracción, fricción, complementos y el alma de la relación.</p>
+</div>
+
+<div class="narrow">
+{% if complete|length < 2 %}
+  <div class="card empty-state">
+    <div class="glyph">✦</div>
+    <h3 style="margin-bottom:0.5rem;">Necesitas dos personas</h3>
+    <p>Para comparar, añade al menos dos personas con fecha y lugar de nacimiento completos.</p>
+    <a href="{{ url_for('main.profiles') }}" class="btn btn-primary">Añadir persona</a>
+  </div>
+{% else %}
+  <div class="card featured" style="padding:2rem;">
+    <form method="POST" action="{{ url_for('main.compare') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="form-row" style="align-items:flex-end;">
+        <div class="form-group" style="flex:2;">
+          <label>Persona 1</label>
+          <select name="profile_a" required>
+            <option value="">— Elige —</option>
+            {% for p in complete %}
+            <option value="{{ p.id }}">{{ p.name }} · ☉ {{ p.sun_sign }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div style="padding-bottom:0.7rem; color:var(--gold); font-size:1.1rem;">✦</div>
+        <div class="form-group" style="flex:2;">
+          <label>Persona 2</label>
+          <select name="profile_b" required>
+            <option value="">— Elige —</option>
+            {% for p in complete %}
+            {% if not loop.first %}<option value="{{ p.id }}">{{ p.name }} · ☉ {{ p.sun_sign }}</option>{% endif %}
+            {% endfor %}
+          </select>
+        </div>
+        <button type="submit" class="btn btn-primary">Comparar →</button>
+      </div>
+      {% if complete|length < 2 %}{% endif %}
+    </form>
+    <p class="muted" style="font-size:0.8rem; margin-top:0.9rem;">
+      ¿Falta alguien? <a href="{{ url_for('main.profiles') }}">Añade otra persona</a> — es gratis.
+    </p>
+  </div>
+
+  <div class="card" style="padding:1.6rem;">
+    <h3 style="font-size:1.15rem; margin-bottom:0.75rem;">Qué incluye la comparación</h3>
+    <ul style="color:var(--muted); font-size:0.9rem; line-height:2; padding-left:1.2rem;">
+      <li><strong style="color:var(--text);">Sinastría</strong> — cómo los planetas de una persona tocan la carta de la otra</li>
+      <li><strong style="color:var(--text);">Carta Davison</strong> — la relación como entidad propia, con su propio Sol, Luna y Ascendente</li>
+      <li>Comparación visual de ambas cartas natales, lado a lado</li>
+    </ul>
+  </div>
+{% endif %}
+</div>
+
+{% endblock %}

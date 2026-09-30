@@ -1,91 +1,97 @@
 {% extends "base.html" %}
-{% block title %}Dashboard — Astronode{% endblock %}
+{% block title %}Tus personas — Astronode{% endblock %}
 {% block content %}
-<h2 style="margin-bottom: 1.5rem; color: var(--accent-light)">Hola de nuevo ✦</h2>
 
-{% if not profiles %}
-<div class="card" style="border-color: var(--accent); background: var(--bg2);">
-  <strong>Crea tu primer perfil</strong>
-  <p style="color: var(--text-muted); margin: 0.5rem 0;">Añade tus datos de nacimiento para desbloquear lecturas personalizadas.</p>
-  <a href="{{ url_for('main.profiles') }}" class="btn btn-primary" style="margin-top: 0.75rem;">Añadir personas →</a>
+<div class="page-head" style="display:flex; justify-content:space-between; align-items:flex-end; gap:1rem; flex-wrap:wrap;">
+  <div>
+    <div class="eyebrow">Astronode</div>
+    <h2>Tus personas</h2>
+    <p>La carta natal de cada persona, calculada y documentada. Sin coste.</p>
+  </div>
+  <a href="{{ url_for('main.profiles') }}" class="btn btn-subtle">+ Añadir persona</a>
+</div>
+
+{% if unassigned %}
+<div class="card gold" id="credits">
+  <div style="display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-wrap:wrap;">
+    <div>
+      <strong style="font-size:0.95rem;">✦ Tienes créditos sin asignar</strong>
+      <p class="muted" style="font-size:0.85rem; margin-top:0.15rem;">
+        {% for e in unassigned %}{% if e.product == 'natal' %}1 lectura natal{% else %}1 pack completo (dos personas){% endif %}{% if not loop.last %} · {% endif %}{% endfor %}
+        — asígnalos para generar sus lecturas.
+      </p>
+    </div>
+    <a href="{{ url_for('main.assign_entitlement', eid=unassigned[0].id) }}" class="btn btn-gold">Asignar ahora</a>
+  </div>
 </div>
 {% endif %}
 
 {% if profiles %}
-<div class="card">
-  <h3 style="margin-bottom: 1rem;">Tus personas</h3>
-  <div class="profile-grid">
-    {% for p in profiles %}
-    <div class="profile-card {% if p.is_self %}is-self{% endif %}">
-      <div class="profile-name">
-        {{ p.name }}
-        {% if p.is_self %}<span class="self-badge">TÚ</span>{% endif %}
-      </div>
-      {% if p.sun_sign %}
-      <div class="profile-meta">☉ {{ p.sun_sign }}</div>
-      {% endif %}
-      {% if p.birth_place %}
-      <div class="profile-meta">{{ p.birth_place }}</div>
-      {% endif %}
-      <div class="profile-actions">
-        <a href="{{ url_for('main.profile_chart', profile_id=p.id) }}" class="btn btn-outline btn-sm">Carta</a>
-        <a href="{{ url_for('main.profiles') }}" class="btn btn-sm" style="color:var(--text-muted); border:1px solid var(--border);">Editar</a>
+<div class="profile-grid">
+  {% for p in profiles %}
+  <div class="profile-card {% if p.is_self %}is-self{% endif %}">
+    <div class="profile-top">
+      <div class="p-avatar">{{ p.name[0]|upper }}</div>
+      <div>
+        <div class="profile-name">{{ p.name }}{% if p.is_self %}<span class="self-badge">TÚ</span>{% endif %}</div>
+        {% if p.birth_date %}<div class="profile-meta">{{ p.birth_date.strftime('%d %b %Y') }}{% if p.birth_place %} · {{ p.birth_place }}{% endif %}</div>
+        {% else %}<div class="profile-meta" style="color:var(--danger);">Faltan datos de nacimiento</div>{% endif %}
       </div>
     </div>
-    {% endfor %}
+
+    {% if p.birth_date %}
+    <div style="margin-bottom:0.4rem;">
+      <span class="sign-pill">☉ {{ p.sun_sign }}</span>
+      {% if coverage.get(p.id) == 'pack' %}<span class="coverage-tag pack" style="margin-left:0.35rem;">PACK COMPLETO</span>
+      {% elif coverage.get(p.id) == 'natal' %}<span class="coverage-tag natal" style="margin-left:0.35rem;">LECTURA LISTA</span>{% endif %}
+    </div>
+    {% endif %}
+
+    <div class="profile-actions">
+      {% if p.birth_date and p.birth_place %}
+      <a href="{{ url_for('main.profile_chart', profile_id=p.id) }}" class="btn btn-primary btn-sm">Abrir carta →</a>
+      {% else %}
+      <a href="{{ url_for('main.profile_edit', profile_id=p.id) }}" class="btn btn-gold btn-sm">Completar datos</a>
+      {% endif %}
+      <a href="{{ url_for('main.profile_edit', profile_id=p.id) }}" class="btn btn-subtle btn-sm">Editar</a>
+      {% if not p.is_self %}
+      <form method="POST" action="{{ url_for('main.profile_delete', profile_id=p.id) }}" style="display:inline;"
+            onsubmit="return confirm('¿Eliminar a {{ p.name }}?');">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-danger btn-sm">Eliminar</button>
+      </form>
+      {% endif %}
+    </div>
   </div>
-  <a href="{{ url_for('main.profiles') }}" style="font-size: 0.9rem;">Gestionar personas →</a>
+  {% endfor %}
+</div>
+{% else %}
+<div class="card empty-state">
+  <div class="glyph">✦</div>
+  <h3 style="margin-bottom:0.5rem;">Añade a tu primera persona</h3>
+  <p>Puede seas tú o cualquier persona: madre, pareja, un amigo. Su carta natal se calcula al instante y es gratis — solo pagas si quieres la lectura escrita por IA.</p>
+  <a href="{{ url_for('main.profiles') }}" class="btn btn-primary">Añadir persona</a>
 </div>
 {% endif %}
 
-<div class="card">
-  <h3 style="margin-bottom: 1rem;">Tus créditos</h3>
-  {% if unassigned %}
-    {% for e in unassigned %}
-    <div style="padding: 0.75rem 0; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; gap: 1rem;">
-      <div>
-        <strong>{% if e.product == 'natal' %}✦ 1 lectura natal{% else %}✦ 1 pack completo (dos personas){% endif %}</strong>
-        <div style="color: var(--text-muted); font-size: 0.82rem;">sin asignar — compra del {{ e.created_at.strftime('%d/%m/%Y') }}</div>
-      </div>
-      <a href="{{ url_for('main.assign_entitlement', eid=e.id) }}" class="btn btn-primary" style="padding: 0.4rem 0.9rem; font-size: 0.85rem; white-space: nowrap;">Asignar</a>
-    </div>
-    {% endfor %}
-  {% else %}
-  <p style="color: var(--text-muted); margin-bottom: 1rem;">
-    Lectura natal para una persona: <strong style="color:var(--accent-light)">$7.99</strong> ·
-    Pack completo para dos personas: <strong style="color:var(--accent-light)">$17.99</strong>. Pago único, sin suscripción.
-  </p>
-  <div style="display:flex; gap:0.75rem; flex-wrap:wrap;">
-    <form method="POST" action="{{ url_for('billing.checkout', product='natal') }}">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <button type="submit" class="btn btn-outline">Lectura natal — $7.99</button>
-    </form>
-    <form method="POST" action="{{ url_for('billing.checkout', product='complete') }}">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <button type="submit" class="btn btn-primary">Pack para dos — $17.99</button>
-    </form>
+{% if readings %}
+<div class="section-label">Lecturas recientes</div>
+{% for r in readings %}
+<div class="card" style="display:flex; justify-content:space-between; align-items:center; gap:1rem; padding:1.1rem 1.4rem;">
+  <div>
+    <strong>{{ r.reading_type.name }}</strong>
+    {% if r.profile %}<span class="muted" style="font-size:0.84rem; margin-left:0.4rem;">— {{ r.profile.name }}</span>{% endif %}
+    <div class="muted" style="font-size:0.8rem; margin-top:0.15rem;">{{ r.created_at.strftime('%d/%m/%Y') }}</div>
   </div>
-  {% endif %}
+  <div style="display:flex; align-items:center; gap:0.75rem;">
+    <span class="status-pill status-{{ r.status }}">{{ {'completed':'Lista','generating':'Generando','failed':'Error','pending':'En cola'}.get(r.status, r.status) }}</span>
+    {% if r.status == 'completed' %}
+    <a href="{{ url_for('readings.view', reading_id=r.id) }}" class="btn btn-outline btn-sm">Leer</a>
+    {% endif %}
+  </div>
 </div>
+{% endfor %}
+<a href="{{ url_for('readings.index') }}" class="muted" style="font-size:0.88rem;">Todas las lecturas →</a>
+{% endif %}
 
-<div class="card">
-  <h3 style="margin-bottom: 1rem;">Lecturas recientes</h3>
-  {% if readings %}
-    {% for r in readings %}
-    <div style="padding: 0.75rem 0; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
-      <div>
-        <strong>{{ r.reading_type.name }}</strong>
-        {% if r.profile %}<span style="color:var(--text-muted); font-size:0.8rem; margin-left:0.5rem;">para {{ r.profile.name }}</span>{% endif %}
-        <div style="color: var(--text-muted); font-size: 0.85rem;">{{ r.created_at.strftime('%d/%m/%Y') }} · {{ r.status }}</div>
-      </div>
-      {% if r.status == 'completed' %}
-      <a href="{{ url_for('readings.view', reading_id=r.id) }}" class="btn btn-outline" style="padding: 0.3rem 0.8rem; font-size: 0.85rem;">Ver</a>
-      {% endif %}
-    </div>
-    {% endfor %}
-    <a href="{{ url_for('readings.index') }}" style="font-size: 0.9rem; margin-top: 0.75rem; display: inline-block;">Todas las lecturas →</a>
-  {% else %}
-    <p style="color: var(--text-muted);">Sin lecturas aún. <a href="{{ url_for('main.profiles') }}">Genera una →</a></p>
-  {% endif %}
-</div>
 {% endblock %}

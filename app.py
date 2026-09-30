@@ -59,10 +59,16 @@ def _register_hooks(app):
     def inject_notifications():
         if not current_user.is_authenticated:
             return {}
-        from models import Notification
+        from models import Notification, Entitlement
         count = Notification.query.filter_by(
             user_id=current_user.id, read_at=None).count()
-        return {'unread_count': count}
+        credits = {'natal': 0, 'complete': 0}
+        for e in Entitlement.query.filter_by(user_id=current_user.id,
+                                             profile_a_id=None).all():
+            credits[e.product] = credits.get(e.product, 0) + 1
+        return {'unread_count': count,
+                'credit_natal': credits['natal'],
+                'credit_pack': credits['complete']}
 
     @app.after_request
     def set_headers(response):

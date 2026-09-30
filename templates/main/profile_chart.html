@@ -1,68 +1,115 @@
 {% extends "base.html" %}
-{% block title %}Carta de {{ p.name }} — Astronode{% endblock %}
+{% block title %}{{ p.name }} — Carta Natal — Astronode{% endblock %}
 
 {% block extra_css %}
 <style>
-  .chart-img-wrap { text-align: center; margin-bottom: 2rem; overflow-x: auto; }
-  .chart-img-wrap svg { max-width: 100%; height: auto; border-radius: 12px; }
-  table.planets { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
-  table.planets th { color: var(--text-muted); text-align: left; padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--border); font-weight: 600; }
-  table.planets td { padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--border); }
-  table.planets tr:last-child td { border-bottom: none; }
-  .sign-pill { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.8rem; background: var(--border); color: var(--accent-light); }
-  .aspects-list { display: flex; flex-wrap: wrap; gap: 0.5rem; }
-  .aspect-tag { background: var(--bg2); border: 1px solid var(--border); border-radius: 6px; padding: 0.3rem 0.6rem; font-size: 0.8rem; color: var(--text-muted); }
-  .aspect-tag strong { color: var(--accent-light); }
-  .autocomplete-dropdown { display:none; position:absolute; top:calc(100% + 4px); left:0; right:0;
-    background:var(--bg2); border:1px solid var(--border); border-radius:8px;
-    max-height:200px; overflow-y:auto; z-index:200; box-shadow:0 8px 24px rgba(0,0,0,0.4); }
-  .autocomplete-item { padding:0.55rem 0.9rem; cursor:pointer; font-size:0.88rem; color:var(--text); border-bottom:1px solid var(--border); }
-  .autocomplete-item:last-child { border-bottom:none; }
-  .autocomplete-item:hover { background:var(--border); }
+  .person-hero { display:flex; align-items:center; gap:1.1rem; margin-bottom:1.75rem; flex-wrap:wrap; }
+  .person-hero .p-avatar { width:64px; height:64px; font-size:1.7rem; }
+  .ai-cta {
+    background: linear-gradient(135deg, rgba(139,92,246,0.16) 0%, rgba(124,58,237,0.07) 100%);
+    border: 1px solid rgba(139,92,246,0.45);
+    border-radius: var(--radius); padding: 1.5rem 1.75rem; margin-bottom: 2rem;
+  }
+  .mini-form { background: var(--bg2); border: 1px solid var(--border-soft); border-radius: 10px; padding: 1rem 1.1rem; margin-bottom: 0.9rem; }
+  .mini-form:last-child { margin-bottom: 0; }
+  .mini-form .title { font-weight: 600; font-size: 0.92rem; margin-bottom: 0.15rem; }
+  .mini-form .desc { color: var(--muted); font-size: 0.8rem; margin-bottom: 0.75rem; }
+  .locked-panel { text-align:center; padding: 2.25rem 1.5rem; }
 </style>
 {% endblock %}
 
 {% block content %}
-<div style="max-width: 860px;">
-  <a href="{{ url_for('main.profiles') }}" style="color:var(--text-muted); font-size:0.9rem;">← Volver a personas</a>
-  <div style="display:flex; justify-content:space-between; align-items:center; margin: 1rem 0 1.5rem;">
-    <h2 style="color: var(--accent-light);">
-      Carta de {{ p.name }}
-      {% if p.is_self %}<span class="self-badge" style="font-size:0.7rem; vertical-align:middle;">TÚ</span>{% endif %}
-    </h2>
-    <a href="{{ url_for('main.profile_edit', profile_id=p.id) }}" class="btn btn-outline btn-sm">Editar perfil</a>
+
+<a href="{{ url_for('main.dashboard') }}" class="muted" style="font-size:0.85rem;">← Tus personas</a>
+
+<div class="person-hero" style="margin-top:1rem;">
+  <div class="p-avatar">{{ p.name[0]|upper }}</div>
+  <div style="flex:1;">
+    <h2 style="font-size:1.9rem;">{{ p.name }}{% if p.is_self %} <span class="self-badge">TÚ</span>{% endif %}</h2>
+    <p class="muted" style="font-size:0.88rem;">
+      {% if p.birth_date %}{{ p.birth_date.strftime('%d/%m/%Y') }}{% if p.birth_time %} · {{ p.birth_time.strftime('%H:%M') }}{% endif %}{% if p.birth_place %} · {{ p.birth_place }}{% endif %}{% endif %}
+    </p>
   </div>
-
-  {% if error %}
-  <div class="card" style="border-color:#e74c3c;">
-    <p>{{ error }}</p>
-    <a href="{{ url_for('main.profile_edit', profile_id=p.id) }}" class="btn btn-primary" style="margin-top:0.75rem;">Completar datos de nacimiento →</a>
+  <div style="display:flex; gap:0.6rem;">
+    {% if p.birth_date %}<span class="sign-pill" style="align-self:center;">☉ {{ p.sun_sign }}</span>{% endif %}
+    <a href="{{ url_for('main.profile_edit', profile_id=p.id) }}" class="btn btn-subtle btn-sm">Editar</a>
   </div>
+</div>
 
-  {% elif result %}
+{# ── AI reading CTA ── #}
+<div class="ai-cta">
+  <div style="display:flex; justify-content:space-between; align-items:center; gap:1.25rem; flex-wrap:wrap;">
+    <div style="flex:1; min-width:240px;">
+      <h3 style="font-size:1.25rem; margin-bottom:0.25rem;">Lectura natal de {{ p.name }}</h3>
+      <p class="muted" style="font-size:0.88rem;">
+        13 capítulos · ~30 páginas en español · planetas, casas y aspectos interpretados · PDF incluido.
+        {% if covered_natal %}Incluida en tu acceso.{% elif credit_natal %}Usa tu crédito disponible.{% endif %}
+      </p>
+    </div>
+    {% if covered_natal or credit_natal %}
+    <form method="POST" action="{{ url_for('readings.request_reading', reading_type_id=rt_natal.id) if rt_natal else '#' }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="profile_id" value="{{ p.id }}">
+      <button type="submit" class="btn btn-primary" style="font-size:0.95rem; padding:0.75rem 1.6rem;">✦ Generar lectura</button>
+    </form>
+    {% else %}
+    <form method="POST" action="{{ url_for('billing.checkout', product='natal') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit" class="btn btn-gold" style="font-size:0.95rem; padding:0.75rem 1.6rem;">Generar lectura — $7.99</button>
+    </form>
+    {% endif %}
+  </div>
+</div>
 
+{# ── Existing readings for this person ── #}
+{% if readings %}
+<div class="section-label" style="margin-top:0;">Lecturas de {{ p.name }}</div>
+{% for r in readings %}
+<div class="card" style="display:flex; justify-content:space-between; align-items:center; gap:1rem; padding:1rem 1.3rem;">
+  <div>
+    <strong style="font-size:0.92rem;">{{ r.reading_type.name }}</strong>
+    <div class="muted" style="font-size:0.78rem; margin-top:0.1rem;">{{ r.created_at.strftime('%d/%m/%Y') }}</div>
+  </div>
+  <div style="display:flex; align-items:center; gap:0.7rem;">
+    <span class="status-pill status-{{ r.status }}">{{ {'completed':'Lista','generating':'Generando','failed':'Error','pending':'En cola'}.get(r.status, r.status) }}</span>
+    {% if r.status == 'completed' %}<a href="{{ url_for('readings.view', reading_id=r.id) }}" class="btn btn-outline btn-sm">Leer</a>{% endif %}
+  </div>
+</div>
+{% endfor %}
+{% endif %}
+
+{% if error %}
+<div class="card" style="border-color:rgba(224,86,107,0.5); margin-top:1.5rem;">
+  <p>{{ error }}</p>
+  <a href="{{ url_for('main.profile_edit', profile_id=p.id) }}" class="btn btn-gold" style="margin-top:0.9rem;">Completar datos de nacimiento →</a>
+</div>
+
+{% elif result %}
+
+{# ── Documented chart (free) ── #}
+<div class="section-label">Su carta — documentada, sin IA</div>
+
+<div class="card" style="padding:1.25rem;">
   {% if result.chart_image %}
-  <div class="chart-img-wrap card" style="padding:1rem;">
-    {{ result.chart_image | safe }}
-  </div>
+  <div class="chart-img-wrap">{{ result.chart_image | safe }}</div>
   {% endif %}
+</div>
 
-  <div class="card">
-    <h3 style="margin-bottom:1rem; color:var(--accent-light); font-size:0.85rem; text-transform:uppercase; letter-spacing:1px;">Posiciones Planetarias</h3>
+<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:1.1rem;">
+  <div class="card" style="margin-bottom:0;">
+    <h3 style="font-size:0.78rem; text-transform:uppercase; letter-spacing:1.8px; color:var(--muted); margin-bottom:1rem;">Posiciones planetarias</h3>
     <table class="planets">
-      <thead>
-        <tr><th>Planeta</th><th>Signo</th><th>Grado</th><th>Casa</th></tr>
-      </thead>
+      <thead><tr><th>Planeta</th><th>Signo</th><th>Grado</th><th>Casa</th></tr></thead>
       <tbody>
-        {% set planet_order = ['Sun','Moon','Mercury','Venus','Mars','Jupiter','Saturn','Uranus','Neptune','Pluto','Chiron','Ascendant','MC'] %}
-        {% for name in planet_order %}
+        {% set planet_names = {'Sun':'☉ Sol','Moon':'☽ Luna','Mercury':'☿ Mercurio','Venus':'♀ Venus','Mars':'♂ Marte','Jupiter':'♃ Júpiter','Saturn':'♄ Saturno','Uranus':'♅ Urano','Neptune':'♆ Neptuno','Pluto':'♇ Plutón','Chiron':'⚷ Quirón','Ascendant':'Asc','MC':'MC'} %}
+        {% for name in ['Sun','Moon','Mercury','Venus','Mars','Jupiter','Saturn','Uranus','Neptune','Pluto','Chiron','Ascendant','MC'] %}
           {% if name in result.positions %}
           {% set p2 = result.positions[name] %}
           <tr>
-            <td><strong>{{ name }}</strong></td>
+            <td>{{ planet_names.get(name, name) }}</td>
             <td><span class="sign-pill">{{ p2.sign }}</span></td>
-            <td>{{ "%.1f"|format(p2.longitude % 30) }}°</td>
-            <td>{% if p2.house and p2.house != 'Unknown' %}Casa {{ p2.house }}{% else %}—{% endif %}</td>
+            <td class="muted">{{ "%.1f"|format(p2.longitude % 30) }}°</td>
+            <td class="muted">{% if p2.house and p2.house != 'Unknown' %}{{ p2.house }}{% else %}—{% endif %}</td>
           </tr>
           {% endif %}
         {% endfor %}
@@ -70,254 +117,221 @@
     </table>
   </div>
 
-  <div class="card">
-    <h3 style="margin-bottom:1rem; color:var(--accent-light); font-size:0.85rem; text-transform:uppercase; letter-spacing:1px;">Cúspides de Casas</h3>
-    <div style="display:flex; flex-wrap:wrap; gap:0.5rem;">
-      {% for i in range(1, 13) %}
-      {% if i in result.house_cusps %}
-      <div style="background:var(--bg2); border:1px solid var(--border); border-radius:6px; padding:0.4rem 0.8rem; font-size:0.85rem;">
-        <span style="color:var(--text-muted);">Casa {{ i }}</span>
-        <strong style="margin-left:0.5rem; color:var(--accent-light);">{{ "%.1f"|format(result.house_cusps[i]) }}°</strong>
-      </div>
-      {% endif %}
-      {% endfor %}
-    </div>
-  </div>
-
-  {% if age_point %}
-  {% set planet_es = {
-    'Sun': '☉ Sol', 'Moon': '☽ Luna', 'Mercury': '☿ Mercurio',
-    'Venus': '♀ Venus', 'Mars': '♂ Marte', 'Jupiter': '♃ Júpiter',
-    'Saturn': '♄ Saturno', 'Uranus': '♅ Urano', 'Neptune': '♆ Neptuno',
-    'Pluto': '♇ Plutón', 'Chiron': '⚷ Quirón',
-    'Ascendant': 'Asc', 'North_Node': '☊ N.Norte', 'South_Node': '☋ N.Sur'
-  } %}
-  <div class="card" style="border-color: var(--accent);">
-    <h3 style="margin-bottom:1.25rem; color:var(--accent-light); font-size:0.85rem; text-transform:uppercase; letter-spacing:1px;">✦ Punto de Edad · Método Huber</h3>
-
-    <div style="display:flex; gap:0.75rem; flex-wrap:wrap; margin-bottom:1.25rem;">
-      <div style="background:var(--bg2); border:1px solid var(--border); border-radius:8px; padding:0.75rem 1rem; flex:1; min-width:120px;">
-        <div style="font-size:0.68rem; text-transform:uppercase; letter-spacing:1px; color:var(--text-muted); margin-bottom:0.3rem;">Edad</div>
-        <div style="font-size:1.4rem; font-weight:700; color:var(--text);">{{ age_point.age }}</div>
-        <div style="font-size:0.75rem; color:var(--text-muted);">ciclo {{ age_point.cycle }}</div>
-      </div>
-      <div style="background:var(--bg2); border:1px solid var(--border); border-radius:8px; padding:0.75rem 1rem; flex:1; min-width:120px;">
-        <div style="font-size:0.68rem; text-transform:uppercase; letter-spacing:1px; color:var(--text-muted); margin-bottom:0.3rem;">Casa actual</div>
-        <div style="font-size:1.4rem; font-weight:700; color:var(--accent-light);">Casa {{ age_point.house }}</div>
-        <div style="font-size:0.75rem; color:var(--text-muted);">{{ age_point.degree }}° {{ age_point.sign }}</div>
-      </div>
-      <div style="background:var(--bg2); border:1px solid var(--border); border-radius:8px; padding:0.75rem 1rem; flex:2; min-width:180px;">
-        <div style="font-size:0.68rem; text-transform:uppercase; letter-spacing:1px; color:var(--text-muted); margin-bottom:0.3rem;">Tránsito por Casa {{ age_point.house }}</div>
-        <div style="font-size:0.88rem; font-weight:600; color:var(--text);">{{ age_point.house_entry_age }} → {{ age_point.house_exit_age }} años</div>
-        <div style="background:var(--border); border-radius:4px; height:5px; margin-top:0.5rem; overflow:hidden;">
-          <div style="background:var(--accent); border-radius:4px; height:5px; width:{{ age_point.progress_in_house }}%;"></div>
+  <div>
+    <div class="card">
+      <h3 style="font-size:0.78rem; text-transform:uppercase; letter-spacing:1.8px; color:var(--muted); margin-bottom:1rem;">Cúspides de casas</h3>
+      <div style="display:flex; flex-wrap:wrap; gap:0.45rem;">
+        {% for i in range(1, 13) %}
+        {% if i in result.house_cusps %}
+        <div style="background:var(--bg2); border:1px solid var(--border-soft); border-radius:8px; padding:0.35rem 0.7rem; font-size:0.8rem;">
+          <span class="muted">{{ i }}</span>
+          <strong style="margin-left:0.4rem; color:var(--violet-hi);">{{ "%.0f"|format(result.house_cusps[i]) }}°</strong>
         </div>
-        <div style="font-size:0.72rem; color:var(--text-muted); margin-top:0.3rem;">{{ age_point.progress_in_house }}% completado</div>
+        {% endif %}
+        {% endfor %}
       </div>
     </div>
 
-    {% if age_point.current_aspects %}
-    <div style="margin-bottom:1rem;">
-      <div style="font-size:0.7rem; text-transform:uppercase; letter-spacing:1px; color:var(--text-muted); margin-bottom:0.5rem;">Aspectos activos (orbe ≤ 3°)</div>
-      <div style="display:flex; flex-wrap:wrap; gap:0.4rem;">
-        {% for asp in age_point.current_aspects %}
-        <span style="background:var(--border); border:1px solid var(--accent); border-radius:6px; padding:0.3rem 0.65rem; font-size:0.82rem; color:var(--accent-light);">
-          PA {{ asp.aspect }} {{ planet_es.get(asp.planet, asp.planet) }}
-          <span style="color:var(--text-muted); font-size:0.75rem;">({{ asp.orb }}°)</span>
-        </span>
+    {% if result.aspects %}
+    <div class="card">
+      <h3 style="font-size:0.78rem; text-transform:uppercase; letter-spacing:1.8px; color:var(--muted); margin-bottom:1rem;">Aspectos principales</h3>
+      <div class="aspects-list">
+        {% for asp in result.aspects %}
+        <div class="aspect-tag">
+          <strong>{{ asp.p1 }}</strong> {{ asp.aspect }} <strong>{{ asp.p2 }}</strong>
+          <span style="opacity:0.7; font-size:0.72rem;">{{ asp.orb }}°</span>
+        </div>
         {% endfor %}
       </div>
     </div>
     {% endif %}
+  </div>
+</div>
 
-    {% if age_point.upcoming_aspects %}
-    <div>
-      <div style="font-size:0.7rem; text-transform:uppercase; letter-spacing:1px; color:var(--text-muted); margin-bottom:0.5rem;">Próximos aspectos — 5 años</div>
-      {% for asp in age_point.upcoming_aspects %}
-      <div style="display:flex; align-items:center; gap:0.75rem; padding:0.35rem 0; border-bottom:1px solid var(--border); font-size:0.84rem; flex-wrap:wrap;">
-        <span style="color:var(--text-muted); min-width:56px; font-size:0.78rem;">{{ asp.date }}</span>
-        <span style="color:var(--accent-light); font-weight:600;">PA {{ asp.aspect }}</span>
-        <span style="color:var(--text);">{{ planet_es.get(asp.planet, asp.planet) }}</span>
-        <span style="color:var(--text-muted); font-size:0.76rem; margin-left:auto;">edad {{ asp.age }} · en {{ asp.years_away }} a.</span>
+{% if age_point %}
+{% set planet_es = {'Sun':'☉ Sol','Moon':'☽ Luna','Mercury':'☿ Mercurio','Venus':'♀ Venus','Mars':'♂ Marte','Jupiter':'♃ Júpiter','Saturn':'♄ Saturno','Uranus':'♅ Urano','Neptune':'♆ Neptuno','Pluto':'♇ Plutón','Chiron':'⚷ Quirón','Ascendant':'Asc','North_Node':'☊ N.Norte','South_Node':'☋ N.Sur'} %}
+<div class="card gold" style="margin-top:1.1rem;">
+  <h3 style="font-size:0.78rem; text-transform:uppercase; letter-spacing:1.8px; color:var(--gold); margin-bottom:1.25rem;">✦ Punto de Edad · Método Huber</h3>
+  <div style="display:flex; gap:0.75rem; flex-wrap:wrap; margin-bottom:1.25rem;">
+    <div style="background:var(--bg2); border:1px solid var(--border-soft); border-radius:10px; padding:0.75rem 1rem; flex:1; min-width:120px;">
+      <div class="muted" style="font-size:0.65rem; text-transform:uppercase; letter-spacing:1px; margin-bottom:0.25rem;">Edad</div>
+      <div style="font-size:1.35rem; font-weight:700;">{{ age_point.age }}</div>
+      <div class="muted" style="font-size:0.72rem;">ciclo {{ age_point.cycle }}</div>
+    </div>
+    <div style="background:var(--bg2); border:1px solid var(--border-soft); border-radius:10px; padding:0.75rem 1rem; flex:1; min-width:120px;">
+      <div class="muted" style="font-size:0.65rem; text-transform:uppercase; letter-spacing:1px; margin-bottom:0.25rem;">Casa actual</div>
+      <div style="font-size:1.35rem; font-weight:700; color:var(--gold);">Casa {{ age_point.house }}</div>
+      <div class="muted" style="font-size:0.72rem;">{{ age_point.degree }}° {{ age_point.sign }}</div>
+    </div>
+    <div style="background:var(--bg2); border:1px solid var(--border-soft); border-radius:10px; padding:0.75rem 1rem; flex:2; min-width:180px;">
+      <div class="muted" style="font-size:0.65rem; text-transform:uppercase; letter-spacing:1px; margin-bottom:0.25rem;">Tránsito por Casa {{ age_point.house }}</div>
+      <div style="font-size:0.86rem; font-weight:600;">{{ age_point.house_entry_age }} → {{ age_point.house_exit_age }} años</div>
+      <div style="background:var(--border); border-radius:4px; height:5px; margin-top:0.5rem; overflow:hidden;">
+        <div style="background:var(--gold); height:5px; width:{{ age_point.progress_in_house }}%;"></div>
       </div>
+      <div class="muted" style="font-size:0.7rem; margin-top:0.3rem;">{{ age_point.progress_in_house }}% completado</div>
+    </div>
+  </div>
+  {% if age_point.current_aspects %}
+  <div style="margin-bottom:1rem;">
+    <div class="muted" style="font-size:0.68rem; text-transform:uppercase; letter-spacing:1px; margin-bottom:0.5rem;">Aspectos activos (orbe ≤ 3°)</div>
+    <div style="display:flex; flex-wrap:wrap; gap:0.4rem;">
+      {% for asp in age_point.current_aspects %}
+      <span class="aspect-tag">PA {{ asp.aspect }} {{ planet_es.get(asp.planet, asp.planet) }} <span style="opacity:0.7;">({{ asp.orb }}°)</span></span>
       {% endfor %}
     </div>
-    {% endif %}
+  </div>
+  {% endif %}
+  {% if age_point.upcoming_aspects %}
+  <div>
+    <div class="muted" style="font-size:0.68rem; text-transform:uppercase; letter-spacing:1px; margin-bottom:0.5rem;">Próximos aspectos — 5 años</div>
+    {% for asp in age_point.upcoming_aspects %}
+    <div style="display:flex; align-items:center; gap:0.75rem; padding:0.35rem 0; border-bottom:1px solid var(--border-soft); font-size:0.84rem; flex-wrap:wrap;">
+      <span class="muted" style="min-width:56px; font-size:0.76rem;">{{ asp.date }}</span>
+      <span style="color:var(--gold); font-weight:600;">PA {{ asp.aspect }}</span>
+      <span>{{ planet_es.get(asp.planet, asp.planet) }}</span>
+      <span class="muted" style="font-size:0.74rem; margin-left:auto;">edad {{ asp.age }} · en {{ asp.years_away }} a.</span>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+  <p class="muted" style="font-size:0.72rem; margin-top:1rem; border-top:1px solid var(--border-soft); padding-top:0.75rem;">
+    El Punto de Edad (Huber) se desplaza por las 12 casas en ciclos de 72 años, señalando procesos internos de crecimiento en cada etapa de la vida.
+  </p>
+</div>
+{% endif %}
 
-    <p style="color:var(--text-muted); font-size:0.75rem; margin-top:1rem; border-top:1px solid var(--border); padding-top:0.75rem;">
-      El Punto de Edad (Huber) se desplaza por las 12 casas en ciclos de 72 años, señalando procesos internos de crecimiento en cada etapa de la vida.
-    </p>
+{# ── Pack readings ── #}
+{% if rt_karmic or rt_sol or rt_lun or rt_sat or rt_jup %}
+<div class="section-label">Lecturas del pack completo</div>
+
+{% if covered_pack or credit_pack %}
+<div class="card">
+  <div class="mini-form">
+    <div class="title">Carta Kármica</div>
+    <div class="desc">Nodos, Quirón y Saturno — la misión del alma y los patrones que llegan a transformarse.</div>
+    {% if rt_karmic %}
+    <form method="POST" action="{{ url_for('readings.request_reading', reading_type_id=rt_karmic.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="profile_id" value="{{ p.id }}">
+      <button type="submit" class="btn btn-primary btn-sm">Generar →</button>
+    </form>
+    {% endif %}
+  </div>
+
+  {% if rt_sol %}
+  <div class="mini-form">
+    <div class="title">Revolución Solar</div>
+    <div class="desc">El tema y las áreas de vida de un año completo, desde el retorno del Sol a su posición natal.</div>
+    <form method="POST" action="{{ url_for('readings.request_reading', reading_type_id=rt_sol.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="profile_id" value="{{ p.id }}">
+      <div style="display:flex; gap:0.75rem; flex-wrap:wrap; align-items:flex-end;">
+        <div class="form-group" style="flex:0 0 100px;">
+          <label>Año</label>
+          <input type="number" name="year" min="2000" max="2100" value="{{ now.year }}">
+        </div>
+        <div class="form-group" style="flex:1; min-width:180px; position:relative;">
+          <label>Ubicación ese día</label>
+          <input type="text" id="sr-display" autocomplete="off" placeholder="p.ej. Barcelona, España">
+          <input type="hidden" name="sr_place" id="sr-place">
+          <input type="hidden" name="sr_lat" id="sr-lat">
+          <input type="hidden" name="sr_lng" id="sr-lng">
+          <div id="sr-dropdown" class="autocomplete-dropdown"></div>
+        </div>
+        <button type="submit" class="btn btn-primary btn-sm">Calcular RS →</button>
+      </div>
+    </form>
   </div>
   {% endif %}
 
-  {% if result.aspects %}
-  <div class="card">
-    <h3 style="margin-bottom:1rem; color:var(--accent-light); font-size:0.85rem; text-transform:uppercase; letter-spacing:1px;">Aspectos Principales</h3>
-    <div class="aspects-list">
-      {% for asp in result.aspects %}
-      <div class="aspect-tag">
-        <strong>{{ asp.p1 }}</strong> {{ asp.aspect }} <strong>{{ asp.p2 }}</strong>
-        <span style="color:var(--text-muted); font-size:0.75rem;">(orb {{ asp.orb }}°)</span>
+  {% if rt_lun %}
+  <div class="mini-form">
+    <div class="title">Revolución Lunar</div>
+    <div class="desc">El tono emocional y el tema de un mes, desde el retorno de la Luna a su posición natal.</div>
+    <form method="POST" action="{{ url_for('readings.request_reading', reading_type_id=rt_lun.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="profile_id" value="{{ p.id }}">
+      <div style="display:flex; gap:0.75rem; flex-wrap:wrap; align-items:flex-end;">
+        <div class="form-group" style="flex:0 0 100px;">
+          <label>Año</label>
+          <input type="number" name="year" min="2000" max="2100" value="{{ now.year }}">
+        </div>
+        <div class="form-group" style="flex:0 0 140px;">
+          <label>Mes</label>
+          <select name="month">
+            {% for m, mn in [(1,'Enero'),(2,'Febrero'),(3,'Marzo'),(4,'Abril'),(5,'Mayo'),(6,'Junio'),(7,'Julio'),(8,'Agosto'),(9,'Septiembre'),(10,'Octubre'),(11,'Noviembre'),(12,'Diciembre')] %}
+            <option value="{{ m }}" {% if m == now.month %}selected{% endif %}>{{ mn }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group" style="flex:1; min-width:180px; position:relative;">
+          <label>Ubicación ese mes</label>
+          <input type="text" id="lr-display" autocomplete="off" placeholder="p.ej. Barcelona, España">
+          <input type="hidden" name="lr_place" id="lr-place">
+          <input type="hidden" name="lr_lat" id="lr-lat">
+          <input type="hidden" name="lr_lng" id="lr-lng">
+          <div id="lr-dropdown" class="autocomplete-dropdown"></div>
+        </div>
+        <button type="submit" class="btn btn-primary btn-sm">Calcular RL →</button>
       </div>
-      {% endfor %}
-    </div>
+    </form>
   </div>
   {% endif %}
 
-  {% if reading_types %}
-  {% set rt_natal  = reading_types | selectattr('slug','equalto','natal')          | first %}
-  {% set rt_karmic = reading_types | selectattr('slug','equalto','karmic')         | first %}
-  {% set rt_sol    = reading_types | selectattr('slug','equalto','solar_return')   | first %}
-  {% set rt_lun    = reading_types | selectattr('slug','equalto','lunar_return')   | first %}
-  {% set rt_sat    = reading_types | selectattr('slug','equalto','saturn_return')  | first %}
-  {% set rt_jup    = reading_types | selectattr('slug','equalto','jupiter_return') | first %}
-
-  <div class="card" style="border-color:var(--accent);">
-    <h3 style="color:var(--accent-light); margin-bottom:1.25rem;">Generar lectura para {{ p.name }}</h3>
-
-    {# ── Carta Astral + Carta Kármica ── #}
-    {% if rt_natal or rt_karmic %}
-    <div style="display:flex; gap:1rem; flex-wrap:wrap; margin-bottom:1.5rem;">
-      {% if rt_natal %}
-      <div style="flex:1; min-width:200px; background:var(--bg2); border:1px solid var(--border); border-radius:10px; padding:1rem;">
-        <div style="font-weight:600; margin-bottom:0.3rem;">Carta Astral</div>
-        <div style="color:var(--text-muted); font-size:0.83rem; margin-bottom:0.9rem;">Interpretación completa de tu carta natal — todos los planetas, casas y aspectos.</div>
-        <form method="POST" action="{{ url_for('readings.request_reading', reading_type_id=rt_natal.id) }}">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <input type="hidden" name="profile_id" value="{{ p.id }}">
-          <button type="submit" class="btn btn-primary" style="width:100%;">Generar →</button>
-        </form>
-      </div>
-      {% endif %}
-      {% if rt_karmic %}
-      <div style="flex:1; min-width:200px; background:var(--bg2); border:1px solid var(--border); border-radius:10px; padding:1rem;">
-        <div style="font-weight:600; margin-bottom:0.3rem;">Carta Kármica</div>
-        <div style="color:var(--text-muted); font-size:0.83rem; margin-bottom:0.9rem;">Nodos, Quirón, Saturno y patrones del alma — el propósito kármico de tu vida.</div>
-        <form method="POST" action="{{ url_for('readings.request_reading', reading_type_id=rt_karmic.id) }}">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <input type="hidden" name="profile_id" value="{{ p.id }}">
-          <button type="submit" class="btn btn-primary" style="width:100%;">Generar →</button>
-        </form>
-      </div>
-      {% endif %}
-    </div>
-    {% endif %}
-
-    {# ── Revolución Solar ── #}
-    {% if rt_sol %}
-    <div style="background:var(--bg2); border:1px solid var(--border); border-radius:10px; padding:1rem; margin-bottom:1rem;">
-      <div style="font-weight:600; margin-bottom:0.3rem;">Revolución Solar</div>
-      <div style="color:var(--text-muted); font-size:0.83rem; margin-bottom:0.9rem;">El tema y las áreas de vida de un año completo, a partir del retorno del Sol a su posición natal.</div>
-      <form method="POST" action="{{ url_for('readings.request_reading', reading_type_id=rt_sol.id) }}">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <input type="hidden" name="profile_id" value="{{ p.id }}">
-        <div style="display:flex; gap:0.75rem; flex-wrap:wrap; align-items:flex-end;">
-          <div style="display:flex; flex-direction:column; gap:0.25rem;">
-            <label style="font-size:0.75rem; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">Año</label>
-            <input type="number" name="year" min="2000" max="2100" value="{{ now.year }}"
-                   style="width:90px; padding:0.5rem 0.7rem; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text);">
-          </div>
-          <div style="display:flex; flex-direction:column; gap:0.25rem; flex:1; min-width:160px; position:relative;">
-            <label style="font-size:0.75rem; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">Ubicación ese día</label>
-            <input type="text" id="sr-display" autocomplete="off" placeholder="p.ej. Barcelona, España"
-                   style="padding:0.5rem 0.7rem; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text);">
-            <input type="hidden" name="sr_place" id="sr-place">
-            <input type="hidden" name="sr_lat"   id="sr-lat">
-            <input type="hidden" name="sr_lng"   id="sr-lng">
-            <div id="sr-dropdown" class="autocomplete-dropdown"></div>
-          </div>
-          <button type="submit" class="btn btn-primary">Calcular RS →</button>
+  {% if rt_sat %}
+  <div class="mini-form">
+    <div class="title">Retorno de Saturno</div>
+    <div class="desc">Cada ~29.5 años. Cada paso exacto —directo y retrógrado— genera su propia lectura. Indica el inicio de la ventana de 10 años.</div>
+    <form method="POST" action="{{ url_for('readings.request_reading', reading_type_id=rt_sat.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="profile_id" value="{{ p.id }}">
+      <div style="display:flex; gap:0.75rem; flex-wrap:wrap; align-items:flex-end;">
+        <div class="form-group" style="flex:0 0 130px;">
+          <label>Inicio de la ventana</label>
+          <input type="number" name="decade_start" min="1950" max="2080" value="{{ now.year }}">
         </div>
-      </form>
-    </div>
-    {% endif %}
-
-    {# ── Revolución Lunar ── #}
-    {% if rt_lun %}
-    <div style="background:var(--bg2); border:1px solid var(--border); border-radius:10px; padding:1rem;">
-      <div style="font-weight:600; margin-bottom:0.3rem;">Revolución Lunar</div>
-      <div style="color:var(--text-muted); font-size:0.83rem; margin-bottom:0.9rem;">El tono emocional y el tema de un mes, a partir del retorno de la Luna a su posición natal.</div>
-      <form method="POST" action="{{ url_for('readings.request_reading', reading_type_id=rt_lun.id) }}">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <input type="hidden" name="profile_id" value="{{ p.id }}">
-        <div style="display:flex; gap:0.75rem; flex-wrap:wrap; align-items:flex-end;">
-          <div style="display:flex; flex-direction:column; gap:0.25rem;">
-            <label style="font-size:0.75rem; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">Año</label>
-            <input type="number" name="year" min="2000" max="2100" value="{{ now.year }}"
-                   style="width:90px; padding:0.5rem 0.7rem; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text);">
-          </div>
-          <div style="display:flex; flex-direction:column; gap:0.25rem;">
-            <label style="font-size:0.75rem; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">Mes</label>
-            <select name="month" style="padding:0.5rem 0.7rem; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text);">
-              {% for m, mn in [(1,'Enero'),(2,'Febrero'),(3,'Marzo'),(4,'Abril'),(5,'Mayo'),(6,'Junio'),(7,'Julio'),(8,'Agosto'),(9,'Septiembre'),(10,'Octubre'),(11,'Noviembre'),(12,'Diciembre')] %}
-              <option value="{{ m }}" {% if m == now.month %}selected{% endif %}>{{ mn }}</option>
-              {% endfor %}
-            </select>
-          </div>
-          <div style="display:flex; flex-direction:column; gap:0.25rem; flex:1; min-width:160px; position:relative;">
-            <label style="font-size:0.75rem; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">Ubicación ese mes</label>
-            <input type="text" id="lr-display" autocomplete="off" placeholder="p.ej. Barcelona, España"
-                   style="padding:0.5rem 0.7rem; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text);">
-            <input type="hidden" name="lr_place" id="lr-place">
-            <input type="hidden" name="lr_lat"   id="lr-lat">
-            <input type="hidden" name="lr_lng"   id="lr-lng">
-            <div id="lr-dropdown" class="autocomplete-dropdown"></div>
-          </div>
-          <button type="submit" class="btn btn-primary">Calcular RL →</button>
-        </div>
-      </form>
-    </div>
-    {% endif %}
-
-    {# ── Retorno de Saturno ── #}
-    {% if rt_sat %}
-    <div style="background:var(--bg2); border:1px solid var(--border); border-radius:10px; padding:1rem; margin-top:1rem;">
-      <div style="font-weight:600; margin-bottom:0.3rem;">Retorno de Saturno</div>
-      <div style="color:var(--text-muted); font-size:0.83rem; margin-bottom:0.9rem;">
-        Saturno vuelve a su posición natal cada ~29.5 años. Cada paso exacto —directo y retrógrado— genera su propia lectura. Indica el inicio de la ventana de 10 años que quieres analizar.
+        <button type="submit" class="btn btn-primary btn-sm">Calcular Saturno →</button>
       </div>
-      <form method="POST" action="{{ url_for('readings.request_reading', reading_type_id=rt_sat.id) }}">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <input type="hidden" name="profile_id" value="{{ p.id }}">
-        <div style="display:flex; gap:0.75rem; flex-wrap:wrap; align-items:flex-end;">
-          <div style="display:flex; flex-direction:column; gap:0.25rem;">
-            <label style="font-size:0.75rem; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">Inicio de la ventana</label>
-            <input type="number" name="decade_start" min="1950" max="2080" value="{{ now.year }}"
-                   style="width:110px; padding:0.5rem 0.7rem; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text);">
-          </div>
-          <button type="submit" class="btn btn-primary">Calcular Saturno →</button>
-        </div>
-      </form>
-    </div>
-    {% endif %}
-
-    {# ── Retorno de Júpiter ── #}
-    {% if rt_jup %}
-    <div style="background:var(--bg2); border:1px solid var(--border); border-radius:10px; padding:1rem; margin-top:1rem;">
-      <div style="font-weight:600; margin-bottom:0.3rem;">Retorno de Júpiter</div>
-      <div style="color:var(--text-muted); font-size:0.83rem; margin-bottom:0.9rem;">
-        Júpiter vuelve a su posición natal cada ~12 años. Cada paso —incluyendo los retrógrados— genera su propia lectura sobre el ciclo de expansión que se abre.
-      </div>
-      <form method="POST" action="{{ url_for('readings.request_reading', reading_type_id=rt_jup.id) }}">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <input type="hidden" name="profile_id" value="{{ p.id }}">
-        <div style="display:flex; gap:0.75rem; flex-wrap:wrap; align-items:flex-end;">
-          <div style="display:flex; flex-direction:column; gap:0.25rem;">
-            <label style="font-size:0.75rem; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">Inicio de la ventana</label>
-            <input type="number" name="decade_start" min="1950" max="2080" value="{{ now.year }}"
-                   style="width:110px; padding:0.5rem 0.7rem; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text);">
-          </div>
-          <button type="submit" class="btn btn-primary">Calcular Júpiter →</button>
-        </div>
-      </form>
-    </div>
-    {% endif %}
-
+    </form>
   </div>
   {% endif %}
 
+  {% if rt_jup %}
+  <div class="mini-form">
+    <div class="title">Retorno de Júpiter</div>
+    <div class="desc">Cada ~12 años. Cada paso —incluyendo los retrógrados— genera su propia lectura sobre el ciclo de expansión que se abre.</div>
+    <form method="POST" action="{{ url_for('readings.request_reading', reading_type_id=rt_jup.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="profile_id" value="{{ p.id }}">
+      <div style="display:flex; gap:0.75rem; flex-wrap:wrap; align-items:flex-end;">
+        <div class="form-group" style="flex:0 0 130px;">
+          <label>Inicio de la ventana</label>
+          <input type="number" name="decade_start" min="1950" max="2080" value="{{ now.year }}">
+        </div>
+        <button type="submit" class="btn btn-primary btn-sm">Calcular Júpiter →</button>
+      </div>
+    </form>
+  </div>
   {% endif %}
 </div>
+
+{% else %}
+<div class="card locked-panel">
+  <div style="font-size:1.5rem; color:var(--gold); margin-bottom:0.6rem;">✦</div>
+  <h3 style="font-size:1.25rem; margin-bottom:0.4rem;">Kármica, Revoluciones y Retornos</h3>
+  <p class="muted" style="font-size:0.88rem; max-width:420px; margin:0 auto 1.4rem;">
+    Estas lecturas forman parte del pack completo: Carta Kármica, 10 Revoluciones Solares, 12 Lunares y los Retornos de Saturno y Júpiter — para {{ p.name }} y otra persona.
+  </p>
+  <form method="POST" action="{{ url_for('billing.checkout', product='complete') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button type="submit" class="btn btn-gold">Desbloquear el pack — $17.99</button>
+  </form>
+</div>
+{% endif %}
+{% endif %}
+
+{% endif %}
 {% endblock %}
 
 {% block extra_js %}

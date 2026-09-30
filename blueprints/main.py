@@ -15,16 +15,38 @@ MAX_PROFILES = 25
 @main_bp.route('/dashboard')
 @login_required
 def dashboard():
-    from models import Entitlement, Reading, Profile
+    from models import Reading, Profile
+    from blueprints.readings import _coverage_sets
     readings = Reading.query.filter_by(user_id=current_user.id)\
+                            .options(defer_blobs())\
                             .order_by(Reading.created_at.desc()).limit(5).all()
     profiles = Profile.query.filter_by(user_id=current_user.id)\
                             .order_by(Profile.is_self.desc(), Profile.created_at.asc()).all()
-    unassigned = Entitlement.query.filter_by(user_id=current_user.id,
-                                             profile_a_id=None)\
-                                  .order_by(Entitlement.created_at.asc()).all()
+    unassigned = _unassigned_entitlements()
+    natal_cov, pack_cov, _ = _coverage_sets(current_user)
+    coverage = {}
+    for p in profiles:
+        if current_user.tier == 'complete' or p.id in pack_cov:
+            coverage[p.id] = 'pack'
+        elif current_user.tier == 'natal' or p.id in natal_cov:
+            coverage[p.id] = 'natal'
+        else:
+            coverage[p.id] = None
     return render_template('main/dashboard.html', readings=readings, profiles=profiles,
-                           unassigned=unassigned)
+                           unassigned=unassigned, coverage=coverage)
+
+
+def defer_blobs():
+    from sqlalchemy.orm import defer
+    from models import Reading
+    return (defer(Reading.chart_image), defer(Reading.chart_png),
+            defer(Reading.pdf_content), defer(Reading.content))
+
+
+def _unassigned_entitlements():
+    from models import Entitlement
+    return Entitlement.query.filter_by(user_id=current_user.id, profile_a_id=None)\
+                            .order_by(Entitlement.created_at.asc()).all()
 
 
 # ── Entitlements (purchase credits) ──────────────────────────────────────────
@@ -253,29 +275,86 @@ def profile_chart(profile_id):
     else:
         error = 'Este perfil necesita fecha y lugar de nacimiento para calcular la carta.'
 
-    from models import ReadingType
+    from models import Reading, ReadingType
     import datetime as _dt
+    from blueprints.readings import person_has_natal, person_has_pack
+
     reading_types = ReadingType.query.filter_by(active=True).all()
+    readings = Reading.query.filter_by(profile_id=p.id, user_id=current_user.id)\
+                            .options(defer_blobs())\
+                            .order_by(Reading.created_at.desc()).limit(6).all()
     return render_template('main/profile_chart.html', p=p, result=result, error=error,
                            age_point=age_point,
+                           covered_natal=person_has_natal(current_user, p.id),
+                           covered_pack=person_has_pack(current_user, p.id),
+                           readings=readings,
                            reading_types=reading_types, now=_dt.date.today())
 
 
-# ── Compatibilidad ────────────────────────────────────────────────────────────
+# ── Comparar (synastry / davison) ────────────────────────────────────────────
+
+@main_bp.route('/comparar', methods=['GET', 'POST'])
+@login_required
+def compare():
+    from models import Profile
+    profiles = Profile.query.filter_by(user_id=current_user.id)\
+                            .order_by(Profile.is_self.desc(), Profile.created_at.asc()).all()
+    complete = [p for p in profiles if p.birth_date and p.birth_place]
+
+    if request.method == 'POST':
+        a_id = request.form.get('profile_a', type=int)
+        b_id = request.form.get('profile_b', type=int)
+        pa = Profile.query.filter_by(id=a_id, user_id=current_user.id).first()
+        pb = Profile.query.filter_by(id=b_id, user_id=current_user.id).first()
+        if not pa or not pb or pa.id == pb.id:
+            flash('Elige dos personas distintas con datos de nacimiento completos.')
+        elif not (pa.birth_date and pa.birth_place and pb.birth_date and pb.birth_place):
+            flash('Ambas personas necesitan fecha y lugar de nacimiento completos.')
+        else:
+            return redirect(url_for('main.compare_result',
+                                    profile_a_id=pa.id, profile_b_id=pb.id))
+    return render_template('main/compare.html', profiles=complete, all_profiles=profiles)
+
+
+@main_bp.route('/comparar/<int:profile_a_id>/<int:profile_b_id>')
+@login_required
+def compare_result(profile_a_id, profile_b_id):
+    from models import Profile, ReadingType
+    from blueprints.readings import pair_has_pack, first_unassigned
+    from ai import compute_chart
+    import datetime as _dt
+
+    pa = Profile.query.filter_by(id=profile_a_id, user_id=current_user.id).first_or_404()
+    pb = Profile.query.filter_by(id=profile_b_id, user_id=current_user.id).first_or_404()
+    if not (pa.birth_date and pa.birth_place and pb.birth_date and pb.birth_place):
+        flash('Ambas personas necesitan fecha y lugar de nacimiento completos.')
+        return redirect(url_for('main.compare'))
+
+    unlocked = pair_has_pack(current_user, pa.id, pb.id)
+    pack     = None if unlocked else first_unassigned(current_user, 'complete')
+
+    charts = {}
+    for p in (pa, pb):
+        try:
+            charts[p.id] = compute_chart(
+                p.birth_date, p.birth_time or _dt.time(12, 0), p.birth_place,
+                lat=p.birth_lat, lng=p.birth_lng)
+        except Exception as e:
+            log.warning('compare chart failed for profile %s: %s', p.id, e)
+
+    rtypes = {rt.slug: rt for rt in ReadingType.query.filter_by(active=True).all()
+              if rt.slug in ('synastry', 'davison')}
+
+    return render_template('main/compare_result.html', pa=pa, pb=pb,
+                           charts=charts, unlocked=unlocked, pack=pack, rtypes=rtypes)
+
+
+# ── Legacy redirect ──────────────────────────────────────────────────────────
 
 @main_bp.route('/compatibilidad')
 @login_required
 def compatibility():
-    from models import Profile, ReadingType
-    profiles = Profile.query.filter_by(user_id=current_user.id)\
-                            .order_by(Profile.is_self.desc(), Profile.created_at.asc()).all()
-    reading_types = ReadingType.query.filter(
-        ReadingType.active == True,
-        ReadingType.slug.in_(['synastry', 'davison'])
-    ).all()
-    return render_template('main/compatibility.html',
-                           profiles=profiles,
-                           reading_types=reading_types)
+    return redirect(url_for('main.compare'))
 
 
 # ── Legacy redirect ───────────────────────────────────────────────────────────
