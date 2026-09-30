@@ -39,13 +39,32 @@
 {% endif %}
 
 <div class="card">
-  <h3 style="margin-bottom: 1rem;">Tu plan: <span style="color: var(--accent-light); text-transform: uppercase;">{{ current_user.tier }}</span></h3>
-  {% if current_user.tier == 'free' %}
-  <p style="color: var(--text-muted); margin-bottom: 1rem;">Desbloquea tu Carta Natal completa por $7.99, o todo el pack para dos personas por $17.99. Pago único, sin suscripción.</p>
-  <a href="{{ url_for('billing.pricing') }}" class="btn btn-primary">Ver opciones</a>
-  {% elif current_user.tier == 'natal' %}
-  <p style="color: var(--text-muted); margin-bottom: 1rem;">¿Quieres más? El pack completo añade la Carta Kármica, las revoluciones solares y lunares, y todo ello también para una segunda persona.</p>
-  <a href="{{ url_for('billing.pricing') }}" class="btn btn-outline">Completar mi astrología — $17.99</a>
+  <h3 style="margin-bottom: 1rem;">Tus créditos</h3>
+  {% if unassigned %}
+    {% for e in unassigned %}
+    <div style="padding: 0.75rem 0; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; gap: 1rem;">
+      <div>
+        <strong>{% if e.product == 'natal' %}✦ 1 lectura natal{% else %}✦ 1 pack completo (dos personas){% endif %}</strong>
+        <div style="color: var(--text-muted); font-size: 0.82rem;">sin asignar — compra del {{ e.created_at.strftime('%d/%m/%Y') }}</div>
+      </div>
+      <a href="{{ url_for('main.assign_entitlement', eid=e.id) }}" class="btn btn-primary" style="padding: 0.4rem 0.9rem; font-size: 0.85rem; white-space: nowrap;">Asignar</a>
+    </div>
+    {% endfor %}
+  {% else %}
+  <p style="color: var(--text-muted); margin-bottom: 1rem;">
+    Lectura natal para una persona: <strong style="color:var(--accent-light)">$7.99</strong> ·
+    Pack completo para dos personas: <strong style="color:var(--accent-light)">$17.99</strong>. Pago único, sin suscripción.
+  </p>
+  <div style="display:flex; gap:0.75rem; flex-wrap:wrap;">
+    <form method="POST" action="{{ url_for('billing.checkout', product='natal') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit" class="btn btn-outline">Lectura natal — $7.99</button>
+    </form>
+    <form method="POST" action="{{ url_for('billing.checkout', product='complete') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit" class="btn btn-primary">Pack para dos — $17.99</button>
+    </form>
+  </div>
   {% endif %}
 </div>
 

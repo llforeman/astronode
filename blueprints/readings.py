@@ -94,13 +94,65 @@ def request_reading(reading_type_id):
             return redirect(url_for('main.profiles'))
         params['decade_start'] = decade_start
 
-    # Entitlements: 'complete' unlocks every reading type (for the main
-    # person and a second one); 'natal' unlocks the natal reading only.
-    if not _DEV and current_user.tier != 'complete':
-        if slug != 'natal':
-            return redirect(url_for('billing.pricing'))
-        if current_user.tier != 'natal':
-            return redirect(url_for('billing.checkout', product='natal'))
+    # ── Entitlement gate ────────────────────────────────────────────────────
+    # Purchases become credits: natal = 1 person, complete = 2 people (all
+    # reading types for both + their synastry/davison). Legacy monthly tiers
+    # (user.tier) keep granting access: 'natal' -> natal, 'complete' -> all.
+    if not _DEV:
+        from models import Entitlement
+
+        assigned = Entitlement.query.filter(Entitlement.user_id == current_user.id,
+                                            Entitlement.profile_a_id.isnot(None)).all()
+        natal_persons    = {e.profile_a_id for e in assigned if e.product == 'natal'}
+        complete_persons = set()
+        complete_pairs   = []
+        for e in assigned:
+            if e.product == 'complete':
+                complete_persons.add(e.profile_a_id)
+                if e.profile_b_id:
+                    complete_persons.add(e.profile_b_id)
+                    complete_pairs.append({e.profile_a_id, e.profile_b_id})
+
+        legacy_natal    = current_user.tier == 'natal'
+        legacy_complete = current_user.tier == 'complete'
+
+        def _unassigned(product):
+            return Entitlement.query.filter_by(user_id=current_user.id,
+                                               product=product,
+                                               profile_a_id=None).first()
+
+        if slug == 'natal':
+            if not (profile.id in natal_persons or profile.id in complete_persons
+                    or legacy_natal or legacy_complete):
+                credit = _unassigned('natal')
+                if credit:
+                    # Auto-assign: paying for one natal reading covers this person.
+                    credit.profile_a_id = profile.id
+                    credit.assigned_at  = datetime.utcnow()
+                    db.session.commit()
+                else:
+                    flash('La lectura natal completa cuesta $7.99 — pago único para esa persona.')
+                    return redirect(url_for('billing.pricing'))
+
+        elif slug in ('synastry', 'davison'):
+            if not (legacy_complete or any(p == {profile.id, pb.id} for p in complete_pairs)):
+                pack = _unassigned('complete')
+                if pack:
+                    flash('Asigna tu pack a estas dos personas para generar la lectura.')
+                    return redirect(url_for('main.assign_entitlement', eid=pack.id,
+                                            profile_a=profile.id, profile_b=pb.id))
+                flash('La sinastría y la carta Davison forman parte del pack completo ($17.99, dos personas).')
+                return redirect(url_for('billing.pricing'))
+
+        else:  # karmic, solar/lunar returns, planet returns
+            if not (profile.id in complete_persons or legacy_complete):
+                pack = _unassigned('complete')
+                if pack:
+                    flash('Asigna tu pack para generar las lecturas de esta persona.')
+                    return redirect(url_for('main.assign_entitlement', eid=pack.id,
+                                            profile_a=profile.id))
+                flash('Esta lectura forma parte del pack completo ($17.99, dos personas).')
+                return redirect(url_for('billing.pricing'))
 
     reading = Reading(user_id=current_user.id, reading_type_id=rtype.id,
                       profile_id=profile.id, params=params or None)

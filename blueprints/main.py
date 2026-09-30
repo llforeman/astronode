@@ -15,12 +15,64 @@ MAX_PROFILES = 25
 @main_bp.route('/dashboard')
 @login_required
 def dashboard():
-    from models import Reading, Profile
+    from models import Entitlement, Reading, Profile
     readings = Reading.query.filter_by(user_id=current_user.id)\
                             .order_by(Reading.created_at.desc()).limit(5).all()
     profiles = Profile.query.filter_by(user_id=current_user.id)\
                             .order_by(Profile.is_self.desc(), Profile.created_at.asc()).all()
-    return render_template('main/dashboard.html', readings=readings, profiles=profiles)
+    unassigned = Entitlement.query.filter_by(user_id=current_user.id,
+                                             profile_a_id=None)\
+                                  .order_by(Entitlement.created_at.asc()).all()
+    return render_template('main/dashboard.html', readings=readings, profiles=profiles,
+                           unassigned=unassigned)
+
+
+# ── Entitlements (purchase credits) ──────────────────────────────────────────
+
+@main_bp.route('/entitlements/<int:eid>/assign', methods=['GET', 'POST'])
+@login_required
+def assign_entitlement(eid):
+    from models import Entitlement, Profile
+    ent = Entitlement.query.filter_by(id=eid, user_id=current_user.id).first_or_404()
+    if ent.is_assigned:
+        flash('Ese crédito ya está asignado.')
+        return redirect(url_for('main.dashboard'))
+
+    profiles = Profile.query.filter_by(user_id=current_user.id)\
+                            .order_by(Profile.is_self.desc(), Profile.created_at.asc()).all()
+
+    if request.method == 'POST':
+        a_id = request.form.get('profile_a', type=int)
+        b_id = request.form.get('profile_b', type=int) if ent.product == 'complete' else None
+
+        pa = Profile.query.filter_by(id=a_id, user_id=current_user.id).first() if a_id else None
+        pb = Profile.query.filter_by(id=b_id, user_id=current_user.id).first() if b_id else None
+
+        if not pa or not pa.birth_date or not pa.birth_place:
+            flash('Elige una persona con fecha y lugar de nacimiento completos.')
+        elif ent.product == 'complete' and (not pb or not pb.birth_date or not pb.birth_place):
+            flash('Elige la segunda persona con datos de nacimiento completos.')
+        elif ent.product == 'complete' and pa.id == pb.id:
+            flash('Elige dos personas distintas para el pack.')
+        else:
+            ent.profile_a_id = pa.id
+            if pb:
+                ent.profile_b_id = pb.id
+            ent.assigned_at = dt.datetime.utcnow()
+            db.session.commit()
+
+            if ent.product == 'natal':
+                from blueprints.billing import _deliver_natal
+                _deliver_natal(current_user, pa, ent.payment)
+                flash(f'¡Listo! La lectura natal de {pa.name} se está generando.')
+            else:
+                flash(f'Pack asignado a {pa.name} y {pb.name}. Ya puedes generar todas sus lecturas.')
+            return redirect(url_for('main.dashboard'))
+
+    pre_a = request.args.get('profile_a', type=int)
+    pre_b = request.args.get('profile_b', type=int)
+    return render_template('main/assign_entitlement.html', ent=ent, profiles=profiles,
+                           pre_a=pre_a, pre_b=pre_b)
 
 
 # ── Profiles ──────────────────────────────────────────────────────────────────

@@ -35,7 +35,13 @@ def _stripe():
 
 @billing_bp.route('/pricing')
 def pricing():
-    return render_template('billing/pricing.html')
+    credits = {'natal': 0, 'complete': 0}
+    if current_user.is_authenticated:
+        from models import Entitlement
+        for e in Entitlement.query.filter_by(user_id=current_user.id,
+                                             profile_a_id=None).all():
+            credits[e.product] = credits.get(e.product, 0) + 1
+    return render_template('billing/pricing.html', credits=credits)
 
 
 # ── Checkout redirects (Stripe Payment Links — no API call at checkout) ─────
@@ -176,7 +182,7 @@ def _demote_user(user):
 # ── Webhook handlers ─────────────────────────────────────────────────────────
 
 def _handle_checkout_completed(session):
-    from models import Notification, Profile, User
+    from models import Entitlement, Notification, Profile
 
     # Idempotency: unique stripe_session_id — webhook replays are no-ops.
     if Payment.query.filter_by(stripe_session_id=session.get('id', '')).first():
@@ -199,12 +205,13 @@ def _handle_checkout_completed(session):
         status='completed',
     )
     db.session.add(payment)
+    db.session.flush()   # assign payment.id before entitlement references it
 
     if mode == 'subscription':
-        # Legacy monthly links — map amount to the new tier names.
+        # Legacy monthly links — map amount to the old tier names (display only).
         amount = session.get('amount_total', 0)
         tier   = 'complete' if amount >= _LEGACY_VIP_MIN_CENTS else 'natal'
-        user.tier      = tier
+        user.tier       = tier
         payment.product = tier
         db.session.add(Subscription(
             user_id=user.id,
@@ -222,46 +229,65 @@ def _handle_checkout_completed(session):
     product = _product_for_session(session)
     payment.product = product
 
-    if product == 'complete':
-        # Everything unlocked, for the main person and a second one.
-        user.tier = 'complete'
-        db.session.commit()
-        db.session.add(Notification(user_id=user.id,
-                                    message='¡Pago confirmado! Ya tienes acceso a todo el pack.',
-                                    link='/readings/'))
-        db.session.commit()
-        _send_welcome_email(user, 'complete')
-        return
+    # Every one-time purchase becomes an unassigned credit the user binds to
+    # people from their dashboard: natal = 1 person, complete = 2 people.
+    entitlement = Entitlement(user_id=user.id, payment_id=payment.id,
+                              product=product)
+    db.session.add(entitlement)
 
-    # natal — deliver the reading immediately from their self profile.
-    if user.tier == 'free':
-        user.tier = 'natal'
+    if product == 'natal':
+        # Nice default: buying for yourself delivers immediately.
+        self_profile = Profile.query.filter_by(user_id=user.id, is_self=True).first()
+        if self_profile and self_profile.birth_date and self_profile.birth_place:
+            entitlement.profile_a_id = self_profile.id
+            entitlement.assigned_at  = datetime.utcnow()
+            db.session.commit()
+            _deliver_natal(user, self_profile, payment)
+            return
 
-    profile = Profile.query.filter_by(user_id=user.id, is_self=True).first()
-    rtype   = ReadingType.query.filter_by(slug='natal', active=True).first() \
-              or ReadingType.query.filter_by(active=True).first()
-
-    if profile and profile.birth_date and profile.birth_place and rtype:
-        reading = Reading(user_id=user.id, reading_type_id=rtype.id,
-                          profile_id=profile.id)
-        db.session.add(reading)
-        db.session.flush()
-        payment.reading_id = reading.id
-        db.session.commit()
-        from worker import enqueue_reading
-        enqueue_reading(reading.id)
-        db.session.add(Notification(user_id=user.id,
-                                    message='¡Pago confirmado! Tu lectura natal está en camino.',
-                                    link=f'/readings/{reading.id}'))
-        db.session.commit()
-    else:
-        # No birth data yet — tier is set, they request it once the profile is complete.
         db.session.commit()
         _send_complete_profile_email(user)
-        db.session.add(Notification(user_id=user.id,
-                                    message='¡Pago confirmado! Completa tus datos de nacimiento para recibir tu lectura.',
-                                    link='/profiles'))
+        db.session.add(Notification(
+            user_id=user.id,
+            message='¡Pago confirmado! Tienes 1 lectura natal lista para asignar a cualquier persona desde tu panel.',
+            link='/dashboard'))
         db.session.commit()
+        return
+
+    # complete pack — needs two people, always assigned from the dashboard.
+    db.session.commit()
+    _send_welcome_email(user, 'complete')
+    db.session.add(Notification(
+        user_id=user.id,
+        message='¡Pago confirmado! Tienes 1 pack completo para asignar a dos personas desde tu panel.',
+        link='/dashboard'))
+    db.session.commit()
+
+
+def _deliver_natal(user, profile, payment):
+    """Create + enqueue the natal reading for an assigned natal credit."""
+    from models import Notification, Reading, ReadingType
+
+    rtype = ReadingType.query.filter_by(slug='natal', active=True).first() \
+            or ReadingType.query.filter_by(active=True).first()
+    if not rtype:
+        db.session.commit()
+        return
+
+    reading = Reading(user_id=user.id, reading_type_id=rtype.id,
+                      profile_id=profile.id)
+    db.session.add(reading)
+    db.session.flush()
+    payment.reading_id = reading.id
+    db.session.commit()
+
+    from worker import enqueue_reading
+    enqueue_reading(reading.id)
+
+    db.session.add(Notification(user_id=user.id,
+                                message='¡Pago confirmado! Tu lectura natal está en camino.',
+                                link=f'/readings/{reading.id}'))
+    db.session.commit()
 
 
 def _sync_legacy_subscription(sub_obj):

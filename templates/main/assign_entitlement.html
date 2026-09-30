@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Asignar crédito — Astronode{% endblock %}
+{% block content %}
+<div style="max-width: 560px; margin: 0 auto;">
+  <h2 style="color: var(--accent-light); margin-bottom: 0.5rem;">
+    {% if ent.product == 'natal' %}Asignar lectura natal{% else %}Asignar pack completo{% endif %}
+  </h2>
+  <p style="color: var(--text-muted); margin-bottom: 1.5rem;">
+    {% if ent.product == 'natal' %}
+      Elige la persona que recibirá su Carta Natal completa (~30 páginas, PDF por email).
+    {% else %}
+      Elige las <strong>dos personas</strong> del pack: cada una recibe su Carta Natal, Carta Kármica,
+      revoluciones solares y lunares, y además la Sinastría y la Carta Davison entre las dos.
+    {% endif %}
+  </p>
+
+  <div class="card">
+    <form method="POST">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <div class="form-group" style="margin-bottom: 1.25rem;">
+        <label>{% if ent.product == 'natal' %}Persona{% else %}Persona 1{% endif %} *</label>
+        <select name="profile_a" required style="width:100%; padding:0.6rem 0.8rem; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text);">
+          <option value="" {% if not pre_a %}selected{% endif %}>— Elige —</option>
+          {% for p in profiles %}
+          <option value="{{ p.id }}" {% if pre_a == p.id %}selected{% endif %}>
+            {{ p.name }}{% if not p.birth_date or not p.birth_place %} (incompleto){% endif %}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      {% if ent.product == 'complete' %}
+      <div class="form-group" style="margin-bottom: 1.25rem;">
+        <label>Persona 2 *</label>
+        <select name="profile_b" required style="width:100%; padding:0.6rem 0.8rem; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text);">
+          <option value="" {% if not pre_b %}selected{% endif %}>— Elige —</option>
+          {% for p in profiles %}
+          <option value="{{ p.id }}" {% if pre_b == p.id %}selected{% endif %}>
+            {{ p.name }}{% if not p.birth_date or not p.birth_place %} (incompleto){% endif %}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      {% endif %}
+
+      <p style="color: var(--text-muted); font-size: 0.82rem; margin-bottom: 1.25rem;">
+        ¿Falta alguien? <a href="{{ url_for('main.profiles') }}">Añade otra persona</a> primero — la asignación no se pierde.
+      </p>
+
+      <button type="submit" class="btn btn-primary" style="width:100%;">
+        {% if ent.product == 'natal' %}Generar lectura natal{% else %}Activar pack{% endif %}
+      </button>
+    </form>
+  </div>
+</div>
+{% endblock %}

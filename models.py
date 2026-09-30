@@ -154,6 +154,31 @@ class Subscription(db.Model):
     cancelled_at             = db.Column(db.DateTime, nullable=True)
 
 
+class Entitlement(db.Model):
+    __tablename__ = 'entitlement'
+
+    id           = db.Column(db.Integer, primary_key=True)
+    user_id      = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    payment_id   = db.Column(db.Integer, db.ForeignKey('payment.id'), nullable=False, unique=True)
+    product      = db.Column(db.String(20), nullable=False)   # natal | complete
+    # Assignment: natal -> profile_a only. complete -> profile_a + profile_b.
+    # NULL = purchased but not yet assigned to people ("credit").
+    profile_a_id = db.Column(db.Integer, db.ForeignKey('profile.id'), nullable=True)
+    profile_b_id = db.Column(db.Integer, db.ForeignKey('profile.id'), nullable=True)
+    created_at   = db.Column(db.DateTime, default=datetime.utcnow)
+    assigned_at  = db.Column(db.DateTime, nullable=True)
+
+    payment    = db.relationship('Payment', backref='entitlements')
+    profile_a  = db.relationship('Profile', foreign_keys=[profile_a_id])
+    profile_b  = db.relationship('Profile', foreign_keys=[profile_b_id])
+
+    @property
+    def is_assigned(self):
+        if self.product == 'natal':
+            return self.profile_a_id is not None
+        return self.profile_a_id is not None and self.profile_b_id is not None
+
+
 class PlacementContent(db.Model):
     __tablename__ = 'placement_content'
 

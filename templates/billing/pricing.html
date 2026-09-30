@@ -2,55 +2,59 @@
 {% block title %}Planes — Astronode{% endblock %}
 {% block content %}
 <h2 style="margin-bottom: 0.5rem; color: var(--accent-light)">Elige tu lectura</h2>
-<p style="color: var(--text-muted); margin-bottom: 2rem;">Tu plan actual: <strong style="color:var(--accent-light); text-transform:uppercase">{{ current_user.tier }}</strong></p>
+<p style="color: var(--text-muted); margin-bottom: 2rem;">Analiza 1 persona o 2 — tantas veces como quieras. Pago único, sin suscripción.</p>
+
+{% if credits.get('natal') or credits.get('complete') %}
+<div class="card" style="border-color: var(--accent); background: var(--bg2); margin-bottom: 1.5rem;">
+  <strong>✦ Tienes créditos sin asignar</strong>
+  <p style="color: var(--text-muted); margin: 0.4rem 0 0.75rem;">
+    {% if credits.get('natal') %}{{ credits['natal'] }} lectura{{ 's' if credits['natal'] != 1 }} natal{{ 'es' if credits['natal'] != 1 }}{% endif %}
+    {% if credits.get('natal') and credits.get('complete') %} · {% endif %}
+    {% if credits.get('complete') %}{{ credits['complete'] }} pack{{ 's' if credits['complete'] != 1 }} completo{{ 's' if credits['complete'] != 1 }}{% endif %}
+    — asígnalos a tus personas desde el panel.
+  </p>
+  <a href="{{ url_for('main.dashboard') }}" class="btn btn-primary" style="padding: 0.45rem 1rem;">Ir al panel para asignar</a>
+</div>
+{% endif %}
 
 <div style="display: flex; gap: 1.5rem; flex-wrap: wrap;">
-  <!-- Carta Natal -->
+  <!-- Una persona -->
   <div class="card" style="width: 280px;">
     <h3 style="margin-bottom: 0.5rem;">Tu Carta Natal como nunca antes</h3>
     <div style="font-size: 1.8rem; font-weight: 700; color: var(--accent-light); margin: 0.75rem 0;">$7.99</div>
-    <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">Pago único · Entrega inmediata</p>
+    <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">Pago único · Una persona</p>
     <ul style="color: var(--text-muted); font-size: 0.88rem; line-height: 1.8; margin-bottom: 1.25rem; padding-left: 1.2rem;">
-      <li>13 capítulos sobre tu carta completa</li>
+      <li>13 capítulos sobre su carta completa</li>
       <li>~30 páginas en prosa fluida, en español</li>
       <li>PDF por email + guardada en tu cuenta</li>
+      <li>Para ti o para cualquier persona que añadas</li>
     </ul>
-    {% if current_user.tier == 'free' %}
     <form method="POST" action="{{ url_for('billing.checkout', product='natal') }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <button type="submit" class="btn btn-outline" style="width:100%;">Comprar mi Carta Natal</button>
+      <button type="submit" class="btn btn-outline" style="width:100%;">Comprar — $7.99</button>
     </form>
-    {% elif current_user.tier == 'natal' %}
-    <span style="color: var(--text-muted); font-size: 0.9rem;">✓ Ya tienes la Carta Natal</span>
-    {% else %}
-    <span style="color: var(--text-muted); font-size: 0.9rem;">✓ Incluida en tu pack</span>
-    {% endif %}
   </div>
 
-  <!-- Astrología Completa -->
+  <!-- Dos personas -->
   <div class="card" style="width: 280px; border-color: var(--accent);">
     <h3 style="margin-bottom: 0.5rem;">Tu Astrología Completa como nunca antes</h3>
     <div style="font-size: 1.8rem; font-weight: 700; color: var(--accent-light); margin: 0.75rem 0;">$17.99</div>
-    <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">Pago único · Todo incluido · Para dos personas</p>
+    <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">Pago único · Dos personas</p>
     <ul style="color: var(--text-muted); font-size: 0.88rem; line-height: 1.8; margin-bottom: 1.25rem; padding-left: 1.2rem;">
-      <li><strong>Carta Natal completa</strong> — 13 capítulos</li>
+      <li>Todo lo de la Carta Natal, <strong>para cada una</strong></li>
       <li><strong>Carta Kármica</strong> — misión del alma</li>
-      <li><strong>10 Revoluciones Solares</strong> + <strong>12 Lunares</strong></li>
-      <li>Todo lo anterior <strong>para una segunda persona</strong></li>
-      <li><strong>Sinastría</strong> y <strong>Carta Davison</strong> entre vosotros</li>
+      <li><strong>10 Revoluciones Solares</strong> + <strong>12 Lunares</strong> cada una</li>
+      <li><strong>Sinastría</strong> y <strong>Carta Davison</strong> entre las dos</li>
+      <li>¿Más personas? Compra otro pack</li>
     </ul>
-    {% if current_user.tier != 'complete' %}
     <form method="POST" action="{{ url_for('billing.checkout', product='complete') }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <button type="submit" class="btn btn-primary" style="width:100%;">Obtener el pack completo</button>
+      <button type="submit" class="btn btn-primary" style="width:100%;">Comprar pack — $17.99</button>
     </form>
-    {% else %}
-    <span style="color: var(--text-muted); font-size: 0.9rem;">✓ Plan actual</span>
-    {% endif %}
   </div>
 </div>
 
 <p style="color: var(--text-muted); font-size: 0.82rem; margin-top: 2rem;">
-  Sin suscripción. Pagas una vez y las lecturas son tuyas para siempre. Pago seguro vía Stripe.
+  Tras el pago, el crédito aparece en tu panel y lo asignas a quien quieras. Pago seguro vía Stripe.
 </p>
 {% endblock %}
