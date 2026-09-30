@@ -89,3 +89,13 @@ def load_user(user_id):
 
 
 app = create_app()
+
+# Warm the heavy astrology stack (kerykeion + swisseph + deps) in the master
+# process BEFORE gunicorn forks. With --preload, workers share these pages
+# copy-on-write instead of each paying ~46 MB on the first chart request
+# (3 lazy workers ≈ +140 MB — that is what pushed the 512 MB instance OOM).
+try:
+    import kerykeion  # noqa: F401  (pulls in swisseph and its deps)
+    import swisseph   # noqa: F401
+except Exception:
+    pass

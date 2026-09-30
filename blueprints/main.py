@@ -271,7 +271,7 @@ def profile_chart(profile_id):
                 log.warning('compute_age_point failed: %s', e)
 
         except Exception as e:
-            error = f'No se pudo calcular la carta: {str(e)}'
+            error = f'No se pudo calcular la carta: {str(e)[:180]}'
     else:
         error = 'Este perfil necesita fecha y lugar de nacimiento para calcular la carta.'
 

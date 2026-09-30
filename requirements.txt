@@ -19,7 +19,7 @@ stripe==10.3.0
 geopy>=2.4.0
 timezonefinder>=5.2.0,<6.0.0
 pytz>=2024.1
-kerykeion>=4.0.0
+kerykeion==5.12.10
 fpdf2>=2.7.0
 markdown>=3.5
 cairosvg>=2.7.0
