@@ -81,7 +81,8 @@ def generate_reading_task(reading_id):
             db.session.commit()
             return
 
-        # 4. Generate wheel PNG — kerykeion is done, collect before loading cairosvg
+        # 4. Generate wheel PNG for the PDF cover (in memory only — fpdf2
+        #    cannot embed SVG). Chart math is done; collect before cairosvg.
         import gc
         gc.collect()
         chart_png = None
@@ -109,10 +110,12 @@ def generate_reading_task(reading_id):
             log.warning("PDF generation failed for reading %s: %s", reading_id, e)
 
         # 7. Re-fetch and write
+        # (chart_png is deliberately NOT persisted: it fed the PDF cover,
+        #  which is already built and stored in pdf_content above. Legacy
+        #  readings keep their stored blobs for the download fallback.)
         reading = Reading.query.get(reading_id)
         reading.content      = result['text']
         reading.chart_image  = result.get('chart_image')
-        reading.chart_png    = chart_png
         reading.pdf_content  = pdf_bytes
         reading.params       = {**(reading.params or {}), **chart_data}
         reading.status       = 'completed'

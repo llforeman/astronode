@@ -129,7 +129,7 @@ class Reading(db.Model):
     status          = db.Column(db.String(20), default='pending')  # pending | generating | completed | failed
     content         = db.Column(db.Text(16777215), nullable=True)  # generated horoscope text (MEDIUMTEXT)
     chart_image     = db.Column(db.Text(16777215), nullable=True)  # SVG string (MEDIUMTEXT)
-    chart_png       = db.Column(db.LargeBinary(length=16777215), nullable=True)  # panel-free wheel PNG for PDF (MEDIUMBLOB)
+    chart_png       = db.Column(db.LargeBinary(length=16777215), nullable=True)  # LEGACY: wheel PNG (no longer written; kept for old readings' PDF fallback)
     pdf_content     = db.Column(db.LargeBinary(length=16777215), nullable=True)  # pre-built PDF bytes (MEDIUMBLOB)
     params          = db.Column(db.JSON, nullable=True)             # extra data per reading type
     sent_by_email   = db.Column(db.Boolean, default=False)
