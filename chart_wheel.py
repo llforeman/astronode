@@ -24,8 +24,8 @@ R_SIGN_GLYPH = 222.0     # zodiac glyph centre radius
 R_HOUSE_NUM = 195.4      # house number radius
 R_PLANET_A = 146.0       # planet glyph ring (even index)
 R_PLANET_B = 166.0       # planet glyph ring (odd index)
-R_DEGREE_LABEL = 261.0   # degree label radius (outside the rim)
-R_TICK_IN, R_TICK_OUT = 236.0, 244.0   # per-planet true-position tick
+R_DEGREE_LABEL = 250.0   # degree label radius (outside the rim)
+R_TICK_IN, R_TICK_OUT = 236.0, 243.0   # per-planet true-position tick
 MIN_GAP_SAME_RING = 8.0  # degrees between glyphs on the same ring
 MIN_GAP_CROSS = 4.0      # degrees between glyphs on different rings
 
@@ -53,7 +53,7 @@ PALETTE = {
     'square': 'rgba(232, 144, 122, 0.35)',
     'trine': 'rgba(136, 212, 176, 0.35)',
     'opposition': 'rgba(232, 144, 122, 0.35)',
-    'quintile': '#1f99b3',
+    'quintile': 'transparent',   # purple theme hid quintile lines
     'fire-percentage': '#f4a87c', 'earth-percentage': '#a8c090',
     'air-percentage': '#8ecae6', 'water-percentage': '#b8a8e8',
 }
@@ -94,6 +94,52 @@ ASPECTS = [  # kerykeion default active aspects + orbs
 _AXIS_PAIRS = {frozenset(p) for p in (
     ('Ascendant', 'Descendant'), ('MC', 'Imum_Coeli'),
     ('North_Node', 'South_Node'))}
+
+_INDICATOR_THRESHOLD = 2.5   # kerykeion INDICATOR_GROUPING_THRESHOLD
+
+
+def _indicator_adjustments(abs_pos: dict[str, float]) -> dict[str, float]:
+    """Degree-label spreading — kerykeion's exact recipe.
+
+    Points whose consecutive gaps are <= 2.5 deg form groups; group members
+    get symmetric offsets (2 -> -1.5/+1.5, 3 -> -2/0/+2, 4 -> -3/-1/+1/+3,
+    5+ -> 1.5 deg steps around the middle).
+    """
+    keys = list(abs_pos)
+    n = len(keys)
+    order = sorted(range(n), key=lambda i: abs_pos[keys[i]])
+    sorted_pos = [abs_pos[keys[i]] for i in order]
+
+    groups: list[list[int]] = []
+    in_group = False
+    for k in range(n):
+        nxt = 0 if k == n - 1 else k + 1
+        gap = (sorted_pos[nxt] - sorted_pos[k]) % 360.0
+        if gap <= _INDICATOR_THRESHOLD:
+            if in_group:
+                groups[-1].append(order[nxt])
+            else:
+                groups.append([order[k], order[nxt]])
+                in_group = True
+        else:
+            in_group = False
+
+    adj = {k: 0.0 for k in keys}
+    for g in groups:
+        idxs = [keys[i] for i in g]   # g holds positions in `order`
+        size = len(idxs)
+        if size == 2:
+            offsets = [-1.5, 1.5]
+        elif size == 3:
+            offsets = [-2.0, 0.0, 2.0]
+        elif size == 4:
+            offsets = [-3.0, -1.0, 1.0, 3.0]
+        else:
+            mid = (size - 1) / 2.0
+            offsets = [(i - mid) * 1.5 for i in range(size)]
+        for key, off in zip(idxs, offsets):
+            adj[key] = off
+    return adj
 
 
 def _wheel_aspects(positions: dict) -> list[dict]:
@@ -336,6 +382,9 @@ def render_chart_svg(positions: dict, house_cusps: dict,
     placed = _place_planets(pts_sorted, dsc_abs)
     lon_by_key = dict(pts_sorted)
 
+    # Degree labels/ticks: spread crowded ones (kerykeion's indicator pass)
+    ind_adj = _indicator_adjustments(lon_by_key)
+
     parts.append("<g kr:node='Planets_Wheel'>")
     for p in placed:
         key = p['key']
@@ -356,17 +405,17 @@ def render_chart_svg(positions: dict, house_cusps: dict,
                 f"scale(0.55)'><use xlink:href='#retrograde' /></g>")
         parts.append('</g>')
 
-        # true-position tick on the rim
-        tx0, ty0 = _svg_point(true_a, R_TICK_IN)
-        tx1, ty1 = _svg_point(true_a, R_TICK_OUT)
+        # true-position tick on the rim (indicator angle)
+        tx0, ty0 = _svg_point(true_a + ind_adj[key], R_TICK_IN)
+        tx1, ty1 = _svg_point(true_a + ind_adj[key], R_TICK_OUT)
         parts.append(
             f"<line class='planet-degree-line' x1='{tx0:.2f}' y1='{ty0:.2f}' "
             f"x2='{tx1:.2f}' y2='{ty1:.2f}' style='stroke: "
             f"var(--kerykeion-chart-color-{css}); stroke-width: .8; "
             f"stroke-opacity:.8;'/>")
 
-        # degree label outside the rim (true angle, ~2 deg clockwise side)
-        lx, ly = _svg_point(true_a - 2.0, R_DEGREE_LABEL)
+        # degree label outside the rim (true angle + indicator adjustment)
+        lx, ly = _svg_point(true_a + ind_adj[key], R_DEGREE_LABEL)
         sign_pos = int(lon % 30)
         parts.append(
             f"<g transform='translate({lx:.2f},{ly:.2f})'>"
