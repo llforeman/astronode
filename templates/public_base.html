@@ -7,8 +7,7 @@
   <meta name="description" content="{% block meta_desc %}Lecturas de horóscopo personalizadas con IA basadas en tu carta natal.{% endblock %}">
   <script>
     (function(){
-      var stored = localStorage.getItem('theme');
-      var t = stored || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      var t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
       document.documentElement.setAttribute('data-theme', t);
     })();
   </script>
@@ -146,10 +145,8 @@
         <a href="{{ url_for('auth.login') }}">Iniciar sesión</a>
         <a href="{{ url_for('auth.register') }}" class="btn btn-primary">Calcular mi carta →</a>
       {% endif %}
-      <button class="theme-toggle" onclick="toggleTheme()">☽</button>
     </div>
     <div class="nav-mobile">
-      <button class="theme-toggle" onclick="toggleTheme()">☽</button>
       <button class="hamburger" onclick="openMobileMenu()" aria-label="Menú">☰</button>
     </div>
   </nav>
@@ -179,11 +176,6 @@
   {% endwith %}
   {% block content %}{% endblock %}
   <script>
-    function toggleTheme() {
-      var t = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-      document.documentElement.setAttribute('data-theme', t);
-      localStorage.setItem('theme', t);
-    }
     function openMobileMenu() {
       document.getElementById('mobile-menu').classList.add('open');
       document.body.style.overflow = 'hidden';

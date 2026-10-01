@@ -8,6 +8,12 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@500;600&family=Inter:wght@400;500;600;700&display=swap">
+  <script>
+    (function(){
+      var t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      document.documentElement.setAttribute('data-theme', t);
+    })();
+  </script>
   <style>
     :root {
       --bg:        #0a0614;
@@ -26,7 +32,54 @@
       --ok:        #4cc38a;
       --shadow:    0 10px 40px rgba(0,0,0,0.45);
       --radius:    14px;
+      --btn-subtle-bg: rgba(255,255,255,0.05);
+      --btn-subtle-bg-hover: rgba(255,255,255,0.09);
+      --nav-bg: rgba(10,6,20,0.82);
+      --text-body: #ded5ef;
     }
+    :root[data-theme="light"] {
+      --bg:        #f6f2fc;
+      --bg2:       #ffffff;
+      --card:      #ffffff;
+      --card2:     #fbf9fe;
+      --border:    #d9cdf0;
+      --border-soft: #e8e0f6;
+      --text:      #241a38;
+      --muted:     #6b5f85;
+      --violet:    #7c3aed;
+      --violet-hi: #6d28d9;
+      --gold:      #9a7a16;
+      --gold-dim:  rgba(154,122,22,0.12);
+      --danger:    #c73a4e;
+      --ok:        #1f9d61;
+      --shadow:    0 8px 30px rgba(60,40,110,0.12);
+      --radius:    14px;
+      --btn-subtle-bg: rgba(36,26,56,0.045);
+      --btn-subtle-bg-hover: rgba(36,26,56,0.09);
+      --nav-bg: rgba(246,242,252,0.85);
+      --text-body: #3a2f52;
+    }
+    :root[data-theme="light"] body {
+      background:
+        radial-gradient(1100px 500px at 85% -10%, rgba(124,58,237,0.08), transparent 60%),
+        radial-gradient(900px 420px at -10% 8%, rgba(154,122,22,0.06), transparent 55%),
+        var(--bg);
+    }
+    :root[data-theme="light"] .nav {
+      background: var(--nav-bg);
+      border-bottom-color: var(--border-soft);
+    }
+    :root[data-theme="light"] .btn-subtle {
+      background: var(--btn-subtle-bg); border-color: var(--border);
+    }
+    :root[data-theme="light"] .btn-subtle:hover { background: var(--btn-subtle-bg-hover); }
+    :root[data-theme="light"] .reading-content p { color: var(--text-body); }
+    :root[data-theme="light"] .aspect-tag { background: var(--bg2); }
+    :root[data-theme="light"] .mini-form { background: #f8f5fd; }
+    :root[data-theme="light"] .coverage-tag.none {
+      background: rgba(36,26,56,0.04); border-color: var(--border);
+    }
+    :root[data-theme="light"] .chart-img-wrap svg { border: 1px solid var(--border-soft); }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html { scroll-behavior: smooth; }
     body {
@@ -49,7 +102,7 @@
     /* ── Top navigation ─────────────────────────────────────── */
     .nav {
       position: sticky; top: 0; z-index: 100;
-      background: rgba(10,6,20,0.82);
+      background: var(--nav-bg);
       backdrop-filter: blur(14px);
       -webkit-backdrop-filter: blur(14px);
       border-bottom: 1px solid var(--border-soft);
@@ -146,8 +199,8 @@
     .btn-outline:hover { background: rgba(139,92,246,0.12); color: var(--violet-hi); }
     .btn-gold { background: linear-gradient(135deg, #e3c25a 0%, #b8912f 100%); color: #241a02; box-shadow: 0 4px 18px rgba(212,175,55,0.28); }
     .btn-gold:hover { color: #241a02; }
-    .btn-subtle { background: rgba(255,255,255,0.05); color: var(--text); border: 1px solid var(--border); }
-    .btn-subtle:hover { background: rgba(255,255,255,0.09); color: var(--text); }
+    .btn-subtle { background: var(--btn-subtle-bg); color: var(--text); border: 1px solid var(--border); }
+    .btn-subtle:hover { background: var(--btn-subtle-bg-hover); color: var(--text); }
     .btn-danger { background: transparent; color: var(--danger); border: 1px solid rgba(224,86,107,0.5); }
     .btn-danger:hover { background: rgba(224,86,107,0.12); color: var(--danger); }
     .btn-sm { padding: 0.35rem 0.85rem; font-size: 0.8rem; border-radius: 8px; }
@@ -252,7 +305,7 @@
       padding-bottom: 0.35rem; border-bottom: 1px solid var(--gold-dim);
     }
     .reading-content h3, .reading-content h4 { color: var(--violet-hi); font-size: 1.05rem; margin: 1.3rem 0 0.4rem; }
-    .reading-content p { margin-bottom: 0.95rem; line-height: 1.85; color: #ded5ef; }
+    .reading-content p { margin-bottom: 0.95rem; line-height: 1.85; color: var(--text-body); }
     .reading-content ul, .reading-content ol { padding-left: 1.4rem; margin-bottom: 0.95rem; }
     .reading-content li { margin-bottom: 0.3rem; line-height: 1.75; }
     .reading-content strong { color: var(--text); }
