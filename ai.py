@@ -111,7 +111,7 @@ def _json_parse(text: str) -> Any:
         raise
 
 
-# ── Kerykeion chart building ───────────────────────────────────────────────────
+# ── Chart building (Swiss Ephemeris) ──
 
 _HOUSE_NAME_MAP = {
     'First_House': 1, 'Second_House': 2, 'Third_House': 3,
@@ -143,7 +143,7 @@ def _house_num(val) -> int:
 def compute_key_signs(birth_date, birth_time, birth_place, lat=None, lng=None) -> dict:
     """Fast Sun/Moon/Ascendant signs only — no chart subject, no SVG.
 
-    Uses swisseph directly (milliseconds instead of the full kerykeion
+    Uses swisseph directly (milliseconds - no full chart build needed,
     chart build). Returns English sign names, e.g. {'sun': 'Pisces', ...}.
     """
     import datetime as _dt
@@ -186,269 +186,219 @@ _SIGN_NAMES = ['Aries', 'Taurus', 'Gemini', 'Cancer', 'Leo', 'Virgo',
                'Libra', 'Scorpio', 'Sagittarius', 'Capricorn', 'Aquarius', 'Pisces']
 
 
-def _build_chart_kerykeion(birth_date, birth_time, birth_place,
-                            lat=None, lng=None):
+import dataclasses
+
+_SIGN_ABBR = ['Ari', 'Tau', 'Gem', 'Can', 'Leo', 'Vir',
+              'Lib', 'Sco', 'Sag', 'Cap', 'Aqu', 'Pis']
+
+
+@dataclasses.dataclass
+class _LunarPhaseInfo:
+    """Minimal lunar-phase info (kerykeion-compatible field names)."""
+    moon_phase_name: str
+    degrees_between_s_m: float
+
+
+@dataclasses.dataclass
+class ChartSubject:
+    """Lightweight stand-in for kerykeion's AstrologicalSubject.
+
+    Carries exactly what the rest of the codebase reads: the computed
+    positions/cusps and the few attributes chart_analysis consumes.
+    """
+    name: str
+    is_diurnal: bool
+    houses_system_name: str
+    lunar_phase: _LunarPhaseInfo
+    positions: dict
+    house_cusps: dict
+    local_dt: object = None
+    lat: float = None
+    lng: float = None
+
+
+def _tz_at(lat: float, lng: float) -> str:
+    global _tz_finder
+    try:
+        tf = _tz_finder
+    except NameError:
+        from timezonefinder import TimezoneFinder
+        tf = _tz_finder = TimezoneFinder()
+    tz_str = tf.timezone_at(lng=lng, lat=lat)
+    if not tz_str:
+        raise ValueError(f'Could not find timezone for lat={lat}, lng={lng}')
+    return tz_str
+
+
+def _julian_day(local_dt) -> float:
     import pytz
+    import swisseph as swe
+    utc_dt = local_dt.astimezone(pytz.utc)
+    return swe.julday(utc_dt.year, utc_dt.month, utc_dt.day,
+                      utc_dt.hour + utc_dt.minute / 60.0
+                      + utc_dt.second / 3600.0)
+
+
+def _lon_to_house(lon: float, cusps: dict) -> int:
+    lon = lon % 360
+    for h in range(1, 13):
+        c1 = cusps[h] % 360
+        c2 = cusps[(h % 12) + 1] % 360
+        if c1 <= c2:
+            if c1 <= lon < c2:
+                return h
+        else:
+            if lon >= c1 or lon < c2:
+                return h
+    return 1
+
+
+_MOON_PHASE_NAMES = [
+    'New Moon', 'Waxing Crescent', 'First Quarter', 'Waxing Gibbous',
+    'Full Moon', 'Waning Gibbous', 'Last Quarter', 'Waning Crescent',
+]
+
+
+def _moon_phase(diff: float) -> tuple[str, float]:
+    """Kerykeion-compatible phase name: 28 segments of 360/28 deg.
+
+    Segment 1 = New Moon, 7-9 = First Quarter, 14 = Full Moon,
+    20-22 = Last Quarter (matches kerykeion's _get_lunar_phase_index).
+    """
+    diff = diff % 360.0
+    phase = int(diff // (360.0 / 28.0)) + 1
+    if phase == 1:
+        idx = 0
+    elif phase < 7:
+        idx = 1
+    elif phase <= 9:
+        idx = 2
+    elif phase < 14:
+        idx = 3
+    elif phase == 14:
+        idx = 4
+    elif phase < 20:
+        idx = 5
+    elif phase <= 22:
+        idx = 6
+    else:
+        idx = 7
+    return _MOON_PHASE_NAMES[idx], diff
+
+
+def _build_chart(birth_date, birth_time, birth_place, lat=None, lng=None):
+    """Compute all chart data with Swiss Ephemeris directly.
+
+    Returns (positions, house_cusps, local_dt, lat, lng, ChartSubject).
+    Positions keys/contract identical to the previous kerykeion-based
+    builder: 3-letter sign abbreviations, int house, retrograde flag.
+    """
     import datetime
-    from timezonefinder import TimezoneFinder
-    from kerykeion import AstrologicalSubject
+    import os
+    import pytz
+    import swisseph as swe
+
+    # Ephemeris files: pyswisseph bundles the main planet files; the
+    # asteroid file (seas_18.se1, needed for Chiron) is vendored in
+    # ./ephemeris.
+    _ephe = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'ephemeris')
+    if os.path.isdir(_ephe):
+        swe.set_ephe_path(_ephe)
+
+    birth_time = birth_time or datetime.time(12, 0)
 
     if lat is None or lng is None:
         lat, lng = _geocode(birth_place)
 
-    tf = TimezoneFinder()
-    tz_str = tf.timezone_at(lng=lng, lat=lat)
-    if not tz_str:
-        raise ValueError(f'Could not find timezone for {birth_place}')
-
-    local_tz = pytz.timezone(tz_str)
-    local_dt = local_tz.localize(datetime.datetime(
+    tz_str = _tz_at(lat, lng)
+    local_dt = pytz.timezone(tz_str).localize(datetime.datetime(
         birth_date.year, birth_date.month, birth_date.day,
         birth_time.hour, birth_time.minute,
     ))
+    jd = _julian_day(local_dt)
 
-    subject = AstrologicalSubject(
-        birth_place,
-        birth_date.year, birth_date.month, birth_date.day,
-        birth_time.hour, birth_time.minute,
-        lng=lng, lat=lat, tz_str=tz_str,
-        online=False,
-    )
+    # Houses (Placidus, like kerykeion's default) + angles
+    cusps_list, ascmc = swe.houses(jd, lat, lng, b'P')
+    house_cusps = {i + 1: float(cusps_list[i]) for i in range(12)}
+    asc_lon, mc_lon = float(ascmc[0]), float(ascmc[1])
 
-    # Planet positions (include retrograde flag)
+    def _mk(lon, house, retro=False):
+        return {'longitude': float(lon % 360.0),
+                'sign': _SIGN_ABBR[int(lon % 360.0 // 30) % 12],
+                'house': house, 'retrograde': bool(retro)}
+
     positions = {}
-    for name, attr in _PLANET_ATTRS:
-        p = getattr(subject, attr)
-        positions[name] = {
-            'longitude':  p.abs_pos,
-            'sign':       p.sign,
-            'house':      _house_num(p.house),
-            'retrograde': bool(getattr(p, 'retrograde', False)),
-        }
+    swe_bodies = [
+        ('Sun', swe.SUN), ('Moon', swe.MOON), ('Mercury', swe.MERCURY),
+        ('Venus', swe.VENUS), ('Mars', swe.MARS), ('Jupiter', swe.JUPITER),
+        ('Saturn', swe.SATURN), ('Uranus', swe.URANUS),
+        ('Neptune', swe.NEPTUNE), ('Pluto', swe.PLUTO),
+    ]
+    for name, body in swe_bodies:
+        res = swe.calc_ut(jd, body)
+        lon, speed = res[0][0], res[0][3]
+        positions[name] = _mk(lon, _lon_to_house(lon, house_cusps),
+                              retro=speed < 0)
 
     # Angles
-    asc = getattr(subject, 'first_house')
-    mc  = getattr(subject, 'tenth_house')
-    dc  = getattr(subject, 'seventh_house')
-    ic  = getattr(subject, 'fourth_house')
+    positions['Ascendant']    = _mk(asc_lon, 1)
+    positions['MC']           = _mk(mc_lon, 10)
+    positions['Medium_Coeli'] = _mk(mc_lon, 10)
+    positions['Descendant']   = _mk(asc_lon + 180.0, 7)
+    positions['Imum_Coeli']   = _mk(mc_lon + 180.0, 4)
 
-    positions['Ascendant']   = {'longitude': asc.abs_pos, 'sign': asc.sign, 'house': 1,  'retrograde': False}
-    positions['MC']          = {'longitude': mc.abs_pos,  'sign': mc.sign,  'house': 10, 'retrograde': False}
-    positions['Medium_Coeli']= {'longitude': mc.abs_pos,  'sign': mc.sign,  'house': 10, 'retrograde': False}
-    positions['Descendant']  = {'longitude': dc.abs_pos,  'sign': dc.sign,  'house': 7,  'retrograde': False}
-    positions['Imum_Coeli']  = {'longitude': ic.abs_pos,  'sign': ic.sign,  'house': 4,  'retrograde': False}
-
-    # House cusps
-    house_cusps = {}
-    for i, attr in enumerate(_HOUSE_ATTRS, 1):
-        h = getattr(subject, attr)
-        house_cusps[i] = h.abs_pos
-
-    # Lunar nodes via swisseph directly (Kerykeion's mean_node is None in some versions)
+    # Lunar nodes (True node, as kerykeion draws) + Mean Lilith + Chiron
+    nn = swe.calc_ut(jd, swe.TRUE_NODE)
+    positions['North_Node'] = _mk(nn[0][0],
+                                  _lon_to_house(nn[0][0], house_cusps),
+                                  retro=nn[0][3] < 0)
+    positions['South_Node'] = _mk(nn[0][0] + 180.0,
+                                  _lon_to_house(nn[0][0] + 180.0, house_cusps),
+                                  retro=True)
     try:
-        import swisseph as swe
-        _SIGN_ABBR = ['Ari', 'Tau', 'Gem', 'Can', 'Leo', 'Vir',
-                      'Lib', 'Sco', 'Sag', 'Cap', 'Aqu', 'Pis']
-        utc_dt = local_dt.astimezone(pytz.utc)
-        jd     = swe.julday(utc_dt.year, utc_dt.month, utc_dt.day,
-                            utc_dt.hour + utc_dt.minute / 60.0)
-        nn_lon = swe.calc_ut(jd, swe.MEAN_NODE)[0][0]
-        sn_lon = (nn_lon + 180) % 360
-
-        def _lon_to_house(lon, cusps):
-            lon = lon % 360
-            for h in range(1, 13):
-                c1 = cusps[h] % 360
-                c2 = cusps[(h % 12) + 1] % 360
-                if c1 <= c2:
-                    if c1 <= lon < c2:
-                        return h
-                else:
-                    if lon >= c1 or lon < c2:
-                        return h
-            return 1
-
-        nn_house = _lon_to_house(nn_lon, house_cusps)
-        sn_house = _lon_to_house(sn_lon, house_cusps)
-        positions['North_Node'] = {
-            'longitude':  nn_lon,
-            'sign':       _SIGN_ABBR[int(nn_lon // 30) % 12],
-            'house':      nn_house,
-            'retrograde': True,
-        }
-        positions['South_Node'] = {
-            'longitude':  sn_lon,
-            'sign':       _SIGN_ABBR[int(sn_lon // 30) % 12],
-            'house':      sn_house,
-            'retrograde': True,
-        }
-        log.info('Lunar nodes via swisseph: NN Casa %d, SN Casa %d', nn_house, sn_house)
-
-        # Chiron
-        ch_res  = swe.calc_ut(jd, swe.CHIRON)
-        ch_lon  = ch_res[0][0]
-        ch_spd  = ch_res[0][3]   # daily motion; negative = retrograde
-        ch_house = _lon_to_house(ch_lon, house_cusps)
-        positions['Chiron'] = {
-            'longitude':  ch_lon,
-            'sign':       _SIGN_ABBR[int(ch_lon // 30) % 12],
-            'house':      ch_house,
-            'retrograde': ch_spd < 0,
-        }
-        log.info('Chiron via swisseph: %.2f° Casa %d', ch_lon, ch_house)
+        lil = swe.calc_ut(jd, swe.MEAN_APOG)
+        positions['Mean_Lilith'] = _mk(lil[0][0],
+                                       _lon_to_house(lil[0][0], house_cusps),
+                                       retro=lil[0][3] < 0)
     except Exception as e:
-        log.warning('Could not compute lunar nodes via swisseph: %s', e)
+        log.warning('Mean Lilith failed: %s', e)
+    try:
+        ch = swe.calc_ut(jd, swe.CHIRON)
+        positions['Chiron'] = _mk(ch[0][0],
+                                  _lon_to_house(ch[0][0], house_cusps),
+                                  retro=ch[0][3] < 0)
+    except Exception as e:
+        log.warning('Chiron failed: %s', e)
 
+    # Lunar phase + diurnal flag
+    phase_name, phase_diff = _moon_phase(
+        positions['Moon']['longitude'] - positions['Sun']['longitude'])
+    is_diurnal = 7 <= positions['Sun']['house'] <= 12
+
+    subject = ChartSubject(
+        name=str(birth_place),
+        is_diurnal=is_diurnal,
+        houses_system_name='Placidus',
+        lunar_phase=_LunarPhaseInfo(moon_phase_name=phase_name,
+                                    degrees_between_s_m=phase_diff),
+        positions=positions,
+        house_cusps=house_cusps,
+        local_dt=local_dt, lat=lat, lng=lng,
+    )
     return positions, house_cusps, local_dt, lat, lng, subject
 
 
 # ── SVG chart ─────────────────────────────────────────────────────────────────
 
-_PURPLE_THEME_CSS = """
-<style>
-:root, svg {
-  --kerykeion-color-neutral-content: #a0a0b0;
-  --kerykeion-color-base-content:    #a0a0b0;
-
-  --kerykeion-chart-color-paper-0: #0d0d1a;
-  --kerykeion-chart-color-paper-1: #13101e;
-
-  --kerykeion-chart-color-zodiac-bg-0:  #1a1525;
-  --kerykeion-chart-color-zodiac-bg-1:  #221c30;
-  --kerykeion-chart-color-zodiac-bg-2:  #1a1525;
-  --kerykeion-chart-color-zodiac-bg-3:  #221c30;
-  --kerykeion-chart-color-zodiac-bg-4:  #1a1525;
-  --kerykeion-chart-color-zodiac-bg-5:  #221c30;
-  --kerykeion-chart-color-zodiac-bg-6:  #1a1525;
-  --kerykeion-chart-color-zodiac-bg-7:  #221c30;
-  --kerykeion-chart-color-zodiac-bg-8:  #1a1525;
-  --kerykeion-chart-color-zodiac-bg-9:  #221c30;
-  --kerykeion-chart-color-zodiac-bg-10: #1a1525;
-  --kerykeion-chart-color-zodiac-bg-11: #221c30;
-
-  --kerykeion-chart-color-zodiac-icon-0:  #ddc8f5;
-  --kerykeion-chart-color-zodiac-icon-1:  #ddc8f5;
-  --kerykeion-chart-color-zodiac-icon-2:  #ddc8f5;
-  --kerykeion-chart-color-zodiac-icon-3:  #ddc8f5;
-  --kerykeion-chart-color-zodiac-icon-4:  #ddc8f5;
-  --kerykeion-chart-color-zodiac-icon-5:  #ddc8f5;
-  --kerykeion-chart-color-zodiac-icon-6:  #ddc8f5;
-  --kerykeion-chart-color-zodiac-icon-7:  #ddc8f5;
-  --kerykeion-chart-color-zodiac-icon-8:  #ddc8f5;
-  --kerykeion-chart-color-zodiac-icon-9:  #ddc8f5;
-  --kerykeion-chart-color-zodiac-icon-10: #ddc8f5;
-  --kerykeion-chart-color-zodiac-icon-11: #ddc8f5;
-
-  --kerykeion-chart-color-zodiac-radix-ring-0: #b89947;
-  --kerykeion-chart-color-zodiac-radix-ring-1: #a08535;
-  --kerykeion-chart-color-zodiac-radix-ring-2: #8a7020;
-
-  --kerykeion-chart-color-houses-radix-line: #6b637d;
-  --kerykeion-chart-color-house-number: #d4af37;
-
-  --kerykeion-chart-color-sun:       #f8f9fa;
-  --kerykeion-chart-color-moon:      #f8f9fa;
-  --kerykeion-chart-color-mercury:   #f8f9fa;
-  --kerykeion-chart-color-venus:     #f8f9fa;
-  --kerykeion-chart-color-mars:      #f8f9fa;
-  --kerykeion-chart-color-jupiter:   #f8f9fa;
-  --kerykeion-chart-color-saturn:    #f8f9fa;
-  --kerykeion-chart-color-uranus:    #f8f9fa;
-  --kerykeion-chart-color-neptune:   #f8f9fa;
-  --kerykeion-chart-color-pluto:     #f8f9fa;
-  --kerykeion-chart-color-mean-node: #f8f9fa;
-  --kerykeion-chart-color-true-node: #f8f9fa;
-
-  --kerykeion-chart-color-chiron:      #c8a0e0;
-  --kerykeion-chart-color-mean-lilith: transparent;
-  --kerykeion-chart-color-true-lilith: transparent;
-
-  --kerykeion-chart-color-first-house:   #d4af37;
-  --kerykeion-chart-color-tenth-house:   #d4af37;
-  --kerykeion-chart-color-seventh-house: #d4af37;
-  --kerykeion-chart-color-fourth-house:  #d4af37;
-
-  --kerykeion-chart-color-conjunction: rgba(216, 200, 248, 0.35);
-  --kerykeion-chart-color-sextile:     rgba(142, 202, 230, 0.35);
-  --kerykeion-chart-color-square:      rgba(232, 144, 122, 0.35);
-  --kerykeion-chart-color-trine:       rgba(136, 212, 176, 0.35);
-  --kerykeion-chart-color-opposition:  rgba(232, 144, 122, 0.35);
-
-  --kerykeion-chart-color-semi-sextile:   transparent;
-  --kerykeion-chart-color-semi-square:    transparent;
-  --kerykeion-chart-color-quintile:       transparent;
-  --kerykeion-chart-color-sesquiquadrate: transparent;
-  --kerykeion-chart-color-biquintile:     transparent;
-  --kerykeion-chart-color-quincunx:       transparent;
-
-  --kerykeion-chart-color-fire-percentage:     #f4a87c;
-  --kerykeion-chart-color-earth-percentage:    #a8c090;
-  --kerykeion-chart-color-air-percentage:      #8ecae6;
-  --kerykeion-chart-color-water-percentage:    #b8a8e8;
-  --kerykeion-chart-color-cardinal-percentage: #88d4b0;
-  --kerykeion-chart-color-fixed-percentage:    #e8cc84;
-  --kerykeion-chart-color-mutable-percentage:  #e8a08c;
-}
-
-[kr\\:node="Top_Left_Text"],
-[kr\\:node="Bottom_Left_Text"],
-[kr\\:node="Elements_Percentages"],
-[kr\\:node="Qualities_Percentages"],
-[kr\\:node="Houses_And_Planets_Grid"],
-[kr\\:node="Aspect_Grid"],
-[kr\\:node="Aspect_List"],
-[kr\\:node="Lunar_Phase"] { display: none; }
-
-text { fill: #e0e0e0; }
-line { stroke-dasharray: none; }
-</style>
-"""
-
-
-def _apply_purple_theme(svg_string: str) -> str:
-    svg_string = re.sub(r'(<svg\b[^>]*>)', r'\1' + _PURPLE_THEME_CSS, svg_string, count=1)
-    m = re.search(r'<svg\b[^>]+\bwidth=["\'](\d+(?:\.\d+)?)["\']', svg_string)
-    if m:
-        w = m.group(1)
-        svg_string = re.sub(r'(<svg\b[^>]*\bheight=)["\'][\d. ]+["\']', rf'\g<1>"{w}"', svg_string)
-        svg_string = re.sub(r'(<svg\b[^>]*\bviewBox=)["\'][\d. ]+["\']', rf'\g<1>"0 0 {w} {w}"', svg_string)
-    return svg_string
-
-
-def _scale_planet_glyphs(svg_string: str, factor: float = 0.85) -> str:
-    def _shrink(m):
-        tag = m.group(0)
-        tag = re.sub(r'scale\(1(?:\.0)?(?:,\s*1(?:\.0)?)?\)', f'scale({factor},{factor})', tag)
-        return tag
-    return re.sub(r'<use\b[^/]*/>', _shrink, svg_string)
-
-
 def _generate_chart_svg(subject) -> str | None:
-    import tempfile
-    import os as _os
-    from kerykeion import KerykeionChartSVG
-
-    svg_string = None
-    with tempfile.TemporaryDirectory() as tmpdir:
-        chart = KerykeionChartSVG(subject, 'Natal', new_output_directory=tmpdir)
-        chart.makeSVG()
-        svg_files = [f for f in _os.listdir(tmpdir) if f.endswith('.svg')]
-        if svg_files:
-            with open(_os.path.join(tmpdir, svg_files[0]), 'r', encoding='utf-8') as f:
-                svg_string = f.read()
-
-    if svg_string is None:
-        try:
-            chart = KerykeionChartSVG(subject, 'Natal')
-            svg_string = chart.makeTemplate()
-        except Exception as e:
-            log.warning('KerykeionChartSVG.makeTemplate() failed: %s', e)
-
-    if svg_string:
-        svg_string = _apply_purple_theme(svg_string)
-        svg_string = _scale_planet_glyphs(svg_string)
-
-    return svg_string
+    """Render the natal wheel with our own renderer (chart_wheel.py)."""
+    try:
+        from chart_wheel import render_chart_svg
+        return render_chart_svg(subject.positions, subject.house_cusps,
+                                title=f"{subject.name} - Birth Chart")
+    except Exception as e:
+        log.warning('Chart SVG generation failed: %s', e)
+        return None
 
 
 # ── Wheel-only PNG (for PDF cover) ────────────────────────────────────────────
@@ -552,7 +502,7 @@ def _compute_aspects(positions: dict) -> list[dict]:
 def compute_chart(birth_date, birth_time, birth_place, lat=None, lng=None) -> dict:
     """Compute positions + SVG only. Used by the free public /chart page."""
     positions, house_cusps, local_dt, lat, lng, subject = \
-        _build_chart_kerykeion(birth_date, birth_time, birth_place, lat=lat, lng=lng)
+        _build_chart(birth_date, birth_time, birth_place, lat=lat, lng=lng)
 
     chart_image = None
     try:
@@ -590,7 +540,7 @@ def compute_age_point(house_cusps: dict, birth_date, target_date=None,
         house_cusps: {1: lon, ..., 12: lon} ecliptic degrees 0-360
         birth_date:  datetime.date
         target_date: datetime.date (defaults to today)
-        positions:   natal planet dict from compute_chart / _build_chart_kerykeion
+        positions:   natal planet dict from compute_chart / _build_chart
 
     Returns dict with current house, longitude, sign, aspects, upcoming aspects.
     """
@@ -1061,7 +1011,7 @@ def generate_karmic(profile, reading_type) -> dict:
     birth_place = profile.birth_place or 'unknown'
 
     positions, house_cusps, local_dt, lat, lng, subject = \
-        _build_chart_kerykeion(birth_date, birth_time, birth_place,
+        _build_chart(birth_date, birth_time, birth_place,
                                lat=getattr(profile, 'birth_lat', None),
                                lng=getattr(profile, 'birth_lng', None))
 
@@ -1144,7 +1094,7 @@ def generate_synastry(profile_a, profile_b, reading_type) -> dict:
         bd = p.birth_date
         bt = p.birth_time or _dt.time(12, 0)
         bp = p.birth_place or 'unknown'
-        pos, cusps, ldt, lat, lng, subj = _build_chart_kerykeion(
+        pos, cusps, ldt, lat, lng, subj = _build_chart(
             bd, bt, bp,
             lat=getattr(p, 'birth_lat', None),
             lng=getattr(p, 'birth_lng', None))
@@ -1260,7 +1210,7 @@ def generate_davison(profile_a, profile_b, reading_type) -> dict:
     lat_mid = (lat_a + lat_b) / 2.0
     lng_mid = (lng_a + lng_b) / 2.0
 
-    # Convert midpoint JD back to a datetime for Kerykeion
+    # Convert midpoint JD back to a datetime for the chart builder
     import swisseph as swe
     jd_parts = swe.revjul(jd_mid)
     year, month, day = int(jd_parts[0]), int(jd_parts[1]), int(jd_parts[2])
@@ -1273,7 +1223,7 @@ def generate_davison(profile_a, profile_b, reading_type) -> dict:
     tz_str = tf.timezone_at(lng=lng_mid, lat=lat_mid) or 'UTC'
 
     positions, house_cusps, local_dt, _lat, _lng, subject = \
-        _build_chart_kerykeion(mid_date, mid_time, f'{lat_mid:.4f},{lng_mid:.4f}',
+        _build_chart(mid_date, mid_time, f'{lat_mid:.4f},{lng_mid:.4f}',
                                lat=lat_mid, lng=lng_mid)
 
     chart_image = None
@@ -1395,7 +1345,7 @@ def generate_solar_return(profile, params: dict, reading_type) -> dict:
     sr_lng      = params.get('lng') or getattr(profile, 'birth_lng', None)
 
     # Natal chart
-    positions_n, cusps_n, _, _lat_n, _lng_n, subj_n = _build_chart_kerykeion(
+    positions_n, cusps_n, _, _lat_n, _lng_n, subj_n = _build_chart(
         profile.birth_date, profile.birth_time or _dt.time(12, 0),
         profile.birth_place or 'unknown',
         lat=getattr(profile, 'birth_lat', None),
@@ -1414,7 +1364,7 @@ def generate_solar_return(profile, params: dict, reading_type) -> dict:
     hf = jd_parts[3]
     sr_time = _dt.time(int(hf), int((hf % 1) * 60))
 
-    positions_sr, cusps_sr, _, _lat_sr, _lng_sr, subj_sr = _build_chart_kerykeion(
+    positions_sr, cusps_sr, _, _lat_sr, _lng_sr, subj_sr = _build_chart(
         sr_date, sr_time, sr_place, lat=sr_lat, lng=sr_lng)
 
     chart_image = None
@@ -1476,7 +1426,7 @@ def generate_lunar_return(profile, params: dict, reading_type) -> dict:
     lr_lng   = params.get('lng') or getattr(profile, 'birth_lng', None)
 
     # Natal chart
-    positions_n, cusps_n, _, _lat_n, _lng_n, subj_n = _build_chart_kerykeion(
+    positions_n, cusps_n, _, _lat_n, _lng_n, subj_n = _build_chart(
         profile.birth_date, profile.birth_time or _dt.time(12, 0),
         profile.birth_place or 'unknown',
         lat=getattr(profile, 'birth_lat', None),
@@ -1493,7 +1443,7 @@ def generate_lunar_return(profile, params: dict, reading_type) -> dict:
     hf = jd_parts[3]
     lr_time  = _dt.time(int(hf), int((hf % 1) * 60))
 
-    positions_lr, cusps_lr, _, _lat_lr, _lng_lr, subj_lr = _build_chart_kerykeion(
+    positions_lr, cusps_lr, _, _lat_lr, _lng_lr, subj_lr = _build_chart(
         lr_date, lr_time, lr_place, lat=lr_lat, lng=lr_lng)
 
     chart_image = None
@@ -1554,7 +1504,7 @@ def generate_saturn_return(profile, params: dict, reading_type) -> dict:
 
     decade_start = int(params.get('decade_start', _dt.date.today().year))
 
-    positions_n, cusps_n, _, _, _, subj_n = _build_chart_kerykeion(
+    positions_n, cusps_n, _, _, _, subj_n = _build_chart(
         profile.birth_date, profile.birth_time or _dt.time(12, 0),
         profile.birth_place or 'unknown',
         lat=getattr(profile, 'birth_lat', None),
@@ -1595,7 +1545,7 @@ def generate_saturn_return(profile, params: dict, reading_type) -> dict:
         pdate = _dt.date(int(parts[0]), int(parts[1]), int(parts[2]))
         hf    = parts[3]
         ptime = _dt.time(int(hf), int((hf % 1) * 60))
-        pos_p, cusps_p, _, _, _, subj_p = _build_chart_kerykeion(
+        pos_p, cusps_p, _, _, _, subj_p = _build_chart(
             pdate, ptime, profile.birth_place or 'unknown',
             lat=getattr(profile, 'birth_lat', None),
             lng=getattr(profile, 'birth_lng', None))
@@ -1658,7 +1608,7 @@ def generate_jupiter_return(profile, params: dict, reading_type) -> dict:
 
     decade_start = int(params.get('decade_start', _dt.date.today().year))
 
-    positions_n, cusps_n, _, _, _, subj_n = _build_chart_kerykeion(
+    positions_n, cusps_n, _, _, _, subj_n = _build_chart(
         profile.birth_date, profile.birth_time or _dt.time(12, 0),
         profile.birth_place or 'unknown',
         lat=getattr(profile, 'birth_lat', None),
@@ -1691,7 +1641,7 @@ def generate_jupiter_return(profile, params: dict, reading_type) -> dict:
         pdate = _dt.date(int(parts[0]), int(parts[1]), int(parts[2]))
         hf    = parts[3]
         ptime = _dt.time(int(hf), int((hf % 1) * 60))
-        pos_p, cusps_p, _, _, _, subj_p = _build_chart_kerykeion(
+        pos_p, cusps_p, _, _, _, subj_p = _build_chart(
             pdate, ptime, profile.birth_place or 'unknown',
             lat=getattr(profile, 'birth_lat', None),
             lng=getattr(profile, 'birth_lng', None))
@@ -1785,7 +1735,7 @@ def generate_horoscope(user, reading_type) -> dict:
     birth_place = user.birth_place or 'unknown'
 
     positions, house_cusps, local_dt, lat, lng, subject = \
-        _build_chart_kerykeion(birth_date, birth_time, birth_place)
+        _build_chart(birth_date, birth_time, birth_place)
     log.info('Chart built for %s', birth_place)
 
     chart_image = None

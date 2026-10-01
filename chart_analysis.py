@@ -4,7 +4,7 @@ chart_analysis.py
 Extraction layer: turns pre-computed Kerykeion data into a weighted, prioritised
 dossier that tells the LLM what is DISTINCTIVE about this chart.
 
-Accepts the output of ai._build_chart_kerykeion() directly — no geocoding,
+Accepts the output of ai._build_chart() directly — no geocoding,
 no Kerykeion factory classes. No LLM calls. Pure deterministic astrology.
 """
 
@@ -345,7 +345,7 @@ def build_dossier(subject, positions: dict, house_cusps: dict,
     Build the interpretation dossier.
 
     subject     — Kerykeion AstrologicalSubject (for lunar_phase, is_diurnal)
-    positions   — dict from ai._build_chart_kerykeion():
+    positions   — dict from ai._build_chart():
                   {name: {longitude, sign, house, retrograde}}
                   Must include Sun, Moon, planets, Ascendant, MC (or Medium_Coeli),
                   Descendant, Imum_Coeli.
